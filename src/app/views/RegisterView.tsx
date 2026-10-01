@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { createRegistration } from "../services/api";
+import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
+import { createRegistration, saveUserProfile, type UserProfile } from "../services/api";
 import {
   ArrowLeft, ArrowRight, User, MapPin, HeartHandshake,
   ShieldCheck, CheckCircle2, Eye, EyeOff, Info, AlertCircle,
@@ -9,12 +10,12 @@ import {
 } from "lucide-react";
 
 // ─── Paleta (mesma do site principal) ───────────────────────────────────────
-const BLUE     = "#1d4ed8";
-const BLUE_MID = "#2563eb";
-const RED      = "#f97316";
-const RED_LIGHT= "#fb923c";
-const GOLD     = "#f97316";
-const GOLD_LIGHT="#fb923c";
+const BLUE     = "#0057d9";
+const BLUE_MID = "#0078ce";
+const RED      = "#ff8500";
+const RED_LIGHT= "#ffb21a";
+const GOLD     = "#ff8500";
+const GOLD_LIGHT="#ffb21a";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface RegisterData {
@@ -161,7 +162,7 @@ const STEPS = [
 ];
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boolean }) {
+export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onBack: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [menorDeIdade, setMenorDeIdade] = useState(false);
@@ -176,6 +177,9 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
     formState: { errors, isSubmitting },
     trigger,
     getValues,
+    setValue,
+    setError,
+    clearErrors,
   } = useForm<RegisterData>({ mode: "onBlur" });
 
   // Verifica se é menor ao mudar data de nascimento
@@ -188,6 +192,37 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
     const dayDiff = today.getDate() - birth.getDate();
     const realAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
     setMenorDeIdade(realAge < 18);
+  }
+
+  async function validateVitoriaCep(value: string) {
+    const cepDigits = value.replace(/\D/g, "");
+    if (!/^\d{8}$/.test(cepDigits)) {
+      return "CEP inválido";
+    }
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
+      const data = await response.json();
+
+      if (data.erro || !data.localidade || !data.uf) {
+        return "CEP não encontrado. Verifique o valor informado.";
+      }
+
+      const localidade = String(data.localidade).trim().toLowerCase();
+      const uf = String(data.uf).trim().toUpperCase();
+      const isVitoria = uf === "ES" && (localidade === "vitoria" || localidade === "vitória");
+
+      if (!isVitoria) {
+        return "A plataforma aceita apenas CEPs da cidade de Vitória-ES. Seu cadastro será bloqueado se o endereço não pertencer à cidade.";
+      }
+
+      setValue("bairro", String(data.bairro ?? "").trim(), { shouldValidate: true });
+      setValue("rua", String(data.logradouro ?? "").trim(), { shouldValidate: true });
+      clearErrors("cep");
+      return true;
+    } catch (error) {
+      return "Não foi possível validar o CEP no momento. Tente novamente.";
+    }
   }
 
   // Navega para o próximo passo com validação
@@ -206,7 +241,9 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
   async function onSubmit(data: RegisterData) {
     setSubmissionError("");
     try {
-      await createRegistration(data as unknown as Record<string, unknown>);
+      const result = await createRegistration(data as unknown as Record<string, unknown>);
+      const profile = saveUserProfile(data as unknown as Record<string, unknown>, result.id, courseId);
+      onProfileCreated(profile);
       setSubmitted(true);
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : "Não foi possível concluir o cadastro");
@@ -226,8 +263,7 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
               Cadastro realizado!
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-              Seu cadastro foi enviado com sucesso. Em breve você receberá um e-mail de confirmação
-              com seus dados de acesso à plataforma <strong>QualificaVix</strong>.
+              Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente.
             </p>
             <button onClick={onBack}
               className="font-black text-white px-8 py-3.5 rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center gap-2"
@@ -252,16 +288,7 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
               aria-label="Voltar">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}>
-                <GraduationCap className="w-4 h-4 text-amber-300" />
-              </div>
-              <span className="font-black text-lg tracking-tight">
-                <span style={{ color: BLUE }}>Qualifica</span>
-                <span className="text-slate-800 dark:text-white">Vix</span>
-              </span>
-            </div>
+            <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-20 h-12 object-contain" />
             <div className="ml-auto text-right hidden sm:block">
               <p className="text-xs font-black uppercase tracking-widest text-slate-500">Cadastro de usuário</p>
               <p className="text-[11px] text-slate-400 font-medium">Passo {step} de {STEPS.length}</p>
@@ -435,7 +462,8 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
                         <Label required>CEP</Label>
                         <Input reg={register("cep", {
                           required: "CEP obrigatório",
-                          pattern: { value: /^\d{5}-?\d{3}$/, message: "CEP inválido" }
+                          pattern: { value: /^\d{5}-?\d{3}$/, message: "CEP inválido" },
+                          validate: async value => await validateVitoriaCep(String(value ?? ""))
                         })}
                           placeholder="29000-000" error={errors.cep?.message} />
                       </FieldWrap>
@@ -859,7 +887,7 @@ export function RegisterPage({ onBack, dark }: { onBack: () => void; dark: boole
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 text-white font-black text-sm px-7 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 text-slate-950 font-black text-sm px-7 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                     style={{ background: `linear-gradient(135deg, ${RED} 0%, ${RED_LIGHT} 100%)` }}
                   >
                     {isSubmitting ? (

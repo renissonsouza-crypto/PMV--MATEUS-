@@ -4,34 +4,34 @@
   :root {
     --font-size: 16px;
 
-    /* Light Theme - QualificaVix · Azul + Laranja */
+    /* Light Theme - QualificaVix · Azul-marinho, azul e dourado */
     --background: #ffffff;
-    --foreground: #0f172a;
+    --foreground: #123047;
     --card: #ffffff;
-    --card-foreground: #0f172a;
+    --card-foreground: #123047;
     --popover: #ffffff;
-    --popover-foreground: #0f172a;
-    --primary: #1d4ed8;
+    --popover-foreground: #123047;
+    --primary: #0057d9;
     --primary-foreground: #ffffff;
-    --secondary: #dbeafe;
-    --secondary-foreground: #1e3a8a;
-    --muted: #f1f5f9;
+    --secondary: #cdeeff;
+    --secondary-foreground: #123b68;
+    --muted: #f1f7fa;
     --muted-foreground: #64748b;
-    --accent: #f97316;
-    --accent-foreground: #ffffff;
+    --accent: #ff8500;
+    --accent-foreground: #123047;
     --destructive: #ef4444;
     --destructive-foreground: #ffffff;
     --border: #e2e8f0;
     --input: transparent;
     --input-background: #f8fafc;
-    --switch-background: #93c5fd;
+    --switch-background: #48b9eb;
     --font-weight-medium: 700;
     --font-weight-normal: 400;
-    --ring: #f97316;
+    --ring: #ff8500;
 
     /* Gráficos / Visualizações - Paleta QualificaVix */
-    --chart-1: #1d4ed8;
-    --chart-2: #f97316;
+    --chart-1: #0057d9;
+    --chart-2: #ff8500;
     --chart-3: #7c3aed;
     --chart-4: #16a34a;
     --chart-5: #0891b2;
@@ -39,57 +39,57 @@
 
     /* Sidebar */
     --sidebar: #ffffff;
-    --sidebar-foreground: #0A1F5C;
-    --sidebar-primary: #0A1F5C;
+    --sidebar-foreground: #123b68;
+    --sidebar-primary: #0057d9;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #e0f2fe;
-    --sidebar-accent-foreground: #0A1F5C;
-    --sidebar-border: #bae6fd;
-    --sidebar-ring: #FF6B00;
+    --sidebar-accent: #cdeeff;
+    --sidebar-accent-foreground: #123b68;
+    --sidebar-border: #8dd5f3;
+    --sidebar-ring: #ff8500;
   }
 
   .dark {
-    /* Dark Theme - Paleta Vibrante */
-    --background: #050E2E;
+    /* Dark Theme - Identidade QualificaVix */
+    --background: #0c1c2d;
     --foreground: #f0f9ff;
-    --card: #0A1F5C;
+    --card: #123047;
     --card-foreground: #f0f9ff;
-    --popover: #0A1F5C;
+    --popover: #123047;
     --popover-foreground: #f0f9ff;
-    --primary: #FF6B00;
+    --primary: #169fe8;
     --primary-foreground: #ffffff;
-    --secondary: #1E40AF;
-    --secondary-foreground: #00BFFF;
-    --muted: #0F2962;
-    --muted-foreground: #7dd3fc;
-    --accent: #FFD60A;
-    --accent-foreground: #0A1F5C;
-    --destructive: #FF6B00;
+    --secondary: #17496b;
+    --secondary-foreground: #d8f3ff;
+    --muted: #163247;
+    --muted-foreground: #a9c8d8;
+    --accent: #ffbd16;
+    --accent-foreground: #123047;
+    --destructive: #e5484d;
     --destructive-foreground: #ffffff;
-    --border: rgba(56, 189, 248, 0.2);
+    --border: rgba(139, 203, 229, 0.2);
     --input: transparent;
-    --input-background: #0F2962;
-    --switch-background: #1E40AF;
+    --input-background: #163247;
+    --switch-background: #17496b;
     --font-weight-medium: 600;
     --font-weight-normal: 400;
-    --ring: #FF6B00;
+    --ring: #ffbd16;
 
     /* Gráficos Dark - Paleta Vibrante */
-    --chart-1: #FF6B00;
-    --chart-2: #FFD60A;
-    --chart-3: #00BFFF;
-    --chart-4: #1E40AF;
+    --chart-1: #169fe8;
+    --chart-2: #ffbd16;
+    --chart-3: #48b9eb;
+    --chart-4: #17496b;
     --chart-5: #ffffff;
 
     /* Sidebar Dark */
-    --sidebar: #0A1F5C;
+    --sidebar: #123047;
     --sidebar-foreground: #f0f9ff;
-    --sidebar-primary: #FF6B00;
+    --sidebar-primary: #169fe8;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #0F2962;
+    --sidebar-accent: #163247;
     --sidebar-accent-foreground: #f0f9ff;
-    --sidebar-border: rgba(56, 189, 248, 0.2);
-    --sidebar-ring: #FF6B00;
+    --sidebar-border: rgba(139, 203, 229, 0.2);
+    --sidebar-ring: #ffbd16;
   }
 
   @theme inline {

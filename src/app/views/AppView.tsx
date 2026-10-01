@@ -1,37 +1,42 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { RegisterPage } from "./RegisterView";
 import { TurtleMascot } from "../components/TurtleMascot";
-import { createTestimonial, getTestimonials } from "../services/api";
+import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
 import { useAppController } from "../controllers/useAppController";
 import type { Course } from "../models/Course";
 import type { Testimonial } from "../models/Testimonial";
 import type { Page } from "../models/navigation";
-import vitoriaCidade from "../../assets/hero/vitoria-cidade.jpg";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "../components/ui/carousel";
+import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
 import qualificavixInformatica from "../../assets/hero/qualificavix-informatica.jpg";
 import qualificavixCulinaria from "../../assets/hero/qualificavix-culinaria.jpg";
 import qualificavixCozinhaAula from "../../assets/hero/qualificavix-cozinha-aula.jpg";
 import qualificavixPanificacao from "../../assets/hero/qualificavix-panificacao.jpg";
 import qualificavixTecnologia from "../../assets/hero/qualificavix-tecnologia.jpg";
-import vitoriaPaisagem from "../../assets/hero/vitoria-paisagem.jpg";
+import vitoriaDoisOlhos1 from "../../assets/hero/vitoria-dois-olhos-1.jpg";
+import vitoriaDoisOlhos2 from "../../assets/hero/vitoria-dois-olhos-2.jpg";
+import vitoriaTerceiraPonte from "../../assets/hero/vitoria-terceira-ponte-panorama.jpg";
 import {
   Search, X, Clock, MapPin, ChevronRight, ChevronDown, Menu, Moon, Sun, Minus, Plus,
   ArrowRight, ArrowLeft, BookOpen, Filter, Star, Users, Award,
   CheckCircle2, Heart, Facebook, Instagram, Twitter, Phone, Mail,
   Monitor, Briefcase, Palette, Wrench, GraduationCap, Utensils,
   Laptop, Send, SlidersHorizontal, Globe, Building2, TrendingUp,
-  PlayCircle, BarChart3, Target, Zap, UserCheck,
+  PlayCircle, BarChart3, Target, Zap, UserCheck, Camera, Trash2, Pause, Play,
 } from "lucide-react";
 
 // ─── Paleta de cores ─────────────────────────────────────────────────────────
 const C = {
-  blue:        "#1d4ed8",
-  blueDark:    "#1e3a8a",
-  blueMid:     "#2563eb",
-  blueLight:   "#dbeafe",
-  bluePale:    "#eff6ff",
-  orange:      "#f97316",
-  orangeDark:  "#ea580c",
-  orangeLight: "#ffedd5",
+  blue:        "#0057d9",
+  blueDark:    "#0a2f61",
+  blueMid:     "#0078ce",
+  blueLight:   "#cdeeff",
+  bluePale:    "#eaf8ff",
+  orange:      "#ff8500",
+  orangeBrightEnd: "#ffb21a",
+  orangeDark:  "#a84800",
+  orangeActionEnd: "#c94e00",
+  orangeLight: "#ffe0a6",
   white:       "#ffffff",
   slate50:     "#f8fafc",
   slate100:    "#f1f5f9",
@@ -49,154 +54,165 @@ const COURSES: Course[] = [
     id: 1, title: "Introdução à Programação",
     category: "Tecnologia", categoryColor: "#2563eb",
     modality: "Online", hours: 120, level: "Iniciante",
-    location: "Vitória - ES", enrolled: 342, status: "open",
+    provider: "Instituição executora não informada no catálogo",
+    location: "", enrolled: 342, status: "open",
     period: "Noturno", duration: "4 meses",
     targetAudience: ["Primeiro emprego", "Mudança de profissão"],
     avgSalary: "R$ 4.200/mês",
-    description: "Aprenda os fundamentos da programação e desenvolva suas primeiras aplicações. Curso ideal para quem deseja iniciar na área de tecnologia.",
+    description: "Comece pela lógica de programação e avance até pequenos programas, praticando como transformar um problema em etapas, escrever instruções e testar uma solução.",
     whatYouLearn: ["Lógica de programação e algoritmos", "Estruturas de dados básicas", "Fundamentos das principais linguagens", "Desenvolvimento de pequenos projetos", "Boas práticas e resolução de problemas"],
-    about: "Este curso é perfeito para quem está começando na área de programação. Você vai aprender os conceitos fundamentais e desenvolver projetos práticos para aplicar seus conhecimentos desde o início. Com metodologia prática e professores experientes, você terá toda a base necessária para iniciar uma carreira em tecnologia.",
-    image: "photo-1517694712202-14dd9538aa97",
+    about: "Com 120 horas distribuídas ao longo de 4 meses, a formação cobre algoritmos, variáveis, condições, repetições, funções e estruturas de dados básicas. As atividades conduzem da resolução de exercícios a pequenos projetos, com foco em raciocínio lógico, leitura de erros e testes. É uma introdução para quem busca o primeiro contato com desenvolvimento; linguagem utilizada, calendário e instituição executora não estão especificados nesta ficha.",
+    image: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#1d4ed8", featured: 1,
   },
   {
     id: 2, title: "Excel do Básico ao Avançado",
     category: "Administração", categoryColor: "#16a34a",
     modality: "Online", hours: 60, level: "Todos os níveis",
-    location: "Online", enrolled: 289, status: "last-spots",
+    provider: "Instituição executora não informada no catálogo",
+    location: "", enrolled: 289, status: "last-spots",
     period: "Flexível", duration: "2 meses",
     targetAudience: ["Atualização profissional", "Primeiro emprego"],
     avgSalary: "R$ 2.800/mês",
-    description: "Domine fórmulas, gráficos e ferramentas avançadas do Excel para otimizar sua produtividade profissional.",
+    description: "Pratique planilhas desde a organização de dados e fórmulas até tabelas dinâmicas, gráficos e automações, aplicando os recursos do Excel a tarefas administrativas.",
     whatYouLearn: ["Fórmulas e funções avançadas", "Tabelas dinâmicas e gráficos", "Macros e automação VBA", "Análise de dados", "Dashboards profissionais"],
-    about: "O Excel é a ferramenta mais utilizada no mercado de trabalho. Neste curso você vai do básico ao avançado com aulas práticas e exercícios reais do dia a dia profissional.",
-    image: "photo-1611532736597-de2d4265fba3",
+    about: "A carga de 60 horas está prevista para 2 meses, em modalidade online e com período flexível. O conteúdo parte da estruturação de planilhas e referências de células, passa por funções, filtros, gráficos e tabelas dinâmicas e chega a macros e automação VBA, conforme o programa cadastrado. Os exercícios podem ser aplicados a controles, relatórios e análises de rotina; acesso a software e critérios de avaliação precisam ser confirmados na oferta da turma.",
+    image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#16a34a", featured: 2,
   },
   {
     id: 3, title: "Design Gráfico para Iniciantes",
     category: "Design", categoryColor: "#7c3aed",
     modality: "Presencial", hours: 80, level: "Iniciante",
+    provider: "SENAI (unidade Beira Mar informada no catálogo)",
     location: "Senai – Beira Mar", enrolled: 156, status: "open",
     period: "Vespertino", duration: "3 meses",
     targetAudience: ["Primeiro emprego", "Empreendedor"],
     avgSalary: "R$ 3.400/mês",
-    description: "Crie artes incríveis e domine os conceitos fundamentais do design com ferramentas profissionais.",
+    description: "Aprenda fundamentos de composição, tipografia e cor e aplique-os na criação de peças gráficas, materiais para redes sociais e uma identidade visual básica.",
     whatYouLearn: ["Princípios do design visual", "Tipografia e cores", "Adobe Photoshop e Illustrator", "Criação de identidade visual", "Design para redes sociais"],
-    about: "Aprenda a criar peças gráficas profissionais para o mercado digital e impresso. Com foco em ferramentas práticas e projetos reais, você sairá pronto para trabalhar como designer.",
-    image: "photo-1558655146-9f40138edfeb",
+    about: "São 80 horas presenciais ao longo de 3 meses, no período vespertino. A proposta percorre princípios de comunicação visual, composição, tipografia, paletas de cor e ferramentas como Photoshop e Illustrator, com exercícios de criação de peças e identidade visual. A ficha indica o SENAI – Beira Mar como local, mas não apresenta endereço completo, datas, nome da unidade oficial ou confirmação de parceria para esta edição; confirme esses dados antes do deslocamento.",
+    image: "https://images.unsplash.com/photo-1522542550221-31fd19575a2d?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#7c3aed", featured: 3,
   },
   {
     id: 4, title: "Marketing Digital na Prática",
     category: "Marketing", categoryColor: "#db2777",
     modality: "Online", hours: 60, level: "Iniciante",
-    location: "Online", enrolled: 412, status: "open",
+    provider: "Instituição executora não informada no catálogo",
+    location: "", enrolled: 412, status: "open",
     period: "Flexível", duration: "2 meses",
     targetAudience: ["Empreendedor", "Atualização profissional", "Mudança de profissão"],
     avgSalary: "R$ 3.800/mês",
-    description: "Estratégias para atrair, engajar e converter na internet. Aprenda as principais ferramentas do marketing digital.",
+    description: "Planeje ações de marketing digital envolvendo conteúdo, busca, redes sociais, anúncios e métricas, conectando objetivos de negócio a indicadores de campanha.",
     whatYouLearn: ["SEO e tráfego orgânico", "Google Ads e Facebook Ads", "E-mail marketing", "Métricas e analytics", "Estratégias de conteúdo"],
-    about: "O marketing digital é uma das áreas que mais cresce no mercado. Aprenda a criar campanhas eficientes, gerenciar redes sociais e gerar resultados mensuráveis para qualquer negócio.",
-    image: "photo-1432888498266-38ffec3eaf0a",
+    about: "A formação online prevê 60 horas em 2 meses, com período flexível. O percurso inclui SEO, planejamento de conteúdo, anúncios em plataformas digitais, e-mail marketing e leitura de métricas. Os exercícios podem envolver a definição de público, calendário editorial, orçamento e indicadores para uma campanha; plataformas utilizadas e ferramentas eventualmente pagas devem ser confirmadas na descrição oficial da turma.",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#db2777", featured: 4,
   },
   {
     id: 5, title: "Desenvolvimento Web Completo",
     category: "Tecnologia", categoryColor: "#2563eb",
     modality: "Online", hours: 150, level: "Intermediário",
-    location: "Online", enrolled: 278, status: "open",
+    provider: "Instituição executora não informada no catálogo",
+    location: "", enrolled: 278, status: "open",
     period: "Noturno", duration: "5 meses",
     targetAudience: ["Mudança de profissão", "Atualização profissional"],
     avgSalary: "R$ 5.500/mês",
-    description: "Aprenda a criar sites e aplicações com as principais tecnologias modernas do desenvolvimento web.",
+    description: "Construa a base de uma aplicação web: páginas com HTML, CSS e JavaScript, interfaces com React, serviços com Node.js, integração com APIs e persistência de dados.",
     whatYouLearn: ["HTML, CSS e JavaScript", "React e Node.js", "Banco de dados SQL e NoSQL", "APIs RESTful", "Deploy e hospedagem"],
-    about: "Torne-se um desenvolvedor web full stack com este curso completo. Você aprenderá do front-end ao back-end, criando projetos reais para o seu portfólio.",
-    image: "photo-1498050108023-c5249f4df085",
+    about: "O curso prevê 150 horas ao longo de 5 meses, em modalidade online e período noturno. O conteúdo cadastrado vai de HTML, CSS e JavaScript a React, Node.js, bancos SQL e NoSQL, APIs REST e publicação de aplicações. A trilha é voltada a quem já tem noções iniciais e quer praticar partes de front-end e back-end; requisitos técnicos, tecnologias e ambiente de desenvolvimento da turma precisam ser confirmados com a instituição executora, ainda não identificada nesta ficha.",
+    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#0891b2",
   },
   {
     id: 6, title: "Gestão de Projetos",
     category: "Administração", categoryColor: "#16a34a",
     modality: "Online", hours: 60, level: "Intermediário",
-    location: "Online", enrolled: 198, status: "coming-soon",
+    provider: "Instituição executora não informada no catálogo",
+    location: "", enrolled: 198, status: "coming-soon",
     period: "Vespertino", duration: "2 meses",
     targetAudience: ["Atualização profissional", "Empreendedor"],
     avgSalary: "R$ 6.200/mês",
-    description: "Planeje, execute e controle projetos com metodologias ágeis e ferramentas modernas de gestão.",
+    description: "Pratique planejamento, acompanhamento e encerramento de projetos com escopo, cronograma, responsabilidades, riscos e métodos ágeis como Scrum e Kanban.",
     whatYouLearn: ["Metodologias ágeis (Scrum, Kanban)", "Gestão de equipes", "Planejamento e cronograma", "Controle de riscos", "Ferramentas: Trello, Jira, Asana"],
-    about: "Profissionais de gestão de projetos são altamente valorizados em todas as áreas. Aprenda as metodologias mais utilizadas no mercado e gerencie projetos com eficiência.",
-    image: "photo-1521737711867-e3b97375f902",
+    about: "A previsão é de 60 horas em 2 meses, no período vespertino e em formato online. O conteúdo reúne definição de objetivos e escopo, organização de tarefas e cronograma, gestão de riscos e equipes, além de práticas Scrum e Kanban e uso de ferramentas como Trello, Jira e Asana. Como a turma aparece como futura, datas, provedor, ferramentas exigidas e formato das atividades ainda precisam ser confirmados quando as inscrições forem abertas.",
+    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#059669",
   },
   {
     id: 7, title: "Informática para o Mercado",
     category: "Tecnologia", categoryColor: "#2563eb",
     modality: "Presencial", hours: 100, level: "Iniciante",
+    provider: "Instituição executora não informada no catálogo",
     location: "Hub de Inovação", enrolled: 134, status: "open",
     period: "Diurno", duration: "3 meses",
     targetAudience: ["Primeiro emprego", "Atualização profissional"],
     avgSalary: "R$ 2.200/mês",
-    description: "Habilidades essenciais para o mercado de trabalho moderno: escritório, internet e ferramentas digitais.",
+    description: "Desenvolva autonomia no uso do computador, internet, e-mail profissional e ferramentas de escritório, com atenção a segurança digital e organização de arquivos.",
     whatYouLearn: ["Windows e pacote Office", "Internet e e-mail profissional", "Segurança digital", "Google Workspace", "Noções de hardware"],
-    about: "Este curso prepara você para usar tecnologia no dia a dia profissional com segurança e eficiência, do básico ao suficiente para qualquer vaga de trabalho.",
-    image: "photo-1516321318423-f06f85e504b3",
+    about: "São 100 horas presenciais previstas para 3 meses, no período diurno e em nível iniciante. A trilha inclui sistema operacional, arquivos, pacote Office, Google Workspace, navegação, e-mail e noções de segurança e hardware. A ficha informa o Hub de Inovação como local, mas não identifica a instituição responsável nem detalha endereço, dias de aula ou equipamentos disponibilizados; esses dados devem ser confirmados antes da inscrição.",
+    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#0369a1",
   },
   {
     id: 8, title: "Atendimento ao Cliente",
     category: "Educação", categoryColor: "#d97706",
     modality: "Online", hours: 40, level: "Iniciante",
-    location: "Online", enrolled: 321, status: "open",
+    provider: "Instituição executora não informada no catálogo",
+    location: "", enrolled: 321, status: "open",
     period: "Flexível", duration: "1 mês",
     targetAudience: ["Primeiro emprego", "Mudança de profissão"],
     avgSalary: "R$ 1.800/mês",
-    description: "Técnicas práticas para encantar clientes e gerar resultados. Aprenda a fidelizar e resolver conflitos.",
+    description: "Treine comunicação clara, escuta ativa, atendimento por diferentes canais, registro de solicitações, encaminhamento de problemas e acompanhamento pós-venda.",
     whatYouLearn: ["Comunicação e linguagem positiva", "Gestão de conflitos", "Atendimento multicanal", "Fidelização de clientes", "CRM e pós-venda"],
-    about: "O atendimento ao cliente é a base de qualquer negócio. Aprenda as melhores práticas para encantar clientes, resolver problemas e construir relacionamentos duradouros.",
-    image: "photo-1556745753-b2904692b3cd",
+    about: "A carga prevista é de 40 horas em 1 mês, com aulas online e período flexível. Os temas incluem comunicação profissional, escuta e identificação de necessidades, atendimento multicanal, resolução e encaminhamento de conflitos, registro em CRM, fidelização e pós-venda. As práticas podem simular conversas e situações de atendimento; critérios de participação e ferramentas utilizadas não estão detalhados no cadastro.",
+    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#d97706",
   },
   {
     id: 9, title: "Gastronomia Brasileira",
     category: "Gastronomia", categoryColor: "#ea580c",
     modality: "Presencial", hours: 80, level: "Iniciante",
+    provider: "SENAC (unidade específica não identificada no catálogo)",
     location: "Senac – Vitória", enrolled: 89, status: "last-spots",
     period: "Diurno", duration: "3 meses",
     targetAudience: ["Primeiro emprego", "Empreendedor"],
     avgSalary: "R$ 2.500/mês",
-    description: "Aprenda técnicas culinárias da culinária brasileira com chefs experientes em cozinhas profissionais.",
+    description: "Pratique técnicas de preparo da culinária brasileira, higiene e segurança alimentar, organização de cozinha e elaboração de fichas técnicas e cardápios.",
     whatYouLearn: ["Técnicas de corte e preparo", "Culinária regional brasileira", "Higiene e segurança alimentar", "Cardápio e fichas técnicas", "Noções de gestão de cozinha"],
-    about: "A gastronomia é uma paixão nacional. Neste curso presencial você aprende técnicas profissionais de culinária brasileira com aulas práticas em cozinhas totalmente equipadas.",
-    image: "photo-1556909114-f6e7ad7d3136",
+    about: "O cadastro prevê 80 horas presenciais ao longo de 3 meses, no período diurno, com nível iniciante. A programação combina técnicas de corte, preparo e cocção, receitas regionais, higiene e segurança alimentar, fichas técnicas, planejamento de cardápio e noções de custos e organização de cozinha. O SENAC – Vitória aparece como local; unidade, endereço, disponibilidade de insumos e calendário devem ser confirmados na chamada oficial da turma.",
+    image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#ea580c",
   },
   {
     id: 10, title: "Eletricista Predial",
     category: "Técnico", categoryColor: "#ca8a04",
     modality: "Presencial", hours: 160, level: "Iniciante",
+    provider: "SENAI (unidade Bento Ferreira informada no catálogo)",
     location: "Senai – Bento Ferreira", enrolled: 67, status: "open",
     period: "Noturno", duration: "5 meses",
     targetAudience: ["Primeiro emprego", "Mudança de profissão"],
     avgSalary: "R$ 4.000/mês",
-    description: "Instalações elétricas residenciais e comerciais com segurança e conforme as normas da ABNT.",
+    description: "Aprenda a interpretar projetos e executar instalações elétricas prediais, selecionar proteções, realizar verificações e aplicar procedimentos de segurança pertinentes.",
     whatYouLearn: ["Leitura de projetos elétricos", "Instalações residenciais e comerciais", "Normas NBR e NR10", "Quadros elétricos e proteções", "Manutenção corretiva"],
-    about: "O eletricista é um dos profissionais mais requisitados do mercado. Aprenda a executar instalações elétricas seguras e regulamentadas com muito suporte prático.",
-    image: "photo-1621905251189-08b1489462df",
+    about: "A formação prevê 160 horas presenciais durante 5 meses, no período noturno e em nível iniciante. Os tópicos cadastrados abrangem leitura de projetos, circuitos residenciais e comerciais, dimensionamento básico, quadros e dispositivos de proteção, manutenção e referências às normas NBR e à NR-10. A menção à NR-10 no conteúdo não confirma, por si só, que a turma conceda certificado dessa norma; confirme escopo, práticas em laboratório, equipamentos de proteção, requisitos e endereço completo com o SENAI – Bento Ferreira.",
+    image: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1200&q=80",
     bgColor: "#ca8a04",
   },
 ];
 
 const COURSE_IMAGES: Record<string, string> = {
-  Tecnologia: qualificavixTecnologia,
-  Administração: qualificavixInformatica,
-  Design: vitoriaCidade,
-  Marketing: qualificavixTecnologia,
-  Educação: qualificavixInformatica,
-  Gastronomia: qualificavixCulinaria,
+  Tecnologia: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+  Administração: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80",
+  Design: "https://images.unsplash.com/photo-1522542550221-31fd19575a2d?auto=format&fit=crop&w=1200&q=80",
+  Marketing: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80",
+  Educação: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+  Gastronomia: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80",
+  Técnico: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1200&q=80",
 };
 
-const courseImage = (course: Course) => COURSE_IMAGES[course.category] ?? qualificavixCozinhaAula;
+const courseImage = (course: Course) => (course.image && course.image.trim().length > 0 ? course.image : COURSE_IMAGES[course.category] ?? qualificavixCozinhaAula);
 
 const CATEGORIES = [
   { id: 1, label: "Tecnologia",    count: 126, color: "#2563eb", icon: Laptop },
@@ -213,29 +229,79 @@ const CATEGORIES = [
 const DEFAULT_TESTIMONIALS: Testimonial[] = [
   {
     id: 1,
-    name: "Manuel Gomes",
-    role: "Desenvolvedora Front-end",
-    course: "Desenvolvimento Web",
-    quote: "Mudei completamente de carreira após o curso. Em 4 meses consegui meu primeiro emprego em tecnologia.",
+    name: "Sandra Lima",
+    role: "Auxiliar de cozinha",
+    course: "Gastronomia Brasileira",
+    quote: "Eu fazia diárias e minha renda variava muito. No curso aprendi boas práticas e técnicas de preparo; depois consegui uma vaga fixa em uma cozinha.",
     rating: 5,
+    illustrative: true,
   },
   {
     id: 2,
-    name: "Mateus Rangel",
-    role: "Empreendedor Digital",
-    course: "Marketing Digital",
-    quote: "Abri meu negócio três meses depois. A plataforma me deu toda a base que eu precisava para empreender.",
+    name: "Marcos Pereira",
+    role: "Eletricista auxiliar",
+    course: "Eletricista Predial",
+    quote: "Eu já ajudava em pequenos reparos, mas não tinha formação. Estudar segurança e instalações me ajudou a buscar oportunidades melhores e organizar meus serviços.",
     rating: 5,
+    illustrative: true,
   },
   {
     id: 3,
-    name: "Ryan De Paula",
-    role: "Designer Freelancer",
-    course: "Design Gráfico",
-    quote: "Eu buscava uma nova oportunidade profissional e o curso me ajudou a conquistar meus primeiros clientes.",
+    name: "Joana Souza",
+    role: "Assistente administrativa",
+    course: "Excel do Básico ao Avançado",
+    quote: "Eu tinha dificuldade com planilhas e relatórios. Com a prática, ganhei confiança para concorrer a vagas administrativas e consegui uma oportunidade mais estável.",
     rating: 5,
+    illustrative: true,
+  },
+  {
+    id: 4,
+    name: "Renata Alves",
+    role: "Pequena empreendedora",
+    course: "Marketing Digital na Prática",
+    quote: "Eu vendia doces para conhecidos e quase não divulgava meu trabalho. Aprendi a planejar conteúdo e hoje alcanço clientes além do meu bairro.",
+    rating: 5,
+    illustrative: true,
+  },
+  {
+    id: 5,
+    name: "Paulo Henrique",
+    role: "Assistente de suporte",
+    course: "Informática para o Mercado",
+    quote: "Depois de um tempo fora do mercado, eu precisava recuperar a confiança com computador e e-mail. O curso me ajudou a voltar a procurar trabalho com mais preparo.",
+    rating: 5,
+    illustrative: true,
+  },
+  {
+    id: 6,
+    name: "Aline Rocha",
+    role: "Designer iniciante",
+    course: "Design Gráfico para Iniciantes",
+    quote: "Eu fazia artes simples no celular, sem saber explicar minhas escolhas. Aprendi composição e identidade visual e comecei a montar um portfólio para buscar clientes.",
+    rating: 5,
+    illustrative: true,
+  },
+  {
+    id: 7,
+    name: "Diego Martins",
+    role: "Desenvolvedor júnior",
+    course: "Introdução à Programação",
+    quote: "Eu achava que tecnologia era uma área distante da minha realidade. Começar pela lógica e criar pequenos projetos me mostrou um caminho possível para mudar de carreira.",
+    rating: 5,
+    illustrative: true,
+  },
+  {
+    id: 8,
+    name: "Vera Costa",
+    role: "Atendente de loja",
+    course: "Atendimento ao Cliente",
+    quote: "Eu já atendia clientes, mas não sabia como lidar com reclamações difíceis. As técnicas de comunicação me ajudaram a crescer para uma função de referência na equipe.",
+    rating: 5,
+    illustrative: true,
   },
 ];
+
+const TESTIMONIAL_CAROUSEL_OPTIONS = { align: "start" as const, loop: true, slidesToScroll: 1 };
 
 // ─── Turtle Mascot SVG ────────────────────────────────────────────────────────
 function LegacyTurtleMascot({
@@ -547,16 +613,8 @@ function TurtleSmall({ size = 32 }: { size?: number }) {
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function Logo({ navigate }: { navigate: (p: Page) => void }) {
   return (
-    <button onClick={() => navigate("home")} className="flex items-center gap-2 shrink-0">
-      <TurtleSmall size={50} />
-      <div className="leading-none">
-        <p className="font-black text-xl tracking-tight" style={{ color: C.blueDark }}>
-          Qualifica
-        </p>
-        <p className="font-black text-xl tracking-tight -mt-1" style={{ color: C.orange }}>
-          Vix
-        </p>
-      </div>
+    <button onClick={() => navigate("home")} className="flex items-center shrink-0" aria-label="Qualifica Vix - início">
+      <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-20 sm:w-24 h-14 object-contain" />
     </button>
   );
 }
@@ -571,8 +629,7 @@ function StatusBadge({ status }: { status: Course["status"] }) {
 }
 
 // ─── Course Card (catálogo) ───────────────────────────────────────────────────
-function CourseCard({ course, onView }: { course: Course; onView: (c: Course) => void }) {
-  const [liked, setLiked] = useState(false);
+function CourseCard({ course, onView, isFavorite, onToggleFavorite }: { course: Course; onView: (c: Course) => void; isFavorite: boolean; onToggleFavorite: (id: number) => void }) {
   return (
     <article className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col group">
       {/* Fotografia do curso, sem sobreposição de categoria ou cor */}
@@ -583,10 +640,12 @@ function CourseCard({ course, onView }: { course: Course; onView: (c: Course) =>
           loading="lazy"
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <button onClick={(e) => { e.stopPropagation(); setLiked(l => !l); }}
-          aria-label={liked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(course.id); }}
+          aria-label={isFavorite ? `Remover ${course.title} dos favoritos` : `Adicionar ${course.title} aos favoritos`}
+          aria-pressed={isFavorite}
+          title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
           className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 shadow-md backdrop-blur-sm flex items-center justify-center hover:bg-white hover:scale-105 transition-all">
-          <Heart className={`w-4 h-4 ${liked ? "text-red-500" : "text-slate-700"}`} fill={liked ? "currentColor" : "none"} />
+          <Heart className={`w-4 h-4 ${isFavorite ? "text-red-500" : "text-slate-700"}`} fill={isFavorite ? "currentColor" : "none"} />
         </button>
       </div>
 
@@ -621,12 +680,23 @@ function CourseCard({ course, onView }: { course: Course; onView: (c: Course) =>
 const NAV = [
   { id: "home",       label: "Início" },
   { id: "cursos",     label: "Cursos" },
+  { id: "favorites",  label: "Favoritos" },
   { id: "categorias", label: "Categorias" },
   { id: "sobre",      label: "Sobre" },
   { id: "contato",    label: "Contato" },
+  { id: "profile",    label: "Meu perfil" },
 ];
 
-function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decreaseFont }: { page: Page; navigate: (p: Page) => void; darkMode: boolean; toggleDarkMode: () => void; increaseFont: () => void; decreaseFont: () => void }) {
+function ProfileAvatar({ name, photo, size = "w-10 h-10" }: { name: string; photo?: string; size?: string }) {
+  const initial = name.trim().charAt(0).toLocaleUpperCase("pt-BR") || "?";
+  return (
+    <span aria-hidden="true" className={`${size} shrink-0 rounded-full overflow-hidden border border-slate-200 bg-blue-700 text-white flex items-center justify-center font-black`}>
+      {photo ? <img src={photo} alt="" className="w-full h-full object-cover" /> : initial}
+    </span>
+  );
+}
+
+function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decreaseFont, profile }: { page: Page; navigate: (p: Page) => void; darkMode: boolean; toggleDarkMode: () => void; increaseFont: () => void; decreaseFont: () => void; profile: UserProfile | null }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -650,10 +720,9 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
             {NAV.map(n => (
               <button key={n.id} onClick={() => navigate(n.id as Page)}
                 className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors relative ${
-                  page === n.id
-                    ? "text-blue-700"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                }`}>
+                  page === n.id ? "" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+                style={page === n.id ? { color: C.blue } : {}}>
                 {n.label}
                 {page === n.id && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
@@ -708,10 +777,15 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
                 <Search className="w-4 h-4" />
               </button>
             )}
-            <button onClick={() => navigate("register")}
-              className="hidden sm:flex items-center gap-1.5 text-sm font-black px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
-              style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeDark} 100%)` }}>
-              Entrar / Cadastrar
+            <button onClick={() => navigate(profile ? "profile" : "register")}
+              aria-label={profile ? `Abrir perfil de ${profile.nome}` : "Entrar ou cadastrar"}
+              title={profile ? `Perfil de ${profile.nome}` : "Entrar / Cadastrar"}
+              className={profile
+                ? "hidden sm:flex rounded-full p-0.5 ring-2 ring-orange-400 ring-offset-2 ring-offset-white hover:ring-orange-500 transition-all"
+                : "hidden sm:flex items-center gap-1.5 text-sm font-black px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
+              }
+              style={profile ? {} : { background: `linear-gradient(135deg, ${C.orangeDark} 0%, ${C.orangeActionEnd} 100%)` }}>
+              {profile ? <ProfileAvatar name={profile.nome} photo={profile.fotoPerfil} /> : "Entrar / Cadastrar"}
             </button>
             <button onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500">
@@ -724,17 +798,18 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
         {mobileOpen && (
           <div className="lg:hidden border-t border-slate-100 py-3 flex flex-col gap-1">
             {NAV.map(n => (
-              <button key={n.id} onClick={() => { navigate(n.id as Page); setMobileOpen(true); }}
+              <button key={n.id} onClick={() => { navigate(n.id as Page); setMobileOpen(false); }}
                 className={`text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                  page === n.id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
-                }`}>
+                  page === n.id ? "" : "text-slate-600 hover:bg-slate-50"
+                }`}
+                style={page === n.id ? { backgroundColor: C.bluePale, color: C.blue } : {}}>
                 {n.label}
               </button>
             ))}
-            <button onClick={() => { navigate("register"); setMobileOpen(false); }}
+            <button onClick={() => { navigate(getUserProfile() ? "profile" : "register"); setMobileOpen(false); }}
               className="mt-1 flex items-center justify-center font-black text-sm py-2.5 rounded-xl text-white"
-              style={{ background: C.blueLight }}>
-              Entrar / Cadastrar
+              style={{ background: `linear-gradient(135deg, ${C.orangeDark} 0%, ${C.orangeActionEnd} 100%)` }}>
+              {getUserProfile() ? "Meu perfil" : "Entrar / Cadastrar"}
             </button>
             <div className="flex items-center gap-2 pt-2 mt-1 border-t border-slate-100">
               <button onClick={decreaseFont} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-sm font-black text-slate-600" aria-label="Reduzir tamanho da fonte"><Minus className="w-4 h-4" /> A−</button>
@@ -749,8 +824,27 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
 }
 
 // ─── Depoimentos ───────────────────────────────────────────────────────────────
-function TestimonialsSection() {
+function findTestimonialCourse(courseName: string): Course | undefined {
+  const query = normalizeChatText(courseName);
+  if (!query) return undefined;
+  const exactMatch = COURSES.find(course => normalizeChatText(course.title) === query);
+  if (exactMatch) return exactMatch;
+  const partialMatches = COURSES.filter(course => {
+    const title = normalizeChatText(course.title);
+    return title.includes(query) || query.includes(title);
+  });
+  return partialMatches.length === 1 ? partialMatches[0] : undefined;
+}
+
+function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Course) => void }) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | undefined>();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [autoplayPaused, setAutoplayPaused] = useState(() =>
+    typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const [carouselHovered, setCarouselHovered] = useState(false);
+  const [carouselFocused, setCarouselFocused] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -758,6 +852,22 @@ function TestimonialsSection() {
   const [quote, setQuote] = useState("");
   const [rating, setRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    const updateCurrentSlide = () => setCurrentSlide(carouselApi.selectedScrollSnap());
+    updateCurrentSlide();
+    carouselApi.on("select", updateCurrentSlide);
+    return () => { carouselApi.off("select", updateCurrentSlide); };
+  }, [carouselApi]);
+
+  useEffect(() => {
+    if (!carouselApi || autoplayPaused || carouselHovered || carouselFocused || testimonials.length < 2) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") carouselApi.scrollNext();
+    }, 5200);
+    return () => window.clearInterval(timer);
+  }, [carouselApi, autoplayPaused, carouselHovered, carouselFocused, testimonials.length]);
 
   useEffect(() => {
     let active = true;
@@ -801,14 +911,14 @@ function TestimonialsSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orange }}>
-            Histórias reais
+            Histórias que inspiram
           </p>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900">
-            Quem estudou, transformou
+            Aprender pode abrir novos caminhos
           </h2>
           <p className="text-slate-600 mt-3 max-w-2xl mx-auto font-medium leading-relaxed">
-            Conte como um curso do QualificaVix ajudou você a conquistar uma nova oportunidade,
-            mudar de carreira, aumentar sua renda ou realizar um projeto.
+            Conheça jornadas ilustrativas de pessoas que usaram a qualificação para buscar novas oportunidades.
+            Os personagens e relatos fictícios estão identificados; depoimentos enviados por participantes aparecem separados.
           </p>
         </div>
 
@@ -821,62 +931,101 @@ function TestimonialsSection() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.slice(0, 6).map(t => (
-            <article
-              key={t.id}
-              className="bg-white rounded-3xl p-6 shadow-md border border-blue-100 hover:-translate-y-1 hover:shadow-xl transition-all flex flex-col"
-            >
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black shrink-0 shadow-sm"
-                    style={{ background: `linear-gradient(135deg, ${C.blue} 0%, ${C.blueMid} 100%)` }}
-                  >
-                    {t.name.charAt(0).toUpperCase()}
+        <Carousel
+          opts={TESTIMONIAL_CAROUSEL_OPTIONS}
+          setApi={setCarouselApi}
+          aria-label="Histórias de transformação"
+          onMouseEnter={() => setCarouselHovered(true)}
+          onMouseLeave={() => setCarouselHovered(false)}
+          onFocusCapture={() => setCarouselFocused(true)}
+          onBlurCapture={event => {
+            const nextTarget = event.relatedTarget;
+            if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) setCarouselFocused(false);
+          }}
+        >
+          <CarouselContent>
+            {testimonials.map(testimonial => (
+              <CarouselItem key={`${testimonial.illustrative ? "illustrative" : "participant"}-${testimonial.id}`} className="basis-full sm:basis-1/2 lg:basis-1/3">
+                {(() => {
+                  const matchingCourse = findTestimonialCourse(testimonial.course);
+                  return (
+                <article className="h-full min-h-80 bg-white rounded-2xl p-5 sm:p-6 shadow-md border border-blue-100 flex flex-col">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black shrink-0 shadow-sm"
+                        style={{ background: `linear-gradient(135deg, ${C.blue} 0%, ${C.blueMid} 100%)` }}>
+                        {testimonial.name.charAt(0).toLocaleUpperCase("pt-BR")}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-black text-slate-900 truncate">{testimonial.name}</p>
+                        <p className="text-xs font-bold text-slate-500 truncate">{testimonial.role}</p>
+                      </div>
+                    </div>
+                    {!testimonial.illustrative && (
+                      <div className="flex gap-0.5 shrink-0" aria-label={`${testimonial.rating} de 5 estrelas`}>
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star key={index} className="w-4 h-4" fill={index < testimonial.rating ? C.orange : "none"}
+                            style={{ color: index < testimonial.rating ? C.orange : "#cbd5e1" }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-black text-slate-900 truncate">{t.name}</p>
-                    <p className="text-xs font-bold text-slate-500 truncate">{t.role}</p>
+
+                  <div className="rounded-lg px-3 py-2 mb-4 text-xs font-black inline-flex self-start"
+                    style={{ backgroundColor: C.orangeLight, color: C.orangeDark }}>
+                    {testimonial.course}
                   </div>
-                </div>
 
-                <div className="flex gap-0.5 shrink-0" aria-label={`${t.rating} de 5 estrelas`}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4"
-                      fill={i < t.rating ? C.orange : "none"}
-                      style={{ color: i < t.rating ? C.orange : "#cbd5e1" }}
-                    />
-                  ))}
-                </div>
-              </div>
+                  <blockquote className="text-sm sm:text-base text-slate-600 leading-relaxed italic flex-1">
+                    “{testimonial.quote}”
+                  </blockquote>
 
-              <div
-                className="rounded-xl px-3 py-2 mb-4 text-xs font-black inline-flex self-start"
-                style={{ backgroundColor: C.orangeLight, color: C.orangeDark }}
-              >
-                📚 {t.course}
-              </div>
+                  {matchingCourse && (
+                    <button type="button" onClick={() => onEnrollCourse(matchingCourse)}
+                      className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black text-slate-950 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 transition-all"
+                      style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
+                      Inscrever-se neste curso <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
 
-              <blockquote className="text-sm sm:text-base text-slate-600 leading-relaxed italic flex-1">
-                “{t.quote}”
-              </blockquote>
-
-              <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-green-700">
-                <CheckCircle2 className="w-4 h-4" />
-                História de transformação
-              </div>
-            </article>
-          ))}
-        </div>
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-slate-600">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: testimonial.illustrative ? C.orangeDark : "#16a34a" }} />
+                    {testimonial.illustrative ? "História ilustrativa · personagem fictício" : "Relato enviado por participante"}
+                  </div>
+                </article>
+                  );
+                })()}
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
+            <p className="text-xs font-semibold text-slate-500" aria-live="polite">
+              História {currentSlide + 1} de {carouselApi?.scrollSnapList().length ?? testimonials.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => carouselApi?.scrollPrev()} aria-label="História anterior" title="História anterior"
+                className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center hover:border-blue-300 hover:text-blue-700 transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={() => setAutoplayPaused(paused => !paused)} aria-pressed={autoplayPaused}
+                aria-label={autoplayPaused ? "Retomar passagem automática" : "Pausar passagem automática"}
+                title={autoplayPaused ? "Retomar" : "Pausar"}
+                className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center hover:border-orange-300 hover:text-orange-700 transition-colors">
+                {autoplayPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              </button>
+              <button type="button" onClick={() => carouselApi?.scrollNext()} aria-label="Próxima história" title="Próxima história"
+                className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center hover:border-blue-300 hover:text-blue-700 transition-colors">
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </Carousel>
 
         <div className="text-center mt-10">
           <button
             onClick={() => setShowForm(value => !value)}
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl text-white font-black shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
-            style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeDark} 100%)` }}
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl text-slate-950 font-black shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
+            style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}
           >
             <Star className="w-5 h-5" fill="currentColor" />
             {showForm ? "Fechar formulário" : "Compartilhar minha história"}
@@ -997,16 +1146,17 @@ function TestimonialsSection() {
 }
 
 // ─── HomePage ─────────────────────────────────────────────────────────────────
-function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void }) {
+function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, onToggleFavorite, profile }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; onEnrollCourse: (course: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void; profile: UserProfile | null }) {
   const [bgIdx, setBgIdx] = useState(0);
   const heroBgs = [
-    { src: vitoriaCidade, alt: "Vista panorâmica da cidade de Vitória" },
-    { src: qualificavixInformatica, alt: "Curso de informática do programa QualificaVix" },
-    { src: qualificavixCulinaria, alt: "Curso de culinária oferecido pela Prefeitura de Vitória" },
-    { src: vitoriaPaisagem, alt: "Paisagem urbana e natural de Vitória" },
-    { src: qualificavixTecnologia, alt: "Curso de tecnologia apoiado pela Prefeitura de Vitória" },
-    { src: qualificavixPanificacao, alt: "Alunos em curso profissionalizante de panificação" },
-    { src: qualificavixCozinhaAula, alt: "Aula prática de gastronomia do QualificaVix" },
+    { src: vitoriaDoisOlhos1, alt: "Vista panorâmica do skyline de Vitória-ES" },
+    { src: vitoriaTerceiraPonte, alt: "Panorama da Terceira Ponte em Vitória-ES" },
+    { src: vitoriaDoisOlhos2, alt: "Vista da cidade de Vitória-ES a partir da Pedra dos Dois Olhos" },
+    { src: qualificavixTecnologia, alt: "Curso profissionalizante de tecnologia do QualificaVix" },
+    { src: qualificavixInformatica, alt: "Aula de informática e capacitação profissional do QualificaVix" },
+    { src: qualificavixCulinaria, alt: "Curso profissionalizante de culinária do QualificaVix" },
+    { src: qualificavixCozinhaAula, alt: "Sala de aula de gastronomia do QualificaVix" },
+    { src: qualificavixPanificacao, alt: "Curso profissionalizante de panificação do QualificaVix" },
   ];
   useEffect(() => {
     const t = setInterval(() => setBgIdx(i => (i + 1) % heroBgs.length), 5000);
@@ -1018,7 +1168,7 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
   return (
     <div>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 60%, #1e40af 100%)` }}>
+      <section className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 60%, ${C.blueMid} 100%)` }}>
         {heroBgs.map((bg, i) => (
           <div key={bg.src} className={`absolute inset-0 transition-opacity duration-1000 ${i === bgIdx ? "opacity-45" : "opacity-0"}`}>
             <img src={bg.src} alt={bg.alt} loading={i < 2 ? "eager" : "lazy"}
@@ -1047,7 +1197,7 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
               <div className="flex flex-wrap gap-3">
                 <button onClick={() => navigate("cursos")}
                   className="flex items-center gap-2 font-black text-slate-900 px-7 py-3.5 rounded-2xl shadow-xl hover:scale-105 transition-all"
-                  style={{ background: `linear-gradient(135deg, ${C.orange} 0%, #fb923c 100%)` }}>
+                  style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
                   Explorar cursos <ArrowRight className="w-5 h-5" />
                 </button>
                 <button onClick={() => navigate("sobre")}
@@ -1075,8 +1225,8 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
         </div>
 
         {/* Wave bottom */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden">
+          <svg viewBox="0 0 1440 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="block -mt-px" style={{ display: "block" }}>
             <path d="M0 48L1440 48L1440 0C1440 0 1200 40 720 40C240 40 0 0 0 0L0 48Z" fill="white"/>
           </svg>
         </div>
@@ -1086,7 +1236,7 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: C.orange }}>Explore por área</p>
+            <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: C.orangeDark }}>Explore por área</p>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Explore por categoria</h2>
           </div>
           <button onClick={() => navigate("categorias")}
@@ -1116,7 +1266,7 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: C.orange }}>Mais populares</p>
+              <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: C.orangeDark }}>Mais populares</p>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Cursos em destaque</h2>
             </div>
             <button onClick={() => navigate("cursos")}
@@ -1127,11 +1277,11 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {featured.map((c, i) => (
               <div key={c.id} className="relative">
-                <div className="absolute -top-3 left-3 z-10 text-xs font-black text-white px-3 py-1 rounded-full shadow-lg"
-                  style={{ background: i === 0 ? C.orange : i === 1 ? C.blue : i === 2 ? "#7c3aed" : "#db2777" }}>
+                <div className="absolute -top-3 left-3 z-10 text-xs font-black px-3 py-1 rounded-full shadow-lg"
+                  style={{ color: i === 0 ? "#123047" : "#ffffff", background: i === 0 ? C.orange : i === 1 ? C.blue : i === 2 ? "#7c3aed" : "#db2777" }}>
                   {i === 0 ? "1º Destaque" : i === 1 ? "2º Destaque" : i === 2 ? "3º Destaque" : "4º Destaque"}
                 </div>
-                <CourseCard course={c} onView={onViewCourse} />
+                <CourseCard course={c} onView={onViewCourse} isFavorite={favoriteCourseIds.includes(c.id)} onToggleFavorite={onToggleFavorite} />
               </div>
             ))}
           </div>
@@ -1140,45 +1290,78 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
 
       {/* ── Como funciona ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <style>{`
+          @keyframes registration-step-enter {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes registration-flow-draw {
+            to { transform: scaleX(1); }
+          }
+          .registration-step { animation: registration-step-enter 480ms cubic-bezier(.2,.7,.2,1) both; }
+          .registration-flow-track { display: none; }
+          .registration-flow-track::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, #ff8500, #ffb21a);
+            transform: scaleX(0);
+            transform-origin: left;
+            animation: registration-flow-draw 1.4s 250ms ease-out forwards;
+          }
+          @media (min-width: 1024px) {
+            .registration-flow-track { display: block; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .registration-step, .registration-flow-track::after { animation: none; }
+          }
+        `}</style>
         <div className="text-center mb-12">
-          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orange }}>Simples assim</p>
+          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orangeDark }}>Simples assim</p>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Como se inscrever</h2>
           <p className="text-slate-500 mt-2 text-sm max-w-md mx-auto">Quatro passos simples para começar sua jornada de qualificação.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="relative">
+          <div aria-hidden="true" className="registration-flow-track absolute left-[12.5%] right-[12.5%] top-[5rem] h-0.5 rounded-full bg-slate-200" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
           {[
-            { step: "01", icon: UserCheck, title: "Crie sua conta", desc: "Cadastre-se gratuitamente com seus dados pessoais.", color: C.blue },
-            { step: "02", icon: Search,    title: "Encontre o curso", desc: "Navegue pelo catálogo e escolha o que combina com você.", color: "#7c3aed" },
-            { step: "03", icon: BookOpen,  title: "Faça a inscrição", desc: "Inscreva-se no curso desejado com um clique.", color: C.orange },
-            { step: "04", icon: Award,     title: "Receba o certificado", desc: "Conclua o curso e obtenha seu certificado digital.", color: "#16a34a" },
-          ].map(s => (
-            <div key={s.step} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-              <span className="absolute top-4 right-4 text-5xl font-black opacity-[0.06]" style={{ color: s.color }}>{s.step}</span>
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                style={{ backgroundColor: `${s.color}15` }}>
-                <s.icon className="w-6 h-6" style={{ color: s.color }} />
+            { step: "01", icon: UserCheck, title: "Crie sua conta", desc: "Cadastre-se gratuitamente com seus dados pessoais.", color: C.blue, action: () => navigate(profile ? "profile" : "register") },
+            { step: "02", icon: Search, title: "Encontre o curso", desc: "Navegue pelo catálogo e escolha o que combina com você.", color: "#7c3aed", action: () => navigate("cursos") },
+            { step: "03", icon: BookOpen, title: "Faça a inscrição", desc: "Inscreva-se no curso desejado com um clique.", color: C.orange, action: () => navigate("cursos") },
+            { step: "04", icon: Award, title: "Receba o certificado", desc: "Conclua o curso e consulte suas informações no perfil.", color: "#16a34a", action: () => navigate(profile ? "profile" : "cursos") },
+          ].map((stepItem, index) => (
+            <button key={stepItem.step} type="button" onClick={stepItem.action}
+              style={{ animationDelay: `${index * 110}ms` }}
+              className="registration-step group relative z-10 min-h-64 w-full rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 text-left shadow-sm hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 transition-all">
+              <span className="absolute top-4 right-4 text-5xl font-black opacity-[0.06]" style={{ color: stepItem.color }}>{stepItem.step}</span>
+              <div className="relative z-10 mb-5 flex h-14 w-14 items-center justify-center rounded-2xl ring-4 ring-white shadow-sm transition-transform group-hover:scale-105"
+                style={{ backgroundColor: `${stepItem.color}15` }}>
+                <stepItem.icon className="w-6 h-6" style={{ color: stepItem.color }} />
               </div>
-              <h3 className="font-black text-slate-900 mb-2">{s.title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">{s.desc}</p>
-            </div>
+              <h3 className="font-black text-slate-900 mb-2 flex items-center justify-between gap-2">
+                {stepItem.title}<ArrowRight className="w-4 h-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-orange-500" />
+              </h3>
+              <p className="text-sm text-slate-500 leading-relaxed">{stepItem.desc}</p>
+            </button>
           ))}
+          </div>
         </div>
       </section>
 
       {/* ── Depoimentos e histórias de transformação ── */}
-      <TestimonialsSection />
+      <TestimonialsSection onEnrollCourse={onEnrollCourse} />
 
       {/* ── CTA Banner ── */}
       <section className="py-16" style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}>
         <div className="max-w-3xl mx-auto px-4 text-center text-white">
-          <TurtleMascot size={80} className="mx-auto mb-4" />
+          <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-32 h-28 object-contain mx-auto mb-4" />
           <h2 className="text-3xl font-black mb-3">Pronto para começar?</h2>
           <p className="text-blue-100 mb-7 font-medium">
             Mais de 12 mil cidadãos já transformaram suas carreiras. Cadastre-se e comece hoje.
           </p>
           <button onClick={() => navigate("register")}
             className="font-black text-slate-900 px-8 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all inline-flex items-center gap-2"
-            style={{ background: `linear-gradient(135deg, ${C.orange} 0%, #fb923c 100%)` }}>
+            style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
             Criar conta gratuita <ArrowRight className="w-5 h-5" />
           </button>
         </div>
@@ -1188,7 +1371,7 @@ function HomePage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onV
 }
 
 // ─── CoursesPage ──────────────────────────────────────────────────────────────
-function CoursesPage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void }) {
+function CoursesPage({ navigate, onViewCourse, favoriteCourseIds, onToggleFavorite }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void }) {
   const [search, setSearch] = useState(() => {
     const initialSearch = sessionStorage.getItem("qualificavix-course-search") ?? "";
     sessionStorage.removeItem("qualificavix-course-search");
@@ -1262,7 +1445,7 @@ function CoursesPage({ navigate, onViewCourse }: { navigate: (p: Page) => void; 
         {/* Grid */}
         {filtered.length === 0 ? (
           <div className="text-center py-20">
-            <TurtleMascot size={80} className="mx-auto mb-4 opacity-40" />
+            <Search className="w-12 h-12 mx-auto mb-4 text-slate-300" aria-hidden="true" />
             <p className="font-bold text-slate-500">Nenhum curso encontrado para sua busca.</p>
             <button onClick={() => setSearch("")} className="mt-3 text-sm font-bold" style={{ color: C.blue }}>
               Limpar busca
@@ -1270,7 +1453,44 @@ function CoursesPage({ navigate, onViewCourse }: { navigate: (p: Page) => void; 
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filtered.map(c => <CourseCard key={c.id} course={c} onView={onViewCourse} />)}
+            {filtered.map(c => <CourseCard key={c.id} course={c} onView={onViewCourse} isFavorite={favoriteCourseIds.includes(c.id)} onToggleFavorite={onToggleFavorite} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FavoritesPage({ favoriteCourseIds, onToggleFavorite, onViewCourse, navigate }: { favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void; onViewCourse: (c: Course) => void; navigate: (p: Page) => void }) {
+  const favoriteCourses = COURSES.filter(course => favoriteCourseIds.includes(course.id));
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="bg-white border-b border-slate-100 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orangeDark }}>Sua lista</p>
+          <h1 className="text-3xl font-black text-slate-900 mb-1">Cursos favoritados</h1>
+          <p className="text-slate-500 font-medium">Guarde cursos para consultar e se inscrever depois. A lista fica salva neste navegador.</p>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {favoriteCourses.length ? (
+          <>
+            <p className="text-sm font-semibold text-slate-500 mb-5">{favoriteCourses.length} {favoriteCourses.length === 1 ? "curso salvo" : "cursos salvos"}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {favoriteCourses.map(course => (
+                <CourseCard key={course.id} course={course} onView={onViewCourse} isFavorite onToggleFavorite={onToggleFavorite} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-20">
+            <Heart className="w-12 h-12 mx-auto mb-4 text-slate-300" aria-hidden="true" />
+            <h2 className="font-black text-slate-800 mb-2">Sua lista está vazia</h2>
+            <p className="text-sm text-slate-500 mb-5">Use o coração nos cursos para guardá-los aqui.</p>
+            <button onClick={() => navigate("cursos")} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-black" style={{ background: C.blue }}>
+              Explorar cursos <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
@@ -1279,7 +1499,7 @@ function CoursesPage({ navigate, onViewCourse }: { navigate: (p: Page) => void; 
 }
 
 // ─── CourseDetailPage ─────────────────────────────────────────────────────────
-function CourseDetailPage({ course, navigate, onRegister }: { course: Course; navigate: (p: Page) => void; onRegister: () => void }) {
+function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, onToggleFavorite }: { course: Course; navigate: (p: Page) => void; onRegister: () => void; enrolled: boolean; isFavorite: boolean; onToggleFavorite: (id: number) => void }) {
   const [tab, setTab] = useState<"sobre" | "conteudo" | "instrutor" | "requisitos" | "certificado" | "instituicao">("sobre");
 
   const tabs = [
@@ -1323,7 +1543,6 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                 { icon: Clock,   label: `${course.hours} horas`,   sub: "Carga horária" },
                 { icon: Monitor, label: course.modality,           sub: "Modalidade" },
                 { icon: Star,    label: course.level,              sub: "Nível" },
-                { icon: MapPin,  label: course.location,           sub: "Localização" },
               ].map(info => (
                 <div key={info.sub} className="bg-slate-100 rounded-xl p-3 text-center">
                   <info.icon className="w-5 h-5 mx-auto mb-1" style={{ color: C.blue }} />
@@ -1331,6 +1550,17 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                   <p className="text-[10px] text-slate-500 font-semibold">{info.sub}</p>
                 </div>
               ))}
+              {course.location && course.modality !== "Online" && (
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${course.location}, Vitória - ES`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  aria-label={`Abrir rota para ${course.location} no Google Maps`}
+                  title={`Como chegar a ${course.location}`}
+                  className="bg-slate-100 rounded-xl p-3 text-center hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+                  <MapPin className="w-5 h-5 mx-auto mb-1" style={{ color: C.blue }} />
+                  <p className="font-black text-xs text-slate-900">{course.location}</p>
+                  <p className="text-[10px] text-slate-500 font-semibold">Como chegar</p>
+                </a>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-3 mb-5">
@@ -1339,14 +1569,31 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                 📅 {course.period}
               </span>
               <span className="text-xs font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                ⏱ {course.duration}
+                ⏱ Duração prevista: {course.duration}
               </span>
               <span className="text-xs font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                👥 {course.enrolled} inscritos
+                👥 {course.enrolled} inscrições informadas no catálogo
               </span>
-              <span className="text-xs font-black px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-                💰 Média: {course.avgSalary}
-              </span>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 mb-5">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Instituição ofertante</p>
+                <p className="text-xs font-bold text-slate-800">{course.provider}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Local de oferta</p>
+                <p className="text-xs font-bold text-slate-800">
+                  {course.location || (course.modality === "Online" ? "Online, sem polo presencial informado" : "Polo presencial não informado")}
+                </p>
+                {course.location && <p className="text-[10px] text-slate-500 mt-1">Endereço completo não consta nesta ficha.</p>}
+              </div>
+              <div className="sm:col-span-2 rounded-xl border border-green-100 bg-green-50 p-3">
+                <p className="text-xs font-black text-green-800">Referência salarial mensal de profissionais da área: {course.avgSalary}</p>
+                <p className="text-[10px] leading-relaxed text-green-800/80 mt-1">
+                  Valor ilustrativo do catálogo, sem fonte estatística ou recorte metodológico informado. A remuneração varia por função, experiência, região e vínculo; concluir o curso não garante emprego nem salário.
+                </p>
+              </div>
             </div>
 
             {/* Indicado para */}
@@ -1364,12 +1611,16 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
 
             <div className="flex gap-3">
               <button onClick={onRegister}
-                className="flex-1 flex items-center justify-center gap-2 font-black text-white py-3.5 rounded-xl hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg"
-                style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeDark} 100%)` }}>
-                Inscrever-se <ArrowRight className="w-5 h-5" />
+                className="flex-1 flex items-center justify-center gap-2 font-black text-slate-950 py-3.5 rounded-xl hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg"
+                style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
+                {enrolled ? "Inscrito" : "Inscrever-se"} <ArrowRight className="w-5 h-5" />
               </button>
-              <button className="w-12 h-12 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:border-red-300 hover:text-red-500 transition-colors">
-                <Heart className="w-5 h-5" />
+              <button onClick={() => onToggleFavorite(course.id)}
+                aria-label={isFavorite ? `Remover ${course.title} dos favoritos` : `Adicionar ${course.title} aos favoritos`}
+                aria-pressed={isFavorite}
+                title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                className={`w-12 h-12 rounded-xl border flex items-center justify-center transition-colors ${isFavorite ? "border-red-300 text-red-500 bg-red-50" : "border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-500"}`}>
+                <Heart className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
               </button>
             </div>
           </div>
@@ -1408,21 +1659,21 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                 </div>
                 <div>
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                    <h4 className="font-black text-slate-900 mb-4">Instituição parceira</h4>
+                    <h4 className="font-black text-slate-900 mb-4">Dados desta oferta</h4>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
                         <Building2 className="w-6 h-6" style={{ color: C.blue }} />
                       </div>
                       <div>
-                        <p className="font-black text-sm text-slate-900">Prefeitura de Vitória</p>
-                        <p className="text-xs text-slate-500 font-semibold">Secretaria de Cidadania,<br/>Trabalho e Educação</p>
+                        <p className="font-black text-sm text-slate-900">{course.provider}</p>
+                        <p className="text-xs text-slate-500 font-semibold">Instituição responsável conforme cadastro</p>
                       </div>
                     </div>
                     <div className="space-y-2">
                       {[
-                        { icon: Award,   label: "Certificado ao final do curso" },
-                        { icon: Clock,   label: `Acesso por ${course.duration}` },
-                        { icon: Users,   label: "Suporte durante o curso" },
+                        { icon: Clock, label: `${course.hours} horas de carga horária prevista` },
+                        { icon: Clock, label: `Duração estimada: ${course.duration}` },
+                        { icon: MapPin, label: course.location || "Oferta online; local físico não aplicável" },
                       ].map(item => (
                         <div key={item.label} className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                           <item.icon className="w-4 h-4" style={{ color: C.blue }} />
@@ -1430,6 +1681,9 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                         </div>
                       ))}
                     </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed mt-4">
+                      Datas, endereço completo, instrutor, regras de certificado e confirmação da parceria não estão detalhados nesta ficha. Consulte o edital da turma antes de se inscrever.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1439,15 +1693,14 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
               <div>
                 <h3 className="font-black text-slate-900 text-lg mb-5">Conteúdo programático</h3>
                 <div className="space-y-3">
-                  {["Módulo 1 — Fundamentos e conceitos básicos",
-                    "Módulo 2 — Ferramentas e ambiente de trabalho",
-                    "Módulo 3 — Prática guiada com projetos reais",
-                    "Módulo 4 — Técnicas avançadas e boas práticas",
-                    "Módulo 5 — Projeto final e avaliação"].map((mod, i) => (
-                    <div key={mod} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-blue-200 transition-colors">
+                  {course.whatYouLearn.map((topic, i) => (
+                    <div key={topic} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-blue-200 transition-colors">
                       <span className="w-8 h-8 rounded-full font-black text-sm flex items-center justify-center text-white shrink-0"
                         style={{ background: C.blue }}>{i + 1}</span>
-                      <p className="font-semibold text-sm text-slate-700">{mod}</p>
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Tópico {i + 1}</p>
+                        <p className="font-semibold text-sm text-slate-700">{topic}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1460,12 +1713,9 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                   <Users className="w-8 h-8" style={{ color: C.blue }} />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-lg">Prof. Equipe QualificaVix</h3>
-                  <p className="text-sm font-bold mb-2" style={{ color: C.blue }}>Especialista certificado · 10+ anos de experiência</p>
+                  <h3 className="font-black text-slate-900 text-lg">Instrutor da turma</h3>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Nossa equipe de instrutores é formada por profissionais altamente qualificados, com vasta experiência
-                    no mercado e dedicação ao aprendizado prático. Todos os professores passam por processo seletivo rigoroso
-                    e recebem formação pedagógica continuada pela Secretaria de Educação de Vitória.
+                    Nome, formação e experiência do instrutor não foram informados no cadastro deste curso. Esses dados devem ser publicados pela instituição responsável junto ao calendário da turma.
                   </p>
                 </div>
               </div>
@@ -1475,11 +1725,14 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
               <div>
                 <h3 className="font-black text-slate-900 text-lg mb-4">Pré-requisitos</h3>
                 <div className="space-y-2">
-                  {["Ter 16 anos ou mais", "Residir ou trabalhar em Vitória - ES",
-                    `Escolaridade mínima: ${course.level === "Iniciante" ? "Ensino Fundamental" : "Ensino Médio"} completo`,
-                    "Disponibilidade para o horário do curso", "Acesso à internet (cursos online)"].map(r => (
+                  { [
+                    `Nível informado no catálogo: ${course.level}. Isso não substitui os pré-requisitos oficiais.`,
+                    "Idade mínima, escolaridade e experiência prévia: confirmar no edital da turma.",
+                    "Documentos, prazo de inscrição e critérios de seleção: confirmar com a instituição ofertante.",
+                    course.modality === "Online" ? "É necessário acesso a um dispositivo compatível e à internet; plataforma e requisitos técnicos devem ser confirmados." : "Confira datas, turno e endereço completo do polo antes de se deslocar.",
+                  ].map(r => (
                     <div key={r} className="flex items-center gap-2 text-sm font-semibold text-slate-700 p-3 bg-slate-50 rounded-xl">
-                      <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "#16a34a" }} />
+                      <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: C.blue }} />
                       {r}
                     </div>
                   ))}
@@ -1493,24 +1746,12 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
                   style={{ background: `${C.orange}15` }}>
                   <Award className="w-10 h-10" style={{ color: C.orange }} />
                 </div>
-                <h3 className="font-black text-slate-900 text-xl mb-3">Certificado de Conclusão</h3>
+                <h3 className="font-black text-slate-900 text-xl mb-3">Certificação</h3>
                 <p className="text-slate-600 leading-relaxed mb-5 text-sm">
-                  Ao concluir o curso com aproveitamento mínimo de 75%, você receberá um certificado digital
-                  emitido pela Prefeitura de Vitória, reconhecido pelo mercado de trabalho capixaba.
+                  Esta ficha não informa se há certificado, quem o emite nem quais são os critérios de frequência e aproveitamento. Confirme essas condições no edital ou diretamente com a instituição ofertante antes da inscrição.
                 </p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-slate-50 rounded-xl p-3 font-semibold text-slate-600">
-                    ✅ Reconhecimento oficial
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-3 font-semibold text-slate-600">
-                    📱 100% digital
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-3 font-semibold text-slate-600">
-                    📤 Compartilhável no LinkedIn
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-3 font-semibold text-slate-600">
-                    📁 Válido na CTPS
-                  </div>
+                <div className="bg-slate-50 rounded-xl p-4 text-sm font-semibold text-slate-600">
+                  A conclusão do curso não garante contratação, renda ou habilitação profissional regulamentada.
                 </div>
               </div>
             )}
@@ -1518,24 +1759,21 @@ function CourseDetailPage({ course, navigate, onRegister }: { course: Course; na
             {tab === "instituicao" && (
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="font-black text-slate-900 text-lg mb-4">Prefeitura Municipal de Vitória</h3>
+                  <h3 className="font-black text-slate-900 text-lg mb-4">Instituição e local desta oferta</h3>
                   <p className="text-sm text-slate-600 leading-relaxed mb-4">
-                    A Prefeitura de Vitória, por meio da Secretaria de Cidadania, Trabalho e Educação,
-                    é responsável pela coordenação do QualificaVix e pelo credenciamento de todas as
-                    instituições parceiras que oferecem cursos na plataforma.
+                    <strong>Instituição ofertante:</strong> {course.provider}.<br />
+                    <strong>Modalidade:</strong> {course.modality}.<br />
+                    <strong>Local informado:</strong> {course.location || (course.modality === "Online" ? "Online, sem polo presencial cadastrado." : "Não informado no catálogo.")}
                   </p>
                   <div className="space-y-2 text-sm font-semibold text-slate-600">
-                    <p className="flex items-center gap-2"><MapPin className="w-4 h-4" style={{ color: C.blue }} /> Vitória, Espírito Santo</p>
-                    <p className="flex items-center gap-2"><Globe className="w-4 h-4" style={{ color: C.blue }} /> vitoria.es.gov.br</p>
-                    <p className="flex items-center gap-2"><Phone className="w-4 h-4" style={{ color: C.blue }} /> 0800 123 4567</p>
+                    <p className="flex items-center gap-2"><MapPin className="w-4 h-4" style={{ color: C.blue }} /> Endereço completo: não informado nesta ficha</p>
+                    {course.location && <p className="flex items-center gap-2"><Globe className="w-4 h-4" style={{ color: C.blue }} /> Use o mapa do local cadastrado e confirme a unidade antes de sair.</p>}
                   </div>
                 </div>
                 <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
-                  <h4 className="font-black text-slate-900 mb-3">Secretaria parceira</h4>
-                  <p className="text-sm font-bold text-blue-700 mb-2">Secretaria de Cidadania, Trabalho e Educação</p>
+                  <h4 className="font-black text-slate-900 mb-3">Confirmações importantes</h4>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Responsável pela política pública de qualificação profissional do município,
-                    garantindo acesso gratuito à educação profissional para todos os cidadãos vitorienses.
+                    Unidade, endereço, calendário, vagas, responsável pela oferta e regras de certificação podem variar por turma. A ficha atual não contém um contato direto nem o edital; consulte o canal oficial indicado para a inscrição para validar essas informações.
                   </p>
                 </div>
               </div>
@@ -1557,7 +1795,7 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 0)", backgroundSize: "28px 28px" }} />
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <TurtleMascot size={90} className="mx-auto mb-5" />
+          <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-32 h-28 object-contain mx-auto mb-5" />
           <h1 className="text-4xl font-black mb-4">Sobre o QualificaVix</h1>
           <p className="text-xl text-blue-100 leading-relaxed font-medium max-w-2xl mx-auto">
             A plataforma oficial de cursos profissionalizantes gratuitos da Prefeitura de Vitória para os cidadãos capixabas.
@@ -1569,7 +1807,7 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
         {/* Missão */}
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: C.orange }}>Nossa missão</p>
+            <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: C.orangeDark }}>Nossa missão</p>
             <h2 className="text-3xl font-black text-slate-900 mb-5 leading-tight">
               Qualificação profissional acessível para todo cidadão vitoriense
             </h2>
@@ -1636,7 +1874,7 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
 
         {/* Como funciona */}
         <div className="mb-16">
-          <p className="text-xs font-black uppercase tracking-widest mb-3 text-center" style={{ color: C.orange }}>Metodologia</p>
+          <p className="text-xs font-black uppercase tracking-widest mb-3 text-center" style={{ color: C.orangeDark }}>Metodologia</p>
           <h2 className="text-2xl font-black text-slate-900 mb-8 text-center">Como a plataforma funciona</h2>
           <div className="grid sm:grid-cols-3 gap-6">
             {[
@@ -1671,8 +1909,8 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
         {/* CTA */}
         <div className="text-center">
           <button onClick={() => navigate("register")}
-            className="font-black text-white px-8 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all inline-flex items-center gap-2 mr-3"
-            style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeDark} 100%)` }}>
+            className="font-black text-slate-950 px-8 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all inline-flex items-center gap-2 mr-3"
+            style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
             Criar conta gratuita <ArrowRight className="w-5 h-5" />
           </button>
           <button onClick={() => navigate("cursos")}
@@ -1687,7 +1925,7 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
 }
 
 // ─── CategoriasPage ───────────────────────────────────────────────────────────
-function CategoriasPage({ navigate, onViewCourse }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void }) {
+function CategoriasPage({ navigate, onViewCourse, favoriteCourseIds, onToggleFavorite }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const filtered = selected ? COURSES.filter(c => c.category === selected) : COURSES;
 
@@ -1718,7 +1956,7 @@ function CategoriasPage({ navigate, onViewCourse }: { navigate: (p: Page) => voi
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filtered.map(c => <CourseCard key={c.id} course={c} onView={onViewCourse} />)}
+          {filtered.map(c => <CourseCard key={c.id} course={c} onView={onViewCourse} isFavorite={favoriteCourseIds.includes(c.id)} onToggleFavorite={onToggleFavorite} />)}
         </div>
       </div>
     </div>
@@ -1733,11 +1971,7 @@ function Footer({ navigate }: { navigate: (p: Page) => void }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <TurtleSmall size={36} />
-              <div className="leading-none">
-                <p className="font-black text-lg tracking-tight text-white">Qualifica</p>
-                <p className="font-black text-lg tracking-tight -mt-1" style={{ color: C.orange }}>Vix</p>
-              </div>
+              <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-24 h-16 object-contain" />
             </div>
             <p className="text-xs text-slate-400 leading-relaxed mb-5">
               Plataforma oficial de qualificação profissional da Prefeitura Municipal de Vitória - ES.
@@ -1757,7 +1991,7 @@ function Footer({ navigate }: { navigate: (p: Page) => void }) {
             </div>
           </div>
           {[
-            { title: "Plataforma", links: [{ label: "Início", page: "home" }, { label: "Cursos", page: "cursos" }, { label: "Categorias", page: "categorias" }, { label: "Sobre", page: "sobre" }] },
+            { title: "Plataforma", links: [{ label: "Início", page: "home" }, { label: "Cursos", page: "cursos" }, { label: "Favoritos", page: "favorites" }, { label: "Categorias", page: "categorias" }, { label: "Sobre", page: "sobre" }] },
             { title: "Cursos", links: [{ label: "Tecnologia" }, { label: "Administração" }, { label: "Gastronomia" }, { label: "Design" }, { label: "Saúde" }] },
             { title: "Contato", links: [] },
           ].map(col => (
@@ -1799,40 +2033,179 @@ function Footer({ navigate }: { navigate: (p: Page) => void }) {
 }
 
 // ─── Chatbot Tortuguita ───────────────────────────────────────────────────────
+const normalizeChatText = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+const CHAT_SUGGESTED_QUESTIONS = [
+  { terms: ["inscri", "matric", "cadastr", "cadastro"], question: "Como faço minha inscrição?" },
+  { terms: ["perfil", "conta", "editar", "alterar", "dados"], question: "Quais dados posso editar no meu perfil?" },
+  { terms: ["gratuit", "preco", "valor", "pagar", "custo", "mensalidade"], question: "Os cursos são gratuitos?" },
+  { terms: ["modalidade", "online", "presencial", "hibrido", "tipo"], question: "Quais cursos são online ou presenciais?" },
+  { terms: ["local", "endereco", "mapa", "chegar", "unidade", "onde fica"], question: "Como encontro o local do curso?" },
+  { terms: ["certific", "diploma", "conclusao", "aproveitamento"], question: "Quais são os critérios do certificado?" },
+  { terms: ["busca", "buscar", "filtro", "pesquisa", "filtrar"], question: "Como buscar e filtrar cursos?" },
+  { terms: ["vaga", "disponivel", "aberta", "turma"], question: "Como vejo se um curso tem vaga?" },
+  { terms: ["requisito", "idade", "escolaridade", "responsavel"], question: "Quais são os requisitos para inscrição?" },
+  { terms: ["contato", "telefone", "email", "ajuda", "atendimento"], question: "Como entro em contato?" },
+  { terms: ["curso", "catalogo", "lista", "opcoes", "cursos"], question: "Quais cursos têm no catálogo?" },
+  { terms: ["horario", "periodo", "duracao", "carga", "tempo"], question: "Como vejo a carga horária e duração do curso?" },
+  { terms: ["plataforma", "qualificavix", "site", "funciona"], question: "Como funciona a plataforma?" },
+];
+
+const PLATFORM_FAQS = [
+  {
+    id: "cadastro",
+    keywords: ["cadastro", "cadastr", "primeiro cadastro", "criar conta", "registrar"],
+    answer: "Para se cadastrar, abra a página de cursos, escolha um curso e clique em “Inscrever-se”. No primeiro acesso, o sistema solicita os dados básicos e depois salva o perfil no navegador para que você não precise preencher tudo novamente em outro curso.",
+  },
+  {
+    id: "inscricao",
+    keywords: ["inscri", "matric", "participar", "entrar no curso", "fazer curso", "vaga"],
+    answer: "Para se inscrever, escolha o curso no catálogo, veja os detalhes e clique em “Inscrever-se”. Depois do cadastro inicial, o perfil pode ser reutilizado para outras inscrições sem repetir o formulário.",
+  },
+  {
+    id: "perfil",
+    keywords: ["perfil", "conta", "editar", "alterar", "dados", "meus dados", "atualizar"],
+    answer: "Após o primeiro cadastro, acesse “Meu perfil” no menu para editar dados pessoais, endereço, escolaridade, situação de emprego e consultar os cursos em que você já se inscreveu. O perfil fica salvo neste navegador.",
+  },
+  {
+    id: "gratuito",
+    keywords: ["gratuit", "preco", "valor", "pagar", "custo", "mensalidade", "gratuito"],
+    answer: "Os cursos da plataforma são gratuitos. A página de cada curso mostra a modalidade, carga horária, duração, período e as condições de inscrição antes de você confirmar a participação.",
+  },
+  {
+    id: "modalidade",
+    keywords: ["modalidade", "online", "presencial", "hibrido", "tipo de curso"],
+    answer: "A plataforma disponibiliza cursos online e presenciais. Use os filtros por categoria ou modalidade para encontrar a opção que melhor combina com sua rotina e objetivo.",
+  },
+  {
+    id: "local",
+    keywords: ["local", "endereco", "mapa", "chegar", "unidade", "onde fica", "como chegar"],
+    answer: "Para cursos presenciais, abra os detalhes do curso e clique no ícone de localização para abrir a rota no Google Maps. Cursos online não têm local presencial, e nem todos os cursos têm endereço completo cadastrado na plataforma.",
+  },
+  {
+    id: "certificado",
+    keywords: ["certific", "diploma", "conclusao", "aproveitamento", "certificado"],
+    answer: "A página do curso traz as regras de certificação, incluindo aproveitamento mínimo e condições de emissão. Em geral, é necessário concluir as atividades e obter a aprovação mínima informada no curso.",
+  },
+  {
+    id: "contato",
+    keywords: ["contato", "telefone", "email", "ajuda", "falar", "atendimento", "suporte"],
+    answer: "O contato informado na plataforma é 0800 123 4567 e contato@qualificavix.es.gov.br. Esses dados também ficam disponíveis na página de contato do site.",
+  },
+  {
+    id: "catalogo",
+    keywords: ["curso", "cursos", "catalogo", "lista", "opcao", "quais cursos", "tem curso"],
+    answer: `O catálogo atual reúne ${COURSES.length} cursos em áreas como tecnologia, administração, marketing, design, educação, gastronomia e muito mais. Diga uma área ou o nome de um curso para eu indicar opções mais relevantes.`,
+  },
+  {
+    id: "busca",
+    keywords: ["buscar", "pesquisar", "pesquisa", "filtrar", "filtro", "encontrar curso"],
+    answer: "Na tela de cursos, você pode pesquisar por nome da formação ou área de interesse e usar filtros de categoria e modalidade. Para limpar, basta selecionar “Limpar filtros”.",
+  },
+  {
+    id: "requisitos",
+    keywords: ["requisito", "idade", "escolaridade", "responsavel", "quem pode fazer", "pre requisito"],
+    answer: "Os requisitos costumam incluir idade mínima, escolaridade e disponibilidade para o horário do curso. Quando houver menor de idade, o cadastro exige dados do responsável legal. Para detalhes exatos, consulte a página do curso.",
+  },
+  {
+    id: "vagas",
+    keywords: ["vaga", "vagas", "disponivel", "aberta", "turma", "inscricoes abertas"],
+    answer: "Cada curso mostra seu status no catálogo: inscrições abertas, últimas vagas ou início em breve. Confira o curso desejado para ver a disponibilidade atual.",
+  },
+  {
+    id: "horario",
+    keywords: ["horario", "periodo", "duracao", "carga horaria", "tempo", "dias"],
+    answer: "Na página do curso, você encontra a carga horária, duração, período e a disponibilidade de aulas. Se quiser, diga o nome do curso e eu te devolvo esse detalhamento.",
+  },
+  {
+    id: "plataforma",
+    keywords: ["plataforma", "qualificavix", "site", "como funciona", "o que e"],
+    answer: "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode navegar pelo catálogo, filtrar por categoria, consultar requisitos e vagas, e concluir a inscrição diretamente no curso escolhido.",
+  },
+];
+
+function getChatSuggestions(input: string) {
+  const query = normalizeChatText(input);
+  if (query.length < 2) return [];
+  const queryWords = query.split(" ").filter(word => word.length >= 2);
+  const lastWord = queryWords.at(-1) ?? query;
+
+  const suggestions = CHAT_SUGGESTED_QUESTIONS
+    .filter(item => item.terms.some(term => queryWords.some(word => term.startsWith(word) || word.startsWith(term))))
+    .map(item => item.question);
+
+  const matchingCourses = COURSES
+    .filter(course => {
+      const searchable = normalizeChatText(`${course.title} ${course.category} ${course.location}`);
+      return searchable.includes(query) || searchable.split(" ").some(word => word.startsWith(lastWord));
+    })
+    .map(course => course.title);
+
+  return [...new Set([...matchingCourses, ...suggestions])].slice(0, 5);
+}
+
 function chatbotAnswer(message: string) {
-  const text = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const normalized = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const text = normalizeChatText(message);
+  if (!text) return "Posso ajudar com cadastro, inscrição, perfil, catálogo, vagas, requisitos, local, certificado e contato. Digite sua dúvida ou escolha uma sugestão.";
+
+  const words = text.split(" ");
   const matchingCourse = COURSES.find(course => {
-    const title = normalized(course.title);
-    return text.includes(title) || title.split(" ").filter(word => word.length > 5).some(word => text.includes(word));
+    const title = normalizeChatText(course.title);
+    const category = normalizeChatText(course.category);
+    if (text.includes(title)) return true;
+    if (text.includes(category)) return true;
+    return title.split(" ").some(word => word.length > 3 && words.includes(word));
   });
-  if (matchingCourse) {
-    const status = matchingCourse.status === "open" ? "inscrições abertas" : matchingCourse.status === "last-spots" ? "últimas vagas" : "início em breve";
-    return `${matchingCourse.title}: ${matchingCourse.hours} horas, modalidade ${matchingCourse.modality}, nível ${matchingCourse.level}, ${status}. Local: ${matchingCourse.location}. Duração: ${matchingCourse.duration}.`;
+
+  const categories = Array.from(new Set(COURSES.map(course => course.category)));
+  const matchingCategory = categories.find(category => text.includes(normalizeChatText(category)));
+  const isGreeting = /^(oi|ola|bom dia|boa tarde|boa noite)(\s|$)/.test(text);
+
+  if (isGreeting) {
+    return "Olá! Posso ajudar com cadastro, inscrição, perfil, busca de cursos, vagas, requisitos, modalidades, localização, certificados e contato. O que você precisa saber?";
   }
-  if (/(tecnologia|programacao|informatica|desenvolvimento web)/.test(text))
-    return `Na área de tecnologia temos: ${COURSES.filter(c => c.category === "Tecnologia").map(c => c.title).join(", ")}. Diga o nome de um deles para consultar os detalhes.`;
-  if (/(gastronomia|culinaria|cozinha)/.test(text))
-    return "Gastronomia Brasileira é presencial, tem 80 horas e acontece no Senac Vitória. O curso inclui preparo, culinária regional e segurança alimentar.";
-  if (/(inscri|matricula|cadastr)/.test(text))
-    return "Escolha um curso, clique em “Ver curso” e depois em “Inscrever-se”. Complete os quatro passos. Menores de 18 anos precisam informar os dados do responsável legal.";
-  if (/(menor|idade|responsavel)/.test(text))
-    return "A idade é calculada pela data de nascimento. Para menores de 18 anos, nome, CPF, parentesco e telefone do responsável legal são obrigatórios.";
-  if (/(gratuit|preco|valor|pagar)/.test(text))
-    return "Os cursos divulgados no QualificaVix são gratuitos. Consulte cada curso para verificar duração, modalidade, local e vagas.";
-  if (text.includes("certific"))
-    return "Os cursos emitem certificado ao final, conforme os requisitos de frequência e conclusão definidos pela instituição responsável.";
-  if (/(online|presencial|modalidade)/.test(text))
-    return "Existem cursos online e presenciais. Na página Cursos, use o filtro “Modalidade” para encontrar a opção ideal.";
-  if (/(local|endereco|vitoria)/.test(text))
-    return "As oportunidades são voltadas para Vitória–ES. Cada curso informa o local específico; há opções online e em unidades como Senac, Senai e Hub de Inovação.";
-  if (/(contato|telefone|email|ajuda)/.test(text))
-    return "Fale com a equipe pelo telefone 0800 123 4567 ou pelo e-mail contato@qualificavix.es.gov.br. Esses dados também estão na página Contato.";
-  if (/(curso|opcao|catalogo)/.test(text))
-    return `O catálogo apresenta ${COURSES.length} cursos em tecnologia, administração, design, marketing, educação, gastronomia e áreas técnicas. Diga uma área ou curso para eu detalhar.`;
-  if (/^(oi|ola|bom dia|boa tarde|boa noite)/.test(text))
-    return "Olá! Posso explicar cursos, inscrições, gratuidade, certificados, modalidades, requisitos para menores de idade e contatos. O que você quer saber?";
-  return "Não encontrei uma resposta exata. Pergunte sobre um curso, inscrição, certificado, modalidade, gratuidade, menor de idade ou contato.";
+
+  const faqMatch = PLATFORM_FAQS
+    .map(item => ({ item, score: item.keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0) }))
+    .filter(entry => entry.score > 0)
+    .sort((a, b) => b.score - a.score)[0];
+
+  if (faqMatch) return faqMatch.item.answer;
+
+  if (/(buscar|pesquisar|pesquisa|filtrar|filtro|encontrar curso|achar curso)/.test(text)) {
+    return "Na tela de cursos, você pode pesquisar por nome ou área e usar os filtros de categoria e modalidade. Para limpar, basta alcançar o botão “Limpar filtros” e tentar outra busca.";
+  }
+
+  if (matchingCourse) {
+    const course = matchingCourse;
+    const status = course.status === "open" ? "inscrições abertas" : course.status === "last-spots" ? "últimas vagas" : "início em breve";
+    const place = course.modality === "Online" ? "modalidade online" : `local: ${course.location || "a confirmar"}`;
+    const routeText = course.modality === "Online" ? "" : " Você pode abrir a rota no Maps pelo ícone de localização do curso.";
+    return `${course.title}: ${course.hours} horas, ${course.modality.toLowerCase()}, nível ${course.level}, ${status}, ${place}. ${course.description}${routeText}`;
+  }
+
+  if (matchingCategory) {
+    const titles = COURSES.filter(course => course.category === matchingCategory).map(course => course.title).join(", ");
+    return `Na categoria ${matchingCategory}, o catálogo tem: ${titles}.`;
+  }
+
+  if (/(plataforma|qualificavix|site|como funciona|o que e|para que serve)/.test(text)) {
+    return "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode consultar o catálogo, filtrar por categoria e modalidade, verificar requisitos e certificar-se da disponibilidade do curso antes de se inscrever.";
+  }
+
+  if (/(vitoria|es|espirito santo|vitoriense)/.test(text)) {
+    return "A plataforma é voltada para a cidade de Vitória-ES, com cursos online e opções presenciais na região. Quando o curso for presencial, pode ser aberto o mapa de rota pelo ícone de localização do curso.";
+  }
+
+  if (/(horario|periodo|duracao|carga horaria|tempo|dias)/.test(text)) {
+    return "Na página do curso, você encontra a carga horária, a duração e o período de aulas. Se quiser, diga o nome do curso e eu te devolvo esse resumo com mais precisão.";
+  }
+
+  if (/(e? gratuito|e? pago|preco|valor|quanto custa|mensalidade)/.test(text)) {
+    return "Os cursos da plataforma são gratuitos. O valor da formação não é cobrado ao aluno, e o catálogo informa as condições de participação e os requisitos antes da inscrição.";
+  }
+
+  return "Posso te ajudar com inscrição, perfil, catálogo, modalidades, vagas, requisitos, local/Maps, certificado, busca e contato. Se for sobre um curso específico, escreva o nome dele ou uma categoria, como tecnologia, marketing ou administração.";
 }
 
 function Chatbot() {
@@ -1843,22 +2216,24 @@ function Chatbot() {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const suggestions = getChatSuggestions(input);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
 
-  const quickActions = ["Cursos de tecnologia", "Como me inscrever?", "Os cursos são gratuitos?", "Menor de idade"];
+  const quickActions = ["Cursos de tecnologia", "Como me inscrever?", "Como edito meu perfil?", "Como chegar ao curso?"];
 
   function send(text?: string) {
     const t = (text ?? input).trim();
-    if (!t) return;
+    if (!t || typing) return;
     setInput("");
-    setMessages(prev => [...prev, { id: Date.now(), role: "user", text: t, time: "agora" }]);
+    const messageId = Date.now();
+    setMessages(prev => [...prev, { id: messageId, role: "user", text: t, time: "agora" }]);
     setTyping(true);
     setTimeout(() => {
-      setTyping(false);
       const resp = chatbotAnswer(t);
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: "bot", text: resp, time: "agora" }]);
-    }, 1000);
+      setMessages(prev => [...prev, { id: messageId + 1, role: "bot", text: resp, time: "agora" }]);
+      setTyping(false);
+    }, 450);
   }
 
   return (
@@ -1912,7 +2287,7 @@ function Chatbot() {
           {/* Quick actions */}
           <div className="px-4 py-2 flex flex-wrap gap-1.5 border-t border-slate-100 bg-white">
             {quickActions.map(a => (
-              <button key={a} onClick={() => send(a)}
+              <button key={a} onClick={() => send(a)} disabled={typing}
                 className="text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors">
                 {a}
               </button>
@@ -1922,10 +2297,29 @@ function Chatbot() {
           {/* Input */}
           <div className="p-3 border-t border-slate-100 bg-white">
             <form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2">
-              <input value={input} onChange={e => setInput(e.target.value)}
-                placeholder="Digite sua mensagem..."
-                className="flex-1 text-sm bg-slate-100 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-400 font-medium" />
-              <button type="submit" disabled={!input.trim()}
+              <div className="relative flex-1 min-w-0">
+                <input value={input} onChange={e => setInput(e.target.value)}
+                  placeholder="Digite sua dúvida ou curso..."
+                  autoComplete="off"
+                  aria-label="Sua dúvida ou busca"
+                  aria-autocomplete="list"
+                  aria-expanded={suggestions.length > 0}
+                  aria-controls="chat-suggestions"
+                  className="w-full text-sm bg-slate-100 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-400 font-medium" />
+                {suggestions.length > 0 && (
+                  <div id="chat-suggestions" role="group" aria-label="Sugestões de busca"
+                    className="absolute bottom-full left-0 right-0 mb-2 max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                    <p className="px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-400">Sugestões</p>
+                    {suggestions.map(suggestion => (
+                      <button key={suggestion} type="button" disabled={typing} onClick={() => send(suggestion)}
+                        className="w-full rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50">
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button type="submit" disabled={!input.trim() || typing}
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white disabled:opacity-40 hover:opacity-90 transition-opacity shrink-0"
                 style={{ background: C.blue }}>
                 <Send className="w-4 h-4" />
@@ -1955,18 +2349,274 @@ function Chatbot() {
 }
 
 // ─── App Root ─────────────────────────────────────────────────────────────────
+function resizeProfilePhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("O arquivo selecionado não é uma imagem válida."));
+      image.onload = () => {
+        const maxDimension = 512;
+        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Não foi possível processar a imagem."));
+          return;
+        }
+        try {
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
+        } catch {
+          reject(new Error("Não foi possível processar a imagem."));
+        }
+      };
+      image.src = String(reader.result ?? "");
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function CourseEnrollmentPage({ course, profile, onBack, onConfirm, onEditProfile }: { course: Course; profile: UserProfile; onBack: () => void; onConfirm: () => void; onEditProfile: () => void }) {
+  const address = [profile.rua, profile.numero, profile.complemento, profile.bairro, profile.cep].filter(Boolean).join(", ");
+  const savedDetails = [
+    { label: "Nome", value: profile.nome },
+    { label: "E-mail", value: profile.email },
+    { label: "Telefone", value: profile.telefone },
+    { label: "Endereço", value: address },
+    { label: "Escolaridade", value: profile.escolaridade },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm font-bold mb-6 hover:underline" style={{ color: C.blue }}>
+          <ArrowLeft className="w-4 h-4" /> Voltar ao curso
+        </button>
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8">
+          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orangeDark }}>Inscrição simplificada</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Confirmar inscrição</h1>
+          <p className="text-sm text-slate-500 mb-6">Vamos usar os dados do seu perfil salvo. Não é necessário preencher outro cadastro.</p>
+          <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 mb-6">
+            <p className="text-xs font-bold text-blue-700 mb-1">Curso selecionado</p>
+            <p className="font-black text-slate-900">{course.title}</p>
+            <p className="text-xs text-slate-600 mt-1">{course.modality} · {course.hours} horas · {course.location || "Online"}</p>
+          </div>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="font-black text-slate-900">Dados do seu perfil</h2>
+            <button onClick={onEditProfile} className="text-sm font-bold hover:underline" style={{ color: C.blue }}>Editar perfil</button>
+          </div>
+          <dl className="grid sm:grid-cols-2 gap-3 mb-7">
+            {savedDetails.map(detail => (
+              <div key={detail.label} className="rounded-lg border border-slate-200 p-3 min-w-0">
+                <dt className="text-[10px] font-black uppercase text-slate-500 mb-1">{detail.label}</dt>
+                <dd className="text-sm font-semibold text-slate-800 break-words">{detail.value || "Não informado"}</dd>
+              </div>
+            ))}
+          </dl>
+          <button onClick={onConfirm} className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3.5 font-black text-slate-950 shadow-md hover:brightness-105 transition-all" style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
+            Confirmar inscrição <ArrowRight className="w-5 h-5" />
+          </button>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ProfilePage({ profile, courses, onBack, onProfileUpdated }: { profile: UserProfile; courses: Course[]; onBack: () => void; onProfileUpdated: (profile: UserProfile) => void }) {
+  const [form, setForm] = useState({
+    nome: profile.nome,
+    email: profile.email,
+    telefone: profile.telefone,
+    whatsapp: profile.whatsapp ?? "",
+    cep: profile.cep,
+    bairro: profile.bairro,
+    rua: profile.rua,
+    numero: profile.numero,
+    complemento: profile.complemento ?? "",
+    escolaridade: profile.escolaridade,
+    situacaoEmprego: profile.situacaoEmprego ?? "",
+  });
+  const [photo, setPhoto] = useState(profile.fotoPerfil ?? "");
+  const [photoError, setPhotoError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const enrolledCourses = courses.filter(course => profile.enrolledCourseIds.includes(course.id));
+
+  function updateField(field: keyof typeof form, value: string) {
+    setForm(current => ({ ...current, [field]: value }));
+    setSaved(false);
+  }
+
+  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Escolha um arquivo de imagem.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("A imagem deve ter no máximo 5 MB.");
+      return;
+    }
+    try {
+      setPhoto(await resizeProfilePhoto(file));
+      setPhotoError("");
+      setSaved(false);
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "Não foi possível processar a imagem.");
+    }
+  }
+
+  function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const updated = updateUserProfile({ ...form, fotoPerfil: photo || undefined });
+    if (updated) {
+      onProfileUpdated(updated);
+      setSaved(true);
+    }
+  }
+
+  const fields: { key: keyof typeof form; label: string; type?: string }[] = [
+    { key: "nome", label: "Nome completo" },
+    { key: "email", label: "E-mail", type: "email" },
+    { key: "telefone", label: "Telefone", type: "tel" },
+    { key: "whatsapp", label: "WhatsApp", type: "tel" },
+    { key: "cep", label: "CEP" },
+    { key: "bairro", label: "Bairro" },
+    { key: "rua", label: "Rua" },
+    { key: "numero", label: "Número" },
+    { key: "complemento", label: "Complemento" },
+    { key: "escolaridade", label: "Escolaridade" },
+    { key: "situacaoEmprego", label: "Situação de emprego" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm font-bold mb-6 hover:underline" style={{ color: C.blue }}>
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </button>
+        <div className="grid lg:grid-cols-[1fr_320px] gap-8 items-start">
+          <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: C.blueLight }}>
+                <UserCheck className="w-5 h-5" style={{ color: C.blue }} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-900">Meu perfil</h1>
+                <p className="text-sm text-slate-500">Perfil salvo neste navegador e pronto para novas inscrições.</p>
+              </div>
+            </div>
+            <form onSubmit={saveProfile} className="grid sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50">
+                <ProfileAvatar name={form.nome} photo={photo || undefined} size="w-20 h-20 text-2xl" />
+                <div className="flex flex-wrap items-center gap-3">
+                  <label htmlFor="profile-photo" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:border-blue-300 cursor-pointer">
+                    <Camera className="w-4 h-4" /> Escolher foto
+                  </label>
+                  <input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} className="sr-only" />
+                  {photo && (
+                    <button type="button" onClick={() => { setPhoto(""); setSaved(false); setPhotoError(""); }} className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:text-red-600">
+                      <Trash2 className="w-4 h-4" /> Remover foto
+                    </button>
+                  )}
+                  <div className="w-full">
+                    <p className="text-xs text-slate-500">PNG, JPG ou WebP, até 5 MB. A foto é ajustada e salva neste navegador.</p>
+                    {photoError && <p role="alert" className="text-xs font-semibold text-red-600 mt-1">{photoError}</p>}
+                  </div>
+                </div>
+              </div>
+              {fields.map(field => (
+                <label key={field.key} className="flex flex-col gap-1.5 text-sm font-bold text-slate-700">
+                  {field.label}
+                  <input required={!['whatsapp', 'complemento', 'situacaoEmprego'].includes(field.key)}
+                    type={field.type ?? "text"} value={form[field.key]}
+                    onChange={event => updateField(field.key, event.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 font-medium outline-none focus:border-blue-500" />
+                </label>
+              ))}
+              <div className="sm:col-span-2 flex items-center gap-4 pt-2">
+                <button type="submit" className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-black" style={{ background: C.blue }}>
+                  <CheckCircle2 className="w-4 h-4" /> Salvar alterações
+                </button>
+                {saved && <p role="status" className="text-sm font-bold text-green-700">Perfil atualizado.</p>}
+              </div>
+            </form>
+          </section>
+
+          <aside className="border-t-2 lg:border-t-0 lg:border-l-2 border-orange-400 pt-5 lg:pt-0 lg:pl-6">
+            <h2 className="font-black text-lg text-slate-900 mb-1">Meus cursos</h2>
+            <p className="text-sm text-slate-500 mb-4">{enrolledCourses.length} inscrição(ões)</p>
+            {enrolledCourses.length ? (
+              <ul className="divide-y divide-slate-200">
+                {enrolledCourses.map(course => (
+                  <li key={course.id} className="py-3">
+                    <p className="font-bold text-sm text-slate-800">{course.title}</p>
+                    <p className="text-xs text-slate-500 mt-1">{course.modality} · {course.period}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm text-slate-500">Você ainda não se inscreveu em um curso.</p>}
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const {
     page, selectedCourse, darkMode, navigate, viewCourse: handleViewCourse,
     toggleDarkMode, increaseFont, decreaseFont,
   } = useAppController<Course>();
-  const handleRegisterFromCourse = () => navigate("register");
+  const [favoriteCourseIds, setFavoriteCourseIds] = useState<number[]>(getFavoriteCourseIds);
+  const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
+  const [returnToEnrollmentConfirmation, setReturnToEnrollmentConfirmation] = useState(false);
+  const handleToggleFavorite = (courseId: number) => {
+    setFavoriteCourseIds(current => saveFavoriteCourseIds(
+      current.includes(courseId) ? current.filter(id => id !== courseId) : [...current, courseId],
+    ));
+  };
+  const handleRegisterFromCourse = () => {
+    if (selectedCourse && profile) {
+      navigate("enrollment-confirmation");
+      return;
+    }
+    navigate("register");
+  };
+  const handleEnrollFromStory = (course: Course) => {
+    handleViewCourse(course);
+    navigate(profile ? "enrollment-confirmation" : "register");
+  };
+  const handleConfirmCourseEnrollment = () => {
+    if (!selectedCourse) return;
+    const updatedProfile = enrollUserInCourse(selectedCourse.id);
+    if (updatedProfile) setProfile(updatedProfile);
+    navigate("course-detail");
+  };
+  const handleProfileBack = () => {
+    const destination = returnToEnrollmentConfirmation ? "enrollment-confirmation" : "home";
+    setReturnToEnrollmentConfirmation(false);
+    navigate(destination);
+  };
+  const handleEditProfileForEnrollment = () => {
+    setReturnToEnrollmentConfirmation(true);
+    navigate("profile");
+  };
 
-  if (page === "register") {
+  if (page === "register" || (page === "profile" && !profile)) {
+    if (profile) return <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} />;
     return (
       <RegisterPage
         dark={darkMode}
         onBack={() => navigate("home")}
+        courseId={selectedCourse?.id}
+        onProfileCreated={setProfile}
       />
     );
   }
@@ -2016,18 +2666,27 @@ export default function App() {
           toggleDarkMode={toggleDarkMode}
           increaseFont={increaseFont}
           decreaseFont={decreaseFont}
+          profile={profile}
         />
       <main>
-        {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} />}
-        {page === "cursos" && <CoursesPage navigate={navigate} onViewCourse={handleViewCourse} />}
-        {page === "course-detail" && selectedCourse && (
-          <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse} />
+        {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} onEnrollCourse={handleEnrollFromStory} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} profile={profile} />}
+        {page === "cursos" && <CoursesPage navigate={navigate} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
+        {page === "favorites" && <FavoritesPage favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} onViewCourse={handleViewCourse} navigate={navigate} />}
+        {page === "enrollment-confirmation" && selectedCourse && profile && (
+          <CourseEnrollmentPage course={selectedCourse} profile={profile} onBack={() => navigate("course-detail")}
+            onConfirm={handleConfirmCourseEnrollment} onEditProfile={handleEditProfileForEnrollment} />
         )}
+        {page === "course-detail" && selectedCourse && (
+          <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse}
+            isFavorite={favoriteCourseIds.includes(selectedCourse.id)} onToggleFavorite={handleToggleFavorite}
+            enrolled={profile?.enrolledCourseIds.includes(selectedCourse.id) ?? false} />
+        )}
+        {page === "profile" && profile && <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} />}
         {page === "sobre" && <SobrePage navigate={navigate} />}
-        {page === "categorias" && <CategoriasPage navigate={navigate} onViewCourse={handleViewCourse} />}
+        {page === "categorias" && <CategoriasPage navigate={navigate} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
         {page === "contato" && (
           <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-            <TurtleMascot size={80} className="mx-auto mb-6" />
+            <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-32 h-28 object-contain mx-auto mb-6" />
             <h1 className="text-3xl font-black text-slate-900 mb-3">Entre em contato</h1>
             <p className="text-slate-500 mb-8">Estamos aqui para te ajudar a encontrar o curso ideal.</p>
             <div className="space-y-3 text-left max-w-sm mx-auto">

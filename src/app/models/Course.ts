@@ -6,6 +6,7 @@ export interface Course {
   modality: "Online" | "Presencial" | "Híbrido";
   hours: number;
   level: "Iniciante" | "Intermediário" | "Avançado" | "Todos os níveis";
+  provider: string;
   location: string;
   description: string;
   enrolled: number;

@@ -5,4 +5,5 @@ export interface Testimonial {
   course: string;
   quote: string;
   rating: number;
+  illustrative?: boolean;
 }
