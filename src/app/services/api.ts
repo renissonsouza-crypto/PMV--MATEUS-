@@ -16,6 +16,14 @@ export const createTestimonial = (data: Omit<StoredTestimonial, "id">) =>
 export const createRegistration = (data: Record<string, unknown>) =>
   request<{ id: number; message: string }>("/registrations", { method: "POST", body: JSON.stringify(data) });
 
+import { getUnsubscribeDeadline, isEnrollmentAllowed, removeCourseEnrollment } from './enrollmentPolicy.js';
+
+export type EnrolledCourse = {
+  courseId: number;
+  enrolledAt: string;
+  unsubscribeDeadline: string;
+};
+
 export type UserProfile = {
   id: number;
   nome: string;
@@ -31,6 +39,7 @@ export type UserProfile = {
   situacaoEmprego?: string;
   fotoPerfil?: string;
   enrolledCourseIds: number[];
+  enrollments?: EnrolledCourse[];
 };
 
 const PROFILE_KEY = "qualificavix-profile";
@@ -56,10 +65,48 @@ export function saveFavoriteCourseIds(courseIds: number[]) {
   return validIds;
 }
 
+function normalizeEnrollments(profile: Partial<UserProfile> | null | undefined): EnrolledCourse[] {
+  const existing = Array.isArray(profile?.enrollments) ? profile.enrollments : [];
+  const map = new Map<number, EnrolledCourse>();
+
+  for (const entry of existing) {
+    if (!entry || !Number.isFinite(entry.courseId)) continue;
+    const enrolledAt = entry.enrolledAt || new Date().toISOString();
+    map.set(entry.courseId, {
+      courseId: entry.courseId,
+      enrolledAt,
+      unsubscribeDeadline: entry.unsubscribeDeadline || getUnsubscribeDeadline(enrolledAt) || new Date().toISOString(),
+    });
+  }
+
+  for (const courseId of profile?.enrolledCourseIds ?? []) {
+    if (!Number.isFinite(courseId)) continue;
+    if (map.has(courseId)) continue;
+    const enrolledAt = new Date().toISOString();
+    map.set(courseId, {
+      courseId,
+      enrolledAt,
+      unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt) || enrolledAt,
+    });
+  }
+
+  return [...map.values()].sort((a, b) => b.courseId - a.courseId);
+}
+
 export function getUserProfile(): UserProfile | null {
   try {
     const saved = localStorage.getItem(PROFILE_KEY);
-    return saved ? JSON.parse(saved) as UserProfile : null;
+    if (!saved) return null;
+
+    const parsed = JSON.parse(saved) as UserProfile;
+    const normalized: UserProfile = {
+      ...parsed,
+      enrolledCourseIds: [...new Set(parsed.enrolledCourseIds ?? [])],
+      enrollments: normalizeEnrollments(parsed),
+    };
+
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized));
+    return normalized;
   } catch {
     return null;
   }
@@ -67,10 +114,20 @@ export function getUserProfile(): UserProfile | null {
 
 export function saveUserProfile(data: Record<string, unknown>, id: number, courseId?: number) {
   const previous = getUserProfile();
-  const enrolledCourseIds = [...new Set([
-    ...(previous?.enrolledCourseIds ?? []),
-    ...(courseId ? [courseId] : []),
-  ])];
+  const existingEnrollments = normalizeEnrollments(previous);
+
+  const nextEnrollments = courseId
+    ? [
+        ...existingEnrollments.filter(entry => entry.courseId !== courseId),
+        {
+          courseId,
+          enrolledAt: new Date().toISOString(),
+          unsubscribeDeadline: getUnsubscribeDeadline(new Date().toISOString()) || new Date().toISOString(),
+        },
+      ]
+    : existingEnrollments;
+
+  const enrolledCourseIds = [...new Set(nextEnrollments.map(entry => entry.courseId))];
   const profile: UserProfile = {
     id,
     nome: String(data.nome ?? ""),
@@ -86,6 +143,7 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
     situacaoEmprego: String(data.situacaoEmprego ?? ""),
     fotoPerfil: previous?.fotoPerfil,
     enrolledCourseIds,
+    enrollments: nextEnrollments,
   };
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   return profile;
@@ -94,17 +152,69 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
 export function enrollUserInCourse(courseId: number) {
   const profile = getUserProfile();
   if (!profile) return null;
-  if (!profile.enrolledCourseIds.includes(courseId)) {
-    profile.enrolledCourseIds = [...profile.enrolledCourseIds, courseId];
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+
+  const existingEnrollments = normalizeEnrollments(profile);
+  const monthlyCheck = isEnrollmentAllowed(existingEnrollments, courseId, new Date());
+
+  if (monthlyCheck.reason === 'duplicate') {
+    return profile;
   }
-  return profile;
+
+  if (!monthlyCheck.allowed) {
+    return { ...profile, enrollmentLimitReached: true, enrollmentReason: monthlyCheck.reason } as UserProfile & {
+      enrollmentLimitReached: boolean;
+      enrollmentReason: string;
+    };
+  }
+
+  const enrolledAt = new Date().toISOString();
+  const nextProfile = {
+    ...profile,
+    enrolledCourseIds: [...new Set([...profile.enrolledCourseIds, courseId])],
+    enrollments: [
+      ...existingEnrollments,
+      {
+        courseId,
+        enrolledAt,
+        unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt) || enrolledAt,
+      },
+    ],
+  };
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
+  return nextProfile;
+}
+
+export function removeUserEnrollmentFromCourse(courseId: number) {
+  const profile = getUserProfile();
+  if (!profile) return null;
+
+  const existingEnrollments = normalizeEnrollments(profile);
+  const updatedEnrollments = removeCourseEnrollment(existingEnrollments, courseId);
+  const nextProfile = {
+    ...profile,
+    enrolledCourseIds: [...new Set(updatedEnrollments.map(entry => entry.courseId))],
+    enrollments: updatedEnrollments,
+  };
+
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
+  return nextProfile;
 }
 
 export function updateUserProfile(updates: Partial<UserProfile>) {
   const profile = getUserProfile();
   if (!profile) return null;
-  const updated = { ...profile, ...updates, id: profile.id, enrolledCourseIds: profile.enrolledCourseIds };
+  const enrollments = normalizeEnrollments(profile);
+  const updated: UserProfile = { ...profile, ...updates, id: profile.id, enrolledCourseIds: profile.enrolledCourseIds, enrollments };
   localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
   return updated;
+}
+
+export function logoutUserProfile() {
+  try {
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(FAVORITES_KEY);
+  } catch {
+    // Logout should still work even if browser storage is unavailable.
+  }
+  return null;
 }

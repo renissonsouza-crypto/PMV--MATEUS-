@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { RegisterPage } from "./RegisterView";
 import { TurtleMascot } from "../components/TurtleMascot";
-import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
+import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, logoutUserProfile, removeUserEnrollmentFromCourse, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
+import { formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
 import { useAppController } from "../controllers/useAppController";
 import type { Course } from "../models/Course";
 import type { Testimonial } from "../models/Testimonial";
@@ -23,6 +24,7 @@ import {
   Monitor, Briefcase, Palette, Wrench, GraduationCap, Utensils,
   Laptop, Send, SlidersHorizontal, Globe, Building2, TrendingUp,
   PlayCircle, BarChart3, Target, Zap, UserCheck, Camera, Trash2, Pause, Play,
+  LogOut,
 } from "lucide-react";
 
 // ─── Paleta de cores ─────────────────────────────────────────────────────────
@@ -711,8 +713,8 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-6 h-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-2 sm:gap-6 h-14 sm:h-16">
           <Logo navigate={navigate} />
 
           {/* Nav desktop */}
@@ -733,7 +735,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
           </nav>
 
           {/* Central de acessibilidade */}
-          <div className="hidden sm:flex items-center rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-sm"
+          <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 shadow-sm"
             role="group" aria-label="Controles de visualização">
             <span className="hidden xl:block pl-2.5 pr-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Visual</span>
             <div className="flex items-center rounded-xl bg-white border border-slate-200 overflow-hidden">
@@ -765,7 +767,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
                   <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
                     onKeyDown={event => { if (event.key === "Enter") submitSearch(event); }}
                     placeholder="Buscar cursos..."
-                    className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-52 font-medium" />
+                    className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-40 sm:w-52 font-medium" />
                 </div>
                 <button type="button" onClick={() => setSearchOpen(false)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
@@ -782,7 +784,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
               title={profile ? `Perfil de ${profile.nome}` : "Entrar / Cadastrar"}
               className={profile
                 ? "hidden sm:flex rounded-full p-0.5 ring-2 ring-orange-400 ring-offset-2 ring-offset-white hover:ring-orange-500 transition-all"
-                : "hidden sm:flex items-center gap-1.5 text-sm font-black px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
+                : "hidden sm:flex items-center gap-1.5 text-xs sm:text-sm font-black px-3 sm:px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
               }
               style={profile ? {} : { background: `linear-gradient(135deg, ${C.orangeDark} 0%, ${C.orangeActionEnd} 100%)` }}>
               {profile ? <ProfileAvatar name={profile.nome} photo={profile.fotoPerfil} /> : "Entrar / Cadastrar"}
@@ -1179,43 +1181,43 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 0)", backgroundSize: "28px 28px" }} />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 lg:py-24">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 mb-6">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 mb-4 sm:mb-6">
                 <Zap className="w-3.5 h-3.5 text-yellow-300" />
-                <span className="text-xs font-bold text-yellow-100">Cursos 100% gratuitos · Certificado incluso</span>
+                <span className="text-[10px] sm:text-xs font-bold text-yellow-100">Cursos 100% gratuitos · Certificado incluso</span>
               </div>
-              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.05] tracking-tight mb-5">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.05] tracking-tight mb-4 sm:mb-5">
                 Encontre oportunidades para{" "}
                 <span style={{ color: C.orange }}>transformar</span>
                 {" "}o seu futuro.
               </h1>
-              <p className="text-base lg:text-lg text-blue-100 mb-8 leading-relaxed max-w-lg">
+              <p className="text-sm sm:text-base lg:text-lg text-blue-100 mb-6 sm:mb-8 leading-relaxed max-w-lg">
                 Cursos, capacitações e oportunidades de qualificação profissional para você em Vitória&nbsp;-&nbsp;ES.
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 <button onClick={() => navigate("cursos")}
-                  className="flex items-center gap-2 font-black text-slate-900 px-7 py-3.5 rounded-2xl shadow-xl hover:scale-105 transition-all"
+                  className="flex items-center justify-center gap-2 font-black text-slate-900 px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl shadow-xl hover:scale-105 transition-all text-sm sm:text-base"
                   style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
-                  Explorar cursos <ArrowRight className="w-5 h-5" />
+                  Explorar cursos <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button onClick={() => navigate("sobre")}
-                  className="flex items-center gap-2 font-bold text-white px-7 py-3.5 rounded-2xl border-2 border-white/30 hover:bg-white/10 transition-all">
+                  className="flex items-center justify-center gap-2 font-bold text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl border-2 border-white/30 hover:bg-white/10 transition-all text-sm sm:text-base">
                   Saiba mais
                 </button>
               </div>
 
               {/* Mini stats */}
-              <div className="mt-10 grid grid-cols-3 gap-3 max-w-sm">
+              <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-sm">
                 {[
                   { n: "156+", l: "Cursos ativos" },
                   { n: "12k+", l: "Formados" },
                   { n: "20+", l: "Unidades" },
                 ].map(s => (
-                  <div key={s.l} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10">
-                    <p className="text-2xl font-black text-amber-300">{s.n}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-blue-100 font-semibold mt-0.5">{s.l}</p>
+                  <div key={s.l} className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 sm:p-3 text-center border border-white/10">
+                    <p className="text-xl sm:text-2xl font-black text-amber-300">{s.n}</p>
+                    <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-blue-100 font-semibold mt-0.5">{s.l}</p>
                   </div>
                 ))}
               </div>
@@ -1233,28 +1235,28 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
       </section>
 
       {/* ── Categorias ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex items-center justify-between mb-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: C.orangeDark }}>Explore por área</p>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Explore por categoria</h2>
+            <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest mb-1" style={{ color: C.orangeDark }}>Explore por área</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900">Explore por categoria</h2>
           </div>
           <button onClick={() => navigate("categorias")}
-            className="flex items-center gap-1 text-sm font-bold hover:underline" style={{ color: C.blue }}>
-            Ver todos <ArrowRight className="w-4 h-4" />
+            className="flex items-center gap-1 text-xs sm:text-sm font-bold hover:underline" style={{ color: C.blue }}>
+            Ver todos <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
           {CATEGORIES.map(cat => (
             <button key={cat.id} onClick={() => navigate("cursos")}
-              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-md hover:-translate-y-0.5 hover:border-blue-200 transition-all group">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"
+              className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-md hover:-translate-y-0.5 hover:border-blue-200 transition-all group">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"
                 style={{ backgroundColor: `${cat.color}18` }}>
                 <cat.icon className="w-6 h-6" style={{ color: cat.color }} />
               </div>
               <div className="text-center">
-                <p className="text-xs font-black text-slate-800 leading-tight">{cat.label}</p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{cat.count} cursos</p>
+                <p className="text-[10px] sm:text-xs font-black text-slate-800 leading-tight">{cat.label}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold mt-0.5">{cat.count} cursos</p>
               </div>
             </button>
           ))}
@@ -1499,8 +1501,17 @@ function FavoritesPage({ favoriteCourseIds, onToggleFavorite, onViewCourse, navi
 }
 
 // ─── CourseDetailPage ─────────────────────────────────────────────────────────
-function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, onToggleFavorite }: { course: Course; navigate: (p: Page) => void; onRegister: () => void; enrolled: boolean; isFavorite: boolean; onToggleFavorite: (id: number) => void }) {
-  const [tab, setTab] = useState<"sobre" | "conteudo" | "instrutor" | "requisitos" | "certificado" | "instituicao">("sobre");
+function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, onToggleFavorite, onUnsubscribe }: { course: Course; navigate: (p: Page) => void; onRegister: () => void; enrolled: boolean; isFavorite: boolean; onToggleFavorite: (id: number) => void; onUnsubscribe: (courseId: number) => void }) {
+  const [tab, setTab] = useState<"sobre" | "conteudo" | "instrutor" | "requisitos" | "certificado" | "instituicao">(enrolled ? "conteudo" : "sobre");
+
+  const handlePrimaryAction = () => {
+    if (enrolled) {
+      onUnsubscribe(course.id);
+      return;
+    }
+
+    onRegister();
+  };
 
   const tabs = [
     { id: "sobre",       label: "Sobre o curso" },
@@ -1582,7 +1593,7 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, 
                 <p className="text-xs font-bold text-slate-800">{course.provider}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Local de oferta</p>
+                <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Local do curso</p>
                 <p className="text-xs font-bold text-slate-800">
                   {course.location || (course.modality === "Online" ? "Online, sem polo presencial informado" : "Polo presencial não informado")}
                 </p>
@@ -1610,10 +1621,10 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, 
             </div>
 
             <div className="flex gap-3">
-              <button onClick={onRegister}
+              <button onClick={handlePrimaryAction}
                 className="flex-1 flex items-center justify-center gap-2 font-black text-slate-950 py-3.5 rounded-xl hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg"
                 style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
-                {enrolled ? "Inscrito" : "Inscrever-se"} <ArrowRight className="w-5 h-5" />
+                {enrolled ? "Desinscrever-se" : "Inscrever-se"} <ArrowRight className="w-5 h-5" />
               </button>
               <button onClick={() => onToggleFavorite(course.id)}
                 aria-label={isFavorite ? `Remover ${course.title} dos favoritos` : `Adicionar ${course.title} aos favoritos`}
@@ -1641,7 +1652,7 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, 
             ))}
           </div>
 
-          <div className="p-6 lg:p-8">
+          <div id="curso-informacoes" className="p-6 lg:p-8">
             {tab === "sobre" && (
               <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
@@ -1759,11 +1770,11 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, 
             {tab === "instituicao" && (
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="font-black text-slate-900 text-lg mb-4">Instituição e local desta oferta</h3>
+                  <h3 className="font-black text-slate-900 text-lg mb-4">Instituição e local do curso</h3>
                   <p className="text-sm text-slate-600 leading-relaxed mb-4">
                     <strong>Instituição ofertante:</strong> {course.provider}.<br />
                     <strong>Modalidade:</strong> {course.modality}.<br />
-                    <strong>Local informado:</strong> {course.location || (course.modality === "Online" ? "Online, sem polo presencial cadastrado." : "Não informado no catálogo.")}
+                    <strong>Local do curso:</strong> {course.location || (course.modality === "Online" ? "Online, sem polo presencial cadastrado." : "Não informado no catálogo.")}
                   </p>
                   <div className="space-y-2 text-sm font-semibold text-slate-600">
                     <p className="flex items-center gap-2"><MapPin className="w-4 h-4" style={{ color: C.blue }} /> Endereço completo: não informado nesta ficha</p>
@@ -2089,8 +2100,8 @@ const PLATFORM_FAQS = [
   },
   {
     id: "contato",
-    keywords: ["contato", "telefone", "email", "ajuda", "falar", "atendimento", "suporte"],
-    answer: "O contato informado na plataforma é 0800 123 4567 e contato@qualificavix.es.gov.br. Esses dados também ficam disponíveis na página de contato do site.",
+    keywords: ["contato", "telefone", "email", "ajuda", "falar", "atendimento", "suporte", "mais informacoes", "mais informações", "falar com a plataforma", "contato da plataforma", "quero falar com a plataforma", "entrar em contato com a plataforma"],
+    answer: "Para mais informações sobre a plataforma, entre em contato pelo telefone 0800 123 4567 ou pelo e-mail contato@qualificavix.es.gov.br. A tortuguita também pode te orientar sobre cursos, inscrição e dúvidas gerais.",
   },
   {
     id: "catalogo",
@@ -2122,6 +2133,16 @@ const PLATFORM_FAQS = [
     keywords: ["plataforma", "qualificavix", "site", "como funciona", "o que e"],
     answer: "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode navegar pelo catálogo, filtrar por categoria, consultar requisitos e vagas, e concluir a inscrição diretamente no curso escolhido.",
   },
+  {
+    id: "limite",
+    keywords: ["limite", "3 cursos", "três cursos", "mais cursos", "inscricoes limitadas", "quantos cursos posso fazer"],
+    answer: "A plataforma permite até 3 cursos cadastrados ao mesmo tempo. Se você já estiver com 3 inscrições ativas, só poderá fazer novos cadastros após concluir ou finalizar algum curso em andamento.",
+  },
+  {
+    id: "cursos cadastrados",
+    keywords: ["cursos cadastrados", "meus cursos", "cursos inscritos", "cadastros", "inscricoes ativas", "meus cadastros"],
+    answer: "Na área de perfil, você pode ver todos os cursos cadastrados, com informações do curso, prazo para desistência e status da matrícula. Essa aba ajuda a acompanhar o que já foi inscrito e o que ainda está em andamento.",
+  },
 ];
 
 function getChatSuggestions(input: string) {
@@ -2149,6 +2170,11 @@ function chatbotAnswer(message: string) {
   if (!text) return "Posso ajudar com cadastro, inscrição, perfil, catálogo, vagas, requisitos, local, certificado e contato. Digite sua dúvida ou escolha uma sugestão.";
 
   const words = text.split(" ");
+  const isGreeting = /^(oi|ola|bom dia|boa tarde|boa noite)(\s|$)/.test(text);
+  if (isGreeting) {
+    return "Olá! Posso ajudar com cadastro, inscrição, perfil, busca de cursos, vagas, requisitos, modalidades, localização, certificados, limite de 3 cursos e contato. O que você precisa saber?";
+  }
+
   const matchingCourse = COURSES.find(course => {
     const title = normalizeChatText(course.title);
     const category = normalizeChatText(course.category);
@@ -2156,25 +2182,6 @@ function chatbotAnswer(message: string) {
     if (text.includes(category)) return true;
     return title.split(" ").some(word => word.length > 3 && words.includes(word));
   });
-
-  const categories = Array.from(new Set(COURSES.map(course => course.category)));
-  const matchingCategory = categories.find(category => text.includes(normalizeChatText(category)));
-  const isGreeting = /^(oi|ola|bom dia|boa tarde|boa noite)(\s|$)/.test(text);
-
-  if (isGreeting) {
-    return "Olá! Posso ajudar com cadastro, inscrição, perfil, busca de cursos, vagas, requisitos, modalidades, localização, certificados e contato. O que você precisa saber?";
-  }
-
-  const faqMatch = PLATFORM_FAQS
-    .map(item => ({ item, score: item.keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0) }))
-    .filter(entry => entry.score > 0)
-    .sort((a, b) => b.score - a.score)[0];
-
-  if (faqMatch) return faqMatch.item.answer;
-
-  if (/(buscar|pesquisar|pesquisa|filtrar|filtro|encontrar curso|achar curso)/.test(text)) {
-    return "Na tela de cursos, você pode pesquisar por nome ou área e usar os filtros de categoria e modalidade. Para limpar, basta alcançar o botão “Limpar filtros” e tentar outra busca.";
-  }
 
   if (matchingCourse) {
     const course = matchingCourse;
@@ -2184,13 +2191,30 @@ function chatbotAnswer(message: string) {
     return `${course.title}: ${course.hours} horas, ${course.modality.toLowerCase()}, nível ${course.level}, ${status}, ${place}. ${course.description}${routeText}`;
   }
 
+  const categories = Array.from(new Set(COURSES.map(course => course.category)));
+  const matchingCategory = categories.find(category => text.includes(normalizeChatText(category)));
   if (matchingCategory) {
     const titles = COURSES.filter(course => course.category === matchingCategory).map(course => course.title).join(", ");
     return `Na categoria ${matchingCategory}, o catálogo tem: ${titles}.`;
   }
 
+  const faqMatch = PLATFORM_FAQS
+    .map(item => ({
+      item,
+      score: item.keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0),
+      exact: item.keywords.some(keyword => text === keyword || text.includes(keyword) && text.length <= keyword.length + 8),
+    }))
+    .filter(entry => entry.score > 0)
+    .sort((a, b) => Number(b.exact) - Number(a.exact) || b.score - a.score)[0];
+
+  if (faqMatch) return faqMatch.item.answer;
+
+  if (/(buscar|pesquisar|pesquisa|filtrar|filtro|encontrar curso|achar curso)/.test(text)) {
+    return "Na tela de cursos, você pode pesquisar por nome ou área e usar os filtros de categoria e modalidade. Para limpar, basta selecionar “Limpar filtros” e tentar outra busca.";
+  }
+
   if (/(plataforma|qualificavix|site|como funciona|o que e|para que serve)/.test(text)) {
-    return "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode consultar o catálogo, filtrar por categoria e modalidade, verificar requisitos e certificar-se da disponibilidade do curso antes de se inscrever.";
+    return "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode consultar o catálogo, filtrar por categoria e modalidade, verificar requisitos e vagas, e acompanhar os cursos cadastrados no seu perfil.";
   }
 
   if (/(vitoria|es|espirito santo|vitoriense)/.test(text)) {
@@ -2205,7 +2229,11 @@ function chatbotAnswer(message: string) {
     return "Os cursos da plataforma são gratuitos. O valor da formação não é cobrado ao aluno, e o catálogo informa as condições de participação e os requisitos antes da inscrição.";
   }
 
-  return "Posso te ajudar com inscrição, perfil, catálogo, modalidades, vagas, requisitos, local/Maps, certificado, busca e contato. Se for sobre um curso específico, escreva o nome dele ou uma categoria, como tecnologia, marketing ou administração.";
+  if (/(limite|3 cursos|tres cursos|mais cursos|maximo|máximo)/.test(text)) {
+    return "A plataforma permite até 3 cursos cadastrados ao mesmo tempo. Se você já estiver com 3 inscrições ativas, só poderá fazer novos cadastros após concluir ou finalizar algum curso em andamento.";
+  }
+
+  return "Posso te ajudar com inscrição, perfil, catálogo, modalidades, vagas, requisitos, local/Maps, certificado, busca, limite de 3 cursos e contato. Se for sobre um curso específico, escreva o nome dele ou uma categoria, como tecnologia, marketing ou administração.";
 }
 
 function Chatbot() {
@@ -2220,7 +2248,13 @@ function Chatbot() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
 
-  const quickActions = ["Cursos de tecnologia", "Como me inscrever?", "Como edito meu perfil?", "Como chegar ao curso?"];
+  const quickActions = [
+    "Cursos de tecnologia",
+    "Como me inscrever?",
+    "Como edito meu perfil?",
+    "Como entro em contato?",
+    "Qual o limite de cursos?",
+  ];
 
   function send(text?: string) {
     const t = (text ?? input).trim();
@@ -2239,7 +2273,7 @@ function Chatbot() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {open && (
-        <div className="w-[340px] sm:w-[360px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 120px)" }}>
+        <div className="w-[90vw] max-w-[360px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 120px)" }}>
           {/* Header */}
           <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100"
             style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}>
@@ -2332,13 +2366,13 @@ function Chatbot() {
       {/* FAB */}
       <div className="relative">
         {!open && (
-          <div className="absolute -top-12 right-0 bg-white text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg border border-slate-100 whitespace-nowrap">
+          <div className="absolute -top-12 right-0 bg-white text-slate-700 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-xl shadow-lg border border-slate-100 whitespace-nowrap max-w-[150px]">
             Olá! Sou a Tortuguita Vix 🐢
             <div className="absolute -bottom-1.5 right-4 w-3 h-3 bg-white border-r border-b border-slate-100 rotate-45" />
           </div>
         )}
         <button onClick={() => setOpen(!open)}
-          className="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all duration-200 border-4 border-white"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all duration-200 border-4 border-white"
           style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}
           aria-label="Abrir assistente virtual">
           {open ? <X className="w-7 h-7 text-white" /> : <TurtleMascot size={52} />}
@@ -2426,7 +2460,7 @@ function CourseEnrollmentPage({ course, profile, onBack, onConfirm, onEditProfil
   );
 }
 
-function ProfilePage({ profile, courses, onBack, onProfileUpdated }: { profile: UserProfile; courses: Course[]; onBack: () => void; onProfileUpdated: (profile: UserProfile) => void }) {
+function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse, onLogout }: { profile: UserProfile; courses: Course[]; onBack: () => void; onProfileUpdated: (profile: UserProfile) => void; onOpenCourse: (course: Course) => void; onLogout: () => void }) {
   const [form, setForm] = useState({
     nome: profile.nome,
     email: profile.email,
@@ -2443,7 +2477,15 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated }: { profile: 
   const [photo, setPhoto] = useState(profile.fotoPerfil ?? "");
   const [photoError, setPhotoError] = useState("");
   const [saved, setSaved] = useState(false);
-  const enrolledCourses = courses.filter(course => profile.enrolledCourseIds.includes(course.id));
+  const [activeTab, setActiveTab] = useState<"dados" | "cadastrados">("dados");
+  const enrolledCourses = courses
+    .filter(course => profile.enrolledCourseIds.includes(course.id))
+    .map(course => {
+      const enrollment = profile.enrollments?.find(item => item.courseId === course.id);
+      const deadline = enrollment?.unsubscribeDeadline ? new Date(enrollment.unsubscribeDeadline) : getUnsubscribeDeadline(new Date().toISOString()) ? new Date(getUnsubscribeDeadline(new Date().toISOString()) as string) : null;
+      return { course, enrollment, deadline };
+    });
+  const registeredCourses = enrolledCourses;
 
   function updateField(field: keyof typeof form, value: string) {
     setForm(current => ({ ...current, [field]: value }));
@@ -2501,17 +2543,28 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated }: { profile: 
         <button onClick={onBack} className="flex items-center gap-2 text-sm font-bold mb-6 hover:underline" style={{ color: C.blue }}>
           <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
-        <div className="grid lg:grid-cols-[1fr_320px] gap-8 items-start">
-          <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: C.blueLight }}>
-                <UserCheck className="w-5 h-5" style={{ color: C.blue }} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black text-slate-900">Meu perfil</h1>
-                <p className="text-sm text-slate-500">Perfil salvo neste navegador e pronto para novas inscrições.</p>
-              </div>
+
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: C.blueLight }}>
+              <UserCheck className="w-5 h-5" style={{ color: C.blue }} />
             </div>
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">Meu perfil</h1>
+              <p className="text-sm text-slate-500">Perfil salvo neste navegador e pronto para novas inscrições.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button type="button" onClick={() => setActiveTab("dados")} className={`px-4 py-2 rounded-xl text-sm font-black transition-colors ${activeTab === "dados" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              Dados do perfil
+            </button>
+            <button type="button" onClick={() => setActiveTab("cadastrados")} className={`px-4 py-2 rounded-xl text-sm font-black transition-colors ${activeTab === "cadastrados" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+              Cursos cadastrados ({registeredCourses.length})
+            </button>
+          </div>
+
+          {activeTab === "dados" ? (
             <form onSubmit={saveProfile} className="grid sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50">
                 <ProfileAvatar name={form.nome} photo={photo || undefined} size="w-20 h-20 text-2xl" />
@@ -2540,30 +2593,71 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated }: { profile: 
                     className="w-full px-3 py-2.5 rounded-lg border border-slate-200 font-medium outline-none focus:border-blue-500" />
                 </label>
               ))}
-              <div className="sm:col-span-2 flex items-center gap-4 pt-2">
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-3 pt-2">
                 <button type="submit" className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-black" style={{ background: C.blue }}>
                   <CheckCircle2 className="w-4 h-4" /> Salvar alterações
+                </button>
+                <button type="button" onClick={onLogout} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 font-black hover:bg-red-100">
+                  <LogOut className="w-4 h-4" /> Sair da plataforma
                 </button>
                 {saved && <p role="status" className="text-sm font-bold text-green-700">Perfil atualizado.</p>}
               </div>
             </form>
-          </section>
+          ) : (
+            <div className="space-y-4">
+              {registeredCourses.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                  <p className="text-lg font-black text-slate-800">Nenhum curso cadastrado</p>
+                  <p className="text-sm text-slate-500 mt-2">Você ainda não tem cursos registrados na plataforma. Explore o catálogo para começar.</p>
+                </div>
+              ) : (
+                registeredCourses.map(({ course, enrollment, deadline }) => (
+                  <article key={course.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full text-blue-700 bg-blue-100">{course.category}</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full text-slate-700 bg-slate-200">{course.modality}</span>
+                        </div>
+                        <h2 className="text-xl font-black text-slate-900">{course.title}</h2>
+                        <p className="text-sm text-slate-600 mt-2">{course.description}</p>
+                      </div>
 
-          <aside className="border-t-2 lg:border-t-0 lg:border-l-2 border-orange-400 pt-5 lg:pt-0 lg:pl-6">
-            <h2 className="font-black text-lg text-slate-900 mb-1">Meus cursos</h2>
-            <p className="text-sm text-slate-500 mb-4">{enrolledCourses.length} inscrição(ões)</p>
-            {enrolledCourses.length ? (
-              <ul className="divide-y divide-slate-200">
-                {enrolledCourses.map(course => (
-                  <li key={course.id} className="py-3">
-                    <p className="font-bold text-sm text-slate-800">{course.title}</p>
-                    <p className="text-xs text-slate-500 mt-1">{course.modality} · {course.period}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-sm text-slate-500">Você ainda não se inscreveu em um curso.</p>}
-          </aside>
-        </div>
+                      <button type="button" onClick={() => onOpenCourse(course)} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white font-black whitespace-nowrap" style={{ background: C.blue }}>
+                        Ver curso <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-5">
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Carga</p>
+                        <p className="text-sm font-bold text-slate-800">{course.hours}h</p>
+                      </div>
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Duração</p>
+                        <p className="text-sm font-bold text-slate-800">{course.duration}</p>
+                      </div>
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Local</p>
+                        <p className="text-sm font-bold text-slate-800">{course.location || "Online"}</p>
+                      </div>
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Inscrição</p>
+                        <p className="text-sm font-bold text-slate-800">{enrollment?.enrolledAt ? formatDateBR(enrollment.enrolledAt) : "Não informado"}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 rounded-xl border border-orange-200 bg-orange-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-orange-700 mb-2">Prazo final para desistência</p>
+                      <p className="text-sm font-bold text-slate-800">{deadline ? formatDateBR(deadline.toISOString()) : "Prazo não informado"}</p>
+                      <p className="text-xs text-slate-600 mt-1">Você pode cancelar sua inscrição até essa data, conforme o prazo do curso e da plataforma.</p>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
@@ -2582,22 +2676,86 @@ export default function App() {
       current.includes(courseId) ? current.filter(id => id !== courseId) : [...current, courseId],
     ));
   };
+  const getMonthlyEnrollmentCount = (userProfile: UserProfile | null) => {
+    if (!userProfile?.enrollments) return 0;
+
+    const now = new Date();
+    const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    return userProfile.enrollments.filter(item => {
+      const date = new Date(item.enrolledAt);
+      if (Number.isNaN(date.getTime())) return false;
+      const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+      return monthKey === currentMonthKey;
+    }).length;
+  };
+
   const handleRegisterFromCourse = () => {
-    if (selectedCourse && profile) {
-      navigate("enrollment-confirmation");
+    if (!selectedCourse) return;
+
+    if (!profile) {
+      navigate("register");
       return;
     }
-    navigate("register");
+
+    if (profile.enrolledCourseIds.includes(selectedCourse.id)) {
+      alert("Você já está inscrito neste curso e não pode se inscrever novamente.");
+      return;
+    }
+
+    if (getMonthlyEnrollmentCount(profile) >= 3) {
+      alert("Você pode cadastrar até 3 cursos por mês. Para fazer novas inscrições, aguarde o próximo mês.");
+      return;
+    }
+
+    navigate("enrollment-confirmation");
   };
   const handleEnrollFromStory = (course: Course) => {
+    if (profile && profile.enrolledCourseIds.includes(course.id)) {
+      alert("Você já está inscrito neste curso e não pode se inscrever novamente.");
+      return;
+    }
+
+    if (profile && getMonthlyEnrollmentCount(profile) >= 3) {
+      alert("Você pode cadastrar até 3 cursos por mês. Para fazer novas inscrições, aguarde o próximo mês.");
+      return;
+    }
+
     handleViewCourse(course);
     navigate(profile ? "enrollment-confirmation" : "register");
   };
   const handleConfirmCourseEnrollment = () => {
     if (!selectedCourse) return;
+
+    if (profile && profile.enrolledCourseIds.includes(selectedCourse.id)) {
+      alert("Você já está inscrito neste curso e não pode se inscrever novamente.");
+      navigate("course-detail");
+      return;
+    }
+
+    if (profile && getMonthlyEnrollmentCount(profile) >= 3) {
+      alert("Você pode cadastrar até 3 cursos por mês. Para fazer novas inscrições, aguarde o próximo mês.");
+      navigate("course-detail");
+      return;
+    }
+
     const updatedProfile = enrollUserInCourse(selectedCourse.id);
+    if (updatedProfile && (updatedProfile as UserProfile & { enrollmentLimitReached?: boolean }).enrollmentLimitReached) {
+      alert("Você pode cadastrar até 3 cursos por mês. Para fazer novas inscrições, aguarde o próximo mês.");
+      navigate("course-detail");
+      return;
+    }
+
     if (updatedProfile) setProfile(updatedProfile);
     navigate("course-detail");
+  };
+
+  const handleUnsubscribeCourse = (courseId: number) => {
+    const confirmed = window.confirm("Tem certeza que deseja desinscrever-se deste curso? Esta ação removerá o curso da aba de cursos cadastrados.");
+    if (!confirmed) return;
+
+    const updatedProfile = removeUserEnrollmentFromCourse(courseId);
+    if (updatedProfile) setProfile(updatedProfile);
   };
   const handleProfileBack = () => {
     const destination = returnToEnrollmentConfirmation ? "enrollment-confirmation" : "home";
@@ -2608,9 +2766,17 @@ export default function App() {
     setReturnToEnrollmentConfirmation(true);
     navigate("profile");
   };
+  const handleLogout = () => {
+    const confirmed = window.confirm("Deseja realmente sair da plataforma? Todos os dados do perfil e as inscrições vinculadas a este navegador serão removidos.");
+    if (!confirmed) return;
+
+    logoutUserProfile();
+    setProfile(null);
+    navigate("home");
+  };
 
   if (page === "register" || (page === "profile" && !profile)) {
-    if (profile) return <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} />;
+    if (profile) return <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} onLogout={handleLogout} />;
     return (
       <RegisterPage
         dark={darkMode}
@@ -2679,9 +2845,10 @@ export default function App() {
         {page === "course-detail" && selectedCourse && (
           <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse}
             isFavorite={favoriteCourseIds.includes(selectedCourse.id)} onToggleFavorite={handleToggleFavorite}
-            enrolled={profile?.enrolledCourseIds.includes(selectedCourse.id) ?? false} />
+            enrolled={profile?.enrolledCourseIds.includes(selectedCourse.id) ?? false}
+            onUnsubscribe={handleUnsubscribeCourse} />
         )}
-        {page === "profile" && profile && <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} />}
+        {page === "profile" && profile && <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} onOpenCourse={(course) => { handleViewCourse(course); navigate("course-detail"); }} onLogout={handleLogout} />}
         {page === "sobre" && <SobrePage navigate={navigate} />}
         {page === "categorias" && <CategoriasPage navigate={navigate} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
         {page === "contato" && (
@@ -2693,7 +2860,6 @@ export default function App() {
               {[
                 { icon: Phone, label: "Telefone", value: "0800 123 4567" },
                 { icon: Mail,  label: "E-mail",   value: "contato@qualificavix.es.gov.br" },
-                { icon: MapPin,label: "Endereço", value: "Vitória, Espírito Santo, Brasil" },
               ].map(c => (
                 <div key={c.label} className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200">
                   <c.icon className="w-5 h-5 shrink-0" style={{ color: C.blue }} />
