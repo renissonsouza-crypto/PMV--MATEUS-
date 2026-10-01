@@ -3,7 +3,8 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
-import { validateRegistration, validateTestimonial } from "../models/validation.mjs";
+import { validateRegistration, validateTestimonial, validateVitoriaCep } from "../models/validation.mjs";
+import { validateJsonMutation } from "./requestSecurity.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const dataDir = resolve(root, "data");
@@ -44,20 +45,43 @@ db.exec(`
 `);
 
 const json = (res, status, payload) => {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+  });
   res.end(JSON.stringify(payload));
 };
 
+const MAX_BODY_BYTES = 1_000_000;
 const body = req => new Promise((resolveBody, reject) => {
-  let raw = "";
+  const chunks = [];
+  let size = 0;
+  let tooLarge = false;
   req.on("data", chunk => {
-    raw += chunk;
-    if (raw.length > 1_000_000) reject(new Error("Payload muito grande"));
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) {
+      tooLarge = true;
+      chunks.length = 0;
+      return;
+    }
+    if (!tooLarge) chunks.push(chunk);
   });
   req.on("end", () => {
-    try { resolveBody(raw ? JSON.parse(raw) : {}); }
-    catch { reject(new Error("JSON inválido")); }
+    if (tooLarge) {
+      reject(Object.assign(new Error("Payload muito grande"), { statusCode: 413 }));
+      return;
+    }
+    try {
+      const raw = Buffer.concat(chunks).toString("utf8");
+      resolveBody(raw ? JSON.parse(raw) : {});
+    } catch {
+      reject(Object.assign(new Error("JSON inválido"), { statusCode: 400 }));
+    }
   });
+  req.on("error", reject);
 });
 
 const server = createServer(async (req, res) => {
@@ -72,6 +96,8 @@ const server = createServer(async (req, res) => {
       return json(res, 200, rows);
     }
     if (req.method === "POST" && url.pathname === "/api/testimonials") {
+      const requestError = validateJsonMutation(req, { checkOrigin: false });
+      if (requestError) return json(res, requestError.status, { error: requestError.error });
       const validation = validateTestimonial(await body(req));
       if (validation.error) return json(res, 400, { error: validation.error });
       const { name, role, course, quote, rating } = validation.data;
@@ -80,8 +106,13 @@ const server = createServer(async (req, res) => {
       return json(res, 201, { id: Number(result.lastInsertRowid), name, role, course, quote, rating });
     }
     if (req.method === "POST" && url.pathname === "/api/registrations") {
+      const requestError = validateJsonMutation(req, { checkOrigin: false });
+      if (requestError) return json(res, requestError.status, { error: requestError.error });
       const validation = validateRegistration(await body(req));
       if (validation.error) return json(res, 400, { error: validation.error });
+      const cepValidation = await validateVitoriaCep(validation.data.cep);
+      if (cepValidation.unavailable) return json(res, 503, { error: "Não foi possível validar o CEP agora. Tente novamente." });
+      if (!cepValidation.valid) return json(res, 400, { error: "O cadastro aceita somente CEPs de Vitória-ES" });
       const data = validation.data;
       try {
         const result = db.prepare(`INSERT INTO registrations
@@ -96,7 +127,9 @@ const server = createServer(async (req, res) => {
     }
     return json(res, 404, { error: "Rota não encontrada" });
   } catch (error) {
-    return json(res, 500, { error: error.message || "Erro interno" });
+    const status = Number.isInteger(error.statusCode) ? error.statusCode : 500;
+    if (status >= 500) console.error("Falha interna na API local:", error);
+    return json(res, status, { error: status < 500 ? error.message : "Erro interno" });
   }
 });
 

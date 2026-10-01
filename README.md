@@ -26,11 +26,10 @@ O fluxo segue `View → Controller → Service/Route → Controller → Model �
 
 ```bash
 npm install
-npm run server
 npm run dev
 ```
 
-O frontend encaminha `/api/*` para a API SQLite na porta 3001.
+`npm run dev` inicia a API SQLite na porta 3001 e o Vite; o frontend encaminha `/api/*` para essa API. Se uma API saudável já estiver rodando na porta 3001, o script a reutiliza.
 
 ## Testes e build
 

@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
     "server": "node server/server.mjs",
     "db:migrate": "node scripts/migrate-postgres.mjs",
     "test:db": "node tests/database.mjs",
+    "test:security": "node tests/security.mjs",
     "test:validation": "node tests/validation.mjs",
     "test:postgres": "node tests/postgres.mjs",
     "test:e2e": "node tests/e2e.mjs"

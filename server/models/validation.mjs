@@ -1,6 +1,27 @@
 // Regras de domínio compartilhadas pelos bancos local e de produção.
 export const clean = (value, max = 500) => String(value ?? "").trim().slice(0, max);
 
+export async function validateVitoriaCep(value, fetcher = fetch) {
+  const cep = clean(value, 12).replace(/\D/g, "");
+  if (!/^\d{8}$/.test(cep)) return { valid: false, unavailable: false };
+
+  try {
+    const baseUrl = (process.env.VIA_CEP_BASE_URL || "https://viacep.com.br/ws").replace(/\/$/, "");
+    const response = await fetcher(`${baseUrl}/${cep}/json/`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!response.ok) return { valid: false, unavailable: true };
+    const address = await response.json();
+    if (address.erro || !address.localidade || !address.uf) return { valid: false, unavailable: false };
+
+    const city = String(address.localidade).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+    return { valid: city === "vitoria" && String(address.uf).trim().toUpperCase() === "ES", unavailable: false };
+  } catch {
+    return { valid: false, unavailable: true };
+  }
+}
+
 export function ageFromBirthDate(value) {
   const birthDate = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(birthDate.getTime()) || birthDate > new Date()) return null;
