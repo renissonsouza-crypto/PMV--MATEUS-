@@ -59,6 +59,20 @@ async function fillAddress(page) {
   await page.waitForFunction(() => document.querySelector('[name="bairro"]')?.value === "Bento Ferreira");
   await page.locator('[name="numero"]').fill("10");
 }
+async function openAssistant(page) {
+  await page.getByRole("button", { name: "Abrir assistente virtual", exact: true }).click();
+  await page.getByRole("dialog", { name: "Tortuguita", exact: true }).waitFor();
+}
+async function askAssistant(page, message) {
+  const log = page.getByRole("log", { name: "Conversa com a Tortuguita", exact: true });
+  const previousCount = await log.locator("p").count();
+  const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
+  await input.fill(message);
+  await input.press("Enter");
+  const response = log.locator("p").nth(previousCount + 1);
+  await response.waitFor();
+  return response.innerText();
+}
 
 // Every case gets a new context, so viewport, dialogs and browser storage never leak.
 test("carregamento da página inicial e API SQLite", async (page, environment) => {
@@ -387,17 +401,121 @@ test("depoimentos: formulário obrigatório e publicação pela API real", async
 });
 
 test("assistente: resposta às mensagens de categoria e limite mensal", async page => {
-  await page.getByRole("button", { name: "Abrir assistente virtual", exact: true }).click();
+  await openAssistant(page);
+  const courses = await askAssistant(page, "Quero cursos de tecnologia");
+  for (const title of [courseTitles[0], courseTitles[4], courseTitles[6]]) assert(courses.includes(title));
+  assert.match(await askAssistant(page, "Qual o limite de cursos?"), /3.*(?:inscriç|cursos).*mês/is);
+  assert.match(await askAssistant(page, "Como entro em contato?"), /Contato.*https:\/\/www\.vitoria\.es\.gov\.br\//is);
+});
+
+test("assistente: contexto do curso, duração e ação real para abrir ficha", async page => {
+  await openAssistant(page);
+  assert.match(await askAssistant(page, "Me conte sobre Excel"), /Excel do Básico ao Avançado/);
+  assert.match(await askAssistant(page, "E quanto tempo dura?"), /2 meses/);
+  const log = page.getByRole("log", { name: "Conversa com a Tortuguita" });
+  await log.getByRole("button", { name: /Excel do Básico ao Avançado/i }).last().click();
+  await page.locator("main").getByRole("heading", { name: courseTitles[1], exact: true }).waitFor();
+  await openAssistant(page);
+  assert.match(await log.innerText(), /E quanto tempo dura/);
+  assert.match(await askAssistant(page, "O que vou aprender nele?"), /tabelas dinâmicas|planilhas|fórmulas/i);
+});
+
+test("assistente: ficha manual sincroniza contexto e respeita seleção posterior na conversa", async page => {
+  await openCourse(page, courseTitles[0]);
+  await openAssistant(page);
+  const reply = await askAssistant(page, "Quanto tempo dura?");
+  assert.match(reply, /4 meses/);
+  assert.match(reply, /120\s*(?:h|horas)/i);
+  await askAssistant(page, "Me conte sobre Excel");
+  await page.getByRole("button", { name: "Fechar assistente virtual", exact: true }).click();
+  await openCourse(page, courseTitles[4]);
+  await openAssistant(page);
+  assert.match(await askAssistant(page, "Quanto tempo dura?"), /5 meses/);
+  await askAssistant(page, "Me conte sobre Excel");
+  assert.match(await askAssistant(page, "E quanto tempo dura?"), /2 meses/);
+});
+
+test("assistente: comparação e recomendação respeitam catálogo e preferências", async page => {
+  await openAssistant(page);
+  const comparison = await askAssistant(page, "Compare Excel com Introdução à Programação");
+  assert.match(comparison, /Excel do Básico ao Avançado/);
+  assert.match(comparison, /Introdução à Programação/);
+  assert.match(comparison, /60\s*(?:h|horas)/i);
+  assert.match(comparison, /120\s*(?:h|horas)/i);
+  await page.getByRole("button", { name: "Reiniciar conversa", exact: true }).click();
+  const recommendation = await askAssistant(page, "Quero tecnologia, mas não presencial");
+  assert.match(recommendation, /Introdução à Programação/);
+  assert.match(recommendation, /Desenvolvimento Web Completo/);
+  assert.doesNotMatch(recommendation, /Informática para o Mercado/);
+});
+
+test("assistente: orienta cadastro e mantém conversa sem enviar formulário", async page => {
+  let posts = 0;
+  page.on("request", request => {
+    if (request.url().endsWith("/api/registrations") && request.method() === "POST") posts++;
+  });
+  await openAssistant(page);
+  assert.match(await askAssistant(page, "Como faço meu cadastro?"), /cadastro|cadastrar/i);
+  const log = page.getByRole("log", { name: "Conversa com a Tortuguita" });
+  await log.getByRole("button", { name: /cadastr/i }).last().click();
+  await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).waitFor();
+  await openAssistant(page);
+  assert.match(await log.innerText(), /Como faço meu cadastro/);
+  assert.match(await askAssistant(page, "Quais documentos preciso para o cadastro?"), /CPF/i);
+  assert.equal(posts, 0, "Chat actions and Enter must not submit the registration form");
+});
+
+test("assistente: ação para perfil e histórico local sem expor dados pessoais", async page => {
+  const profile = profileFixture();
+  profile.enrolledCourseIds = [2];
+  profile.enrollments = [{ courseId: 2, enrolledAt: new Date().toISOString() }];
+  await seedProfile(page, profile);
+  await openAssistant(page);
+  const reply = await askAssistant(page, "Quais são meus cursos inscritos?");
+  assert.match(reply, /Excel do Básico ao Avançado/);
+  assert.doesNotMatch(reply, /browser@example\.test|27999999999/);
+  await page.getByRole("log").getByRole("button", { name: /perfil/i }).last().click();
+  await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
+  await openAssistant(page);
+  assert.match(await page.getByRole("log").innerText(), /Quais são meus cursos inscritos/);
+});
+
+test("assistente: reinicia contexto, limita texto e trata HTML como texto", async page => {
+  await openAssistant(page);
+  await askAssistant(page, "Me fale sobre Excel");
+  await page.getByRole("button", { name: "Reiniciar conversa", exact: true }).click();
+  const log = page.getByRole("log", { name: "Conversa com a Tortuguita" });
+  assert.equal(await log.locator("p").count(), 1);
+  const reply = await askAssistant(page, "Quanto tempo dura?");
+  assert.match(reply, /qual|nome|escolh/i);
+  assert.doesNotMatch(reply, /Excel do Básico ao Avançado/);
   const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
-  await input.fill("Quero cursos de tecnologia");
-  await input.press("Enter");
-  await page.getByText(/Introdução à Programação.*Desenvolvimento Web Completo.*Informática para o Mercado/i).waitFor();
-  await input.fill("Qual o limite de cursos?");
-  await input.press("Enter");
-  await page.getByText(/3 cursos.*mês/i).waitFor();
-  await input.fill("Como entro em contato?");
-  await input.press("Enter");
-  await page.getByText(/Abra Contato.*https:\/\/www\.vitoria\.es\.gov\.br\//i).waitFor();
+  await input.fill("a".repeat(1200));
+  assert.equal((await input.inputValue()).length, 1000);
+  await askAssistant(page, "<img src=x onerror=alert('chat-xss')>");
+  assert.equal(await log.locator("img").count(), 0);
+  assert.match(await log.innerText(), /<img src=x/);
+});
+
+test("assistente no celular: teclado, sugestões, foco e largura", async page => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openAssistant(page);
+  const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
+  assert(await input.evaluate(el => el === document.activeElement));
+  await input.fill("Quero cursos");
+  await input.press("Shift+Enter");
+  assert.match(await input.inputValue(), /\n/);
+  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  await input.fill("exc");
+  await page.getByLabel("Perguntas sugeridas", { exact: true }).getByRole("button", { name: /Excel/i }).first().click();
+  await page.getByRole("log").getByText(/Excel do Básico ao Avançado/).last().waitFor();
+  const dialog = page.getByRole("dialog", { name: "Tortuguita", exact: true });
+  const bounds = await dialog.boundingBox();
+  assert(bounds.x >= 0 && bounds.x + bounds.width <= 391, "Chat must fit a mobile viewport");
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await input.press("Escape");
+  await dialog.waitFor({ state: "hidden" });
+  assert(await page.getByRole("button", { name: "Abrir assistente virtual", exact: true }).evaluate(el => el === document.activeElement));
 });
 
 test("responsividade: menu e catálogo no celular", async page => {

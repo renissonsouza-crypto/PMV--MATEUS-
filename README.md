@@ -65,6 +65,16 @@ O cadastro exige endereço de Vitória-ES, dados e consentimentos válidos, alé
 
 O limite é de três inscrições realizadas no mês, incluindo inscrições canceladas. O prazo de cancelamento é de três dias após cada inscrição. Dados antigos são normalizados ao carregar; se o navegador negar gravações, a interface informa que as alterações duram somente enquanto a página estiver aberta.
 
+## Assistente Tortuguita
+
+A Tortuguita usa uma base local de 50 temas e 400 exemplos de perguntas, junto com o catálogo compartilhado pelas telas. Ela orienta cadastro, perfil, favoritos, consentimentos, inscrições, cancelamentos, suporte e escolha de cursos. A conversa permite continuar um assunto, comparar cursos e refinar preferências sem repetir toda a pergunta.
+
+Esse funcionamento combina regras de interpretação de texto, exemplos e contexto da conversa; não envolve treinamento de pesos de um modelo de linguagem nem chamadas a uma API de IA. As respostas não inventam datas, docentes, critérios de certificação ou garantias de emprego ausentes do catálogo. Quando faltam informações, indicam como confirmá-las. Os botões do chat abrem telas e fichas; inscrições, cancelamentos e alterações continuam exigindo a ação do usuário na interface correspondente.
+
+O histórico da conversa permanece em memória nesta página e pode ser reiniciado no chat. O assistente não precisa receber documentos, senhas ou informações bancárias. Para orientar prazos individuais, utiliza somente o contexto de inscrições locais disponibilizado pela interface.
+
+O catálogo está em `src/app/data/courses.ts`, o conhecimento editorial em `src/app/data/tortuguitaKnowledge.ts` e a interpretação em `src/app/services/tortuguita.ts`. Consulte [a manutenção da Tortuguita](docs/tortuguita-knowledge.md) antes de acrescentar respostas e valide mudanças com `npm test` e `npm run test:e2e`.
+
 ## Testes e build
 
 ```bash

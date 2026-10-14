@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { RegisterPage } from "./RegisterView";
 import { TurtleMascot } from "../components/TurtleMascot";
+import { TortuguitaChat } from "../components/TortuguitaChat";
+import { COURSES } from "../data/courses";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
 import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, removeUserEnrollmentFromCourse, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
 import { canUnsubscribeFromCourse, countEnrollmentsInCurrentMonth, formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
@@ -25,7 +27,7 @@ import {
   ArrowRight, ArrowLeft, BookOpen, Filter, Star, Users, Award,
   CheckCircle2, Heart, Facebook, Instagram, Twitter, Phone, Mail,
   Monitor, Briefcase, Palette, Wrench, GraduationCap, Utensils,
-  Laptop, Send, SlidersHorizontal, Globe, Building2, TrendingUp,
+  Laptop, SlidersHorizontal, Globe, Building2, TrendingUp,
   PlayCircle, BarChart3, Target, Zap, UserCheck, Camera, Trash2, Pause, Play,
   LogOut,
 } from "lucide-react";
@@ -58,159 +60,6 @@ const C = {
   slate900:    "#0f172a",
 };
 
-// ─── Dados dos Cursos ─────────────────────────────────────────────────────────
-const COURSES: Course[] = [
-  {
-    id: 1, title: "Introdução à Programação",
-    category: "Tecnologia", categoryColor: "#2563eb",
-    modality: "Online", hours: 120, level: "Iniciante",
-    provider: "Instituição executora não informada no catálogo",
-    location: "", enrolled: 342, status: "open",
-    period: "Noturno", duration: "4 meses",
-    targetAudience: ["Primeiro emprego", "Mudança de profissão"],
-    avgSalary: "R$ 4.200/mês",
-    description: "Comece pela lógica de programação e avance até pequenos programas, praticando como transformar um problema em etapas, escrever instruções e testar uma solução.",
-    whatYouLearn: ["Lógica de programação e algoritmos", "Estruturas de dados básicas", "Fundamentos das principais linguagens", "Desenvolvimento de pequenos projetos", "Boas práticas e resolução de problemas"],
-    about: "Com 120 horas distribuídas ao longo de 4 meses, a formação cobre algoritmos, variáveis, condições, repetições, funções e estruturas de dados básicas. As atividades conduzem da resolução de exercícios a pequenos projetos, com foco em raciocínio lógico, leitura de erros e testes. É uma introdução para quem busca o primeiro contato com desenvolvimento; linguagem utilizada, calendário e instituição executora não estão especificados nesta ficha.",
-    image: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#1d4ed8", featured: 1,
-  },
-  {
-    id: 2, title: "Excel do Básico ao Avançado",
-    category: "Administração", categoryColor: "#16a34a",
-    modality: "Online", hours: 60, level: "Todos os níveis",
-    provider: "Instituição executora não informada no catálogo",
-    location: "", enrolled: 289, status: "last-spots",
-    period: "Flexível", duration: "2 meses",
-    targetAudience: ["Atualização profissional", "Primeiro emprego"],
-    avgSalary: "R$ 2.800/mês",
-    description: "Pratique planilhas desde a organização de dados e fórmulas até tabelas dinâmicas, gráficos e automações, aplicando os recursos do Excel a tarefas administrativas.",
-    whatYouLearn: ["Fórmulas e funções avançadas", "Tabelas dinâmicas e gráficos", "Macros e automação VBA", "Análise de dados", "Dashboards profissionais"],
-    about: "A carga de 60 horas está prevista para 2 meses, em modalidade online e com período flexível. O conteúdo parte da estruturação de planilhas e referências de células, passa por funções, filtros, gráficos e tabelas dinâmicas e chega a macros e automação VBA, conforme o programa cadastrado. Os exercícios podem ser aplicados a controles, relatórios e análises de rotina; acesso a software e critérios de avaliação precisam ser confirmados na oferta da turma.",
-    image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#16a34a", featured: 2,
-  },
-  {
-    id: 3, title: "Design Gráfico para Iniciantes",
-    category: "Design", categoryColor: "#7c3aed",
-    modality: "Presencial", hours: 80, level: "Iniciante",
-    provider: "SENAI (unidade Beira Mar informada no catálogo)",
-    location: "Senai – Beira Mar", enrolled: 156, status: "open",
-    period: "Vespertino", duration: "3 meses",
-    targetAudience: ["Primeiro emprego", "Empreendedor"],
-    avgSalary: "R$ 3.400/mês",
-    description: "Aprenda fundamentos de composição, tipografia e cor e aplique-os na criação de peças gráficas, materiais para redes sociais e uma identidade visual básica.",
-    whatYouLearn: ["Princípios do design visual", "Tipografia e cores", "Adobe Photoshop e Illustrator", "Criação de identidade visual", "Design para redes sociais"],
-    about: "São 80 horas presenciais ao longo de 3 meses, no período vespertino. A proposta percorre princípios de comunicação visual, composição, tipografia, paletas de cor e ferramentas como Photoshop e Illustrator, com exercícios de criação de peças e identidade visual. A ficha indica o SENAI – Beira Mar como local, mas não apresenta endereço completo, datas, nome da unidade oficial ou confirmação de parceria para esta edição; confirme esses dados antes do deslocamento.",
-    image: "https://images.unsplash.com/photo-1522542550221-31fd19575a2d?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#7c3aed", featured: 3,
-  },
-  {
-    id: 4, title: "Marketing Digital na Prática",
-    category: "Marketing", categoryColor: "#db2777",
-    modality: "Online", hours: 60, level: "Iniciante",
-    provider: "Instituição executora não informada no catálogo",
-    location: "", enrolled: 412, status: "open",
-    period: "Flexível", duration: "2 meses",
-    targetAudience: ["Empreendedor", "Atualização profissional", "Mudança de profissão"],
-    avgSalary: "R$ 3.800/mês",
-    description: "Planeje ações de marketing digital envolvendo conteúdo, busca, redes sociais, anúncios e métricas, conectando objetivos de negócio a indicadores de campanha.",
-    whatYouLearn: ["SEO e tráfego orgânico", "Google Ads e Facebook Ads", "E-mail marketing", "Métricas e analytics", "Estratégias de conteúdo"],
-    about: "A formação online prevê 60 horas em 2 meses, com período flexível. O percurso inclui SEO, planejamento de conteúdo, anúncios em plataformas digitais, e-mail marketing e leitura de métricas. Os exercícios podem envolver a definição de público, calendário editorial, orçamento e indicadores para uma campanha; plataformas utilizadas e ferramentas eventualmente pagas devem ser confirmadas na descrição oficial da turma.",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#db2777", featured: 4,
-  },
-  {
-    id: 5, title: "Desenvolvimento Web Completo",
-    category: "Tecnologia", categoryColor: "#2563eb",
-    modality: "Online", hours: 150, level: "Intermediário",
-    provider: "Instituição executora não informada no catálogo",
-    location: "", enrolled: 278, status: "open",
-    period: "Noturno", duration: "5 meses",
-    targetAudience: ["Mudança de profissão", "Atualização profissional"],
-    avgSalary: "R$ 5.500/mês",
-    description: "Construa a base de uma aplicação web: páginas com HTML, CSS e JavaScript, interfaces com React, serviços com Node.js, integração com APIs e persistência de dados.",
-    whatYouLearn: ["HTML, CSS e JavaScript", "React e Node.js", "Banco de dados SQL e NoSQL", "APIs RESTful", "Deploy e hospedagem"],
-    about: "O curso prevê 150 horas ao longo de 5 meses, em modalidade online e período noturno. O conteúdo cadastrado vai de HTML, CSS e JavaScript a React, Node.js, bancos SQL e NoSQL, APIs REST e publicação de aplicações. A trilha é voltada a quem já tem noções iniciais e quer praticar partes de front-end e back-end; requisitos técnicos, tecnologias e ambiente de desenvolvimento da turma precisam ser confirmados com a instituição executora, ainda não identificada nesta ficha.",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#0891b2",
-  },
-  {
-    id: 6, title: "Gestão de Projetos",
-    category: "Administração", categoryColor: "#16a34a",
-    modality: "Online", hours: 60, level: "Intermediário",
-    provider: "Instituição executora não informada no catálogo",
-    location: "", enrolled: 198, status: "coming-soon",
-    period: "Vespertino", duration: "2 meses",
-    targetAudience: ["Atualização profissional", "Empreendedor"],
-    avgSalary: "R$ 6.200/mês",
-    description: "Pratique planejamento, acompanhamento e encerramento de projetos com escopo, cronograma, responsabilidades, riscos e métodos ágeis como Scrum e Kanban.",
-    whatYouLearn: ["Metodologias ágeis (Scrum, Kanban)", "Gestão de equipes", "Planejamento e cronograma", "Controle de riscos", "Ferramentas: Trello, Jira, Asana"],
-    about: "A previsão é de 60 horas em 2 meses, no período vespertino e em formato online. O conteúdo reúne definição de objetivos e escopo, organização de tarefas e cronograma, gestão de riscos e equipes, além de práticas Scrum e Kanban e uso de ferramentas como Trello, Jira e Asana. Como a turma aparece como futura, datas, provedor, ferramentas exigidas e formato das atividades ainda precisam ser confirmados quando as inscrições forem abertas.",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#059669",
-  },
-  {
-    id: 7, title: "Informática para o Mercado",
-    category: "Tecnologia", categoryColor: "#2563eb",
-    modality: "Presencial", hours: 100, level: "Iniciante",
-    provider: "Instituição executora não informada no catálogo",
-    location: "Hub de Inovação", enrolled: 134, status: "open",
-    period: "Diurno", duration: "3 meses",
-    targetAudience: ["Primeiro emprego", "Atualização profissional"],
-    avgSalary: "R$ 2.200/mês",
-    description: "Desenvolva autonomia no uso do computador, internet, e-mail profissional e ferramentas de escritório, com atenção a segurança digital e organização de arquivos.",
-    whatYouLearn: ["Windows e pacote Office", "Internet e e-mail profissional", "Segurança digital", "Google Workspace", "Noções de hardware"],
-    about: "São 100 horas presenciais previstas para 3 meses, no período diurno e em nível iniciante. A trilha inclui sistema operacional, arquivos, pacote Office, Google Workspace, navegação, e-mail e noções de segurança e hardware. A ficha informa o Hub de Inovação como local, mas não identifica a instituição responsável nem detalha endereço, dias de aula ou equipamentos disponibilizados; esses dados devem ser confirmados antes da inscrição.",
-    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#0369a1",
-  },
-  {
-    id: 8, title: "Atendimento ao Cliente",
-    category: "Educação", categoryColor: "#d97706",
-    modality: "Online", hours: 40, level: "Iniciante",
-    provider: "Instituição executora não informada no catálogo",
-    location: "", enrolled: 321, status: "open",
-    period: "Flexível", duration: "1 mês",
-    targetAudience: ["Primeiro emprego", "Mudança de profissão"],
-    avgSalary: "R$ 1.800/mês",
-    description: "Treine comunicação clara, escuta ativa, atendimento por diferentes canais, registro de solicitações, encaminhamento de problemas e acompanhamento pós-venda.",
-    whatYouLearn: ["Comunicação e linguagem positiva", "Gestão de conflitos", "Atendimento multicanal", "Fidelização de clientes", "CRM e pós-venda"],
-    about: "A carga prevista é de 40 horas em 1 mês, com aulas online e período flexível. Os temas incluem comunicação profissional, escuta e identificação de necessidades, atendimento multicanal, resolução e encaminhamento de conflitos, registro em CRM, fidelização e pós-venda. As práticas podem simular conversas e situações de atendimento; critérios de participação e ferramentas utilizadas não estão detalhados no cadastro.",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#d97706",
-  },
-  {
-    id: 9, title: "Gastronomia Brasileira",
-    category: "Gastronomia", categoryColor: "#ea580c",
-    modality: "Presencial", hours: 80, level: "Iniciante",
-    provider: "SENAC (unidade específica não identificada no catálogo)",
-    location: "Senac – Vitória", enrolled: 89, status: "last-spots",
-    period: "Diurno", duration: "3 meses",
-    targetAudience: ["Primeiro emprego", "Empreendedor"],
-    avgSalary: "R$ 2.500/mês",
-    description: "Pratique técnicas de preparo da culinária brasileira, higiene e segurança alimentar, organização de cozinha e elaboração de fichas técnicas e cardápios.",
-    whatYouLearn: ["Técnicas de corte e preparo", "Culinária regional brasileira", "Higiene e segurança alimentar", "Cardápio e fichas técnicas", "Noções de gestão de cozinha"],
-    about: "O cadastro prevê 80 horas presenciais ao longo de 3 meses, no período diurno, com nível iniciante. A programação combina técnicas de corte, preparo e cocção, receitas regionais, higiene e segurança alimentar, fichas técnicas, planejamento de cardápio e noções de custos e organização de cozinha. O SENAC – Vitória aparece como local; unidade, endereço, disponibilidade de insumos e calendário devem ser confirmados na chamada oficial da turma.",
-    image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#ea580c",
-  },
-  {
-    id: 10, title: "Eletricista Predial",
-    category: "Técnico", categoryColor: "#ca8a04",
-    modality: "Presencial", hours: 160, level: "Iniciante",
-    provider: "SENAI (unidade Bento Ferreira informada no catálogo)",
-    location: "Senai – Bento Ferreira", enrolled: 67, status: "open",
-    period: "Noturno", duration: "5 meses",
-    targetAudience: ["Primeiro emprego", "Mudança de profissão"],
-    avgSalary: "R$ 4.000/mês",
-    description: "Aprenda a interpretar projetos e executar instalações elétricas prediais, selecionar proteções, realizar verificações e aplicar procedimentos de segurança pertinentes.",
-    whatYouLearn: ["Leitura de projetos elétricos", "Instalações residenciais e comerciais", "Normas NBR e NR10", "Quadros elétricos e proteções", "Manutenção corretiva"],
-    about: "A formação prevê 160 horas presenciais durante 5 meses, no período noturno e em nível iniciante. Os tópicos cadastrados abrangem leitura de projetos, circuitos residenciais e comerciais, dimensionamento básico, quadros e dispositivos de proteção, manutenção e referências às normas NBR e à NR-10. A menção à NR-10 no conteúdo não confirma, por si só, que a turma conceda certificado dessa norma; confirme escopo, práticas em laboratório, equipamentos de proteção, requisitos e endereço completo com o SENAI – Bento Ferreira.",
-    image: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1200&q=80",
-    bgColor: "#ca8a04",
-  },
-];
 
 const COURSE_IMAGES: Record<string, string> = {
   Tecnologia: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
@@ -2087,351 +1936,7 @@ function Footer({ navigate, onSelectCategory }: { navigate: (p: Page) => void; o
   );
 }
 
-// ─── Chatbot Tortuguita ───────────────────────────────────────────────────────
 const normalizeChatText = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-
-const CHAT_SUGGESTED_QUESTIONS = [
-  { terms: ["inscri", "matric", "cadastr", "cadastro"], question: "Como faço minha inscrição?" },
-  { terms: ["perfil", "conta", "editar", "alterar", "dados"], question: "Quais dados posso editar no meu perfil?" },
-  { terms: ["gratuit", "preco", "valor", "pagar", "custo", "mensalidade"], question: "Os cursos são gratuitos?" },
-  { terms: ["modalidade", "online", "presencial", "hibrido", "tipo"], question: "Quais cursos são online ou presenciais?" },
-  { terms: ["local", "endereco", "mapa", "chegar", "unidade", "onde fica"], question: "Como encontro o local do curso?" },
-  { terms: ["certific", "diploma", "conclusao", "aproveitamento"], question: "Quais são os critérios do certificado?" },
-  { terms: ["busca", "buscar", "filtro", "pesquisa", "filtrar"], question: "Como buscar e filtrar cursos?" },
-  { terms: ["vaga", "disponivel", "aberta", "turma"], question: "Como vejo se um curso tem vaga?" },
-  { terms: ["requisito", "idade", "escolaridade", "responsavel"], question: "Quais são os requisitos para inscrição?" },
-  { terms: ["contato", "telefone", "email", "ajuda", "atendimento"], question: "Como entro em contato?" },
-  { terms: ["curso", "catalogo", "lista", "opcoes", "cursos"], question: "Quais cursos têm no catálogo?" },
-  { terms: ["horario", "periodo", "duracao", "carga", "tempo"], question: "Como vejo a carga horária e duração do curso?" },
-  { terms: ["plataforma", "qualificavix", "site", "funciona"], question: "Como funciona a plataforma?" },
-];
-
-const PLATFORM_FAQS = [
-  {
-    id: "cadastro",
-    keywords: ["cadastro", "cadastr", "primeiro cadastro", "criar conta", "registrar"],
-    answer: "Para se cadastrar, abra a página de cursos, escolha um curso e clique em “Inscrever-se”. No primeiro acesso, o sistema solicita os dados básicos e depois salva o perfil no navegador para que você não precise preencher tudo novamente em outro curso.",
-  },
-  {
-    id: "inscricao",
-    keywords: ["inscri", "matric", "participar", "entrar no curso", "fazer curso", "vaga"],
-    answer: "Para se inscrever, escolha o curso no catálogo, veja os detalhes e clique em “Inscrever-se”. Depois do cadastro inicial, o perfil pode ser reutilizado para outras inscrições sem repetir o formulário.",
-  },
-  {
-    id: "perfil",
-    keywords: ["perfil", "conta", "editar", "alterar", "dados", "meus dados", "atualizar"],
-    answer: "Após o primeiro cadastro, acesse “Meu perfil” no menu para editar dados pessoais, endereço, escolaridade, situação de emprego e consultar os cursos em que você já se inscreveu. O perfil fica salvo neste navegador.",
-  },
-  {
-    id: "gratuito",
-    keywords: ["gratuit", "preco", "valor", "pagar", "custo", "mensalidade", "gratuito"],
-    answer: "Os cursos da plataforma são gratuitos. A página de cada curso mostra a modalidade, carga horária, duração, período e as condições de inscrição antes de você confirmar a participação.",
-  },
-  {
-    id: "modalidade",
-    keywords: ["modalidade", "online", "presencial", "hibrido", "tipo de curso"],
-    answer: "A plataforma disponibiliza cursos online e presenciais. Use os filtros por categoria ou modalidade para encontrar a opção que melhor combina com sua rotina e objetivo.",
-  },
-  {
-    id: "local",
-    keywords: ["local", "endereco", "mapa", "chegar", "unidade", "onde fica", "como chegar"],
-    answer: "Para cursos presenciais, abra os detalhes do curso e clique no ícone de localização para abrir a rota no Google Maps. Cursos online não têm local presencial, e nem todos os cursos têm endereço completo cadastrado na plataforma.",
-  },
-  {
-    id: "certificado",
-    keywords: ["certific", "diploma", "conclusao", "aproveitamento", "certificado"],
-    answer: "Consulte a aba “Certificado” nos detalhes do curso. O catálogo atual não informa o emissor nem os critérios de frequência e aproveitamento; confirme essas condições com a instituição ofertante antes da inscrição.",
-  },
-  {
-    id: "contato",
-    keywords: ["contato", "telefone", "email", "ajuda", "falar", "atendimento", "suporte", "mais informacoes", "mais informações", "falar com a plataforma", "contato da plataforma", "quero falar com a plataforma", "entrar em contato com a plataforma"],
-    answer: `Abra Contato no menu para acessar os canais de atendimento: ${CONTACT_CHANNELS.map(channel => `${channel.label}: ${channel.value}${channel.label === "Atendimento" ? ` (${channel.href})` : ""}`).join("; ")}. A tortuguita também pode orientar sobre cursos, inscrição e dúvidas gerais.`,
-  },
-  {
-    id: "catalogo",
-    keywords: ["curso", "cursos", "catalogo", "lista", "opcao", "quais cursos", "tem curso"],
-    answer: `O catálogo atual reúne ${COURSES.length} cursos em áreas como tecnologia, administração, marketing, design, educação, gastronomia e muito mais. Diga uma área ou o nome de um curso para eu indicar opções mais relevantes.`,
-  },
-  {
-    id: "busca",
-    keywords: ["buscar", "pesquisar", "pesquisa", "filtrar", "filtro", "encontrar curso"],
-    answer: "Na tela de cursos, você pode pesquisar por nome da formação ou área de interesse e usar filtros de categoria e modalidade. Para limpar, basta selecionar “Limpar filtros”.",
-  },
-  {
-    id: "requisitos",
-    keywords: ["requisito", "idade", "escolaridade", "responsavel", "quem pode fazer", "pre requisito"],
-    answer: "Os requisitos costumam incluir idade mínima, escolaridade e disponibilidade para o horário do curso. Quando houver menor de idade, o cadastro exige dados do responsável legal. Para detalhes exatos, consulte a página do curso.",
-  },
-  {
-    id: "vagas",
-    keywords: ["vaga", "vagas", "disponivel", "aberta", "turma", "inscricoes abertas"],
-    answer: "Cada curso mostra seu status no catálogo: inscrições abertas, últimas vagas ou início em breve. Confira o curso desejado para ver a disponibilidade atual.",
-  },
-  {
-    id: "horario",
-    keywords: ["horario", "periodo", "duracao", "carga horaria", "tempo", "dias"],
-    answer: "Na página do curso, você encontra a carga horária, duração, período e a disponibilidade de aulas. Se quiser, diga o nome do curso e eu te devolvo esse detalhamento.",
-  },
-  {
-    id: "plataforma",
-    keywords: ["plataforma", "qualificavix", "site", "como funciona", "o que e"],
-    answer: "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode navegar pelo catálogo, filtrar por categoria, consultar requisitos e vagas, e concluir a inscrição diretamente no curso escolhido.",
-  },
-  {
-    id: "limite",
-    keywords: ["limite", "3 cursos", "três cursos", "mais cursos", "inscricoes limitadas", "quantos cursos posso fazer"],
-    answer: "A plataforma permite até 3 inscrições por mês. Cancelar uma inscrição não reinicia a contagem mensal. Quando atingir esse limite, aguarde o próximo mês para se inscrever em outros cursos.",
-  },
-  {
-    id: "cancelamento",
-    keywords: ["cancel", "desist", "desinscrev", "desinscri", "sair do curso"],
-    answer: "Você pode cancelar uma inscrição por até 3 dias após o cadastro no curso. Acesse Meu perfil, abra Cursos cadastrados e selecione Ver curso; dentro do prazo, use Desinscrever-se. Depois desse prazo, procure o atendimento.",
-  },
-  {
-    id: "cursos cadastrados",
-    keywords: ["cursos cadastrados", "meus cursos", "cursos inscritos", "cadastros", "inscricoes ativas", "meus cadastros"],
-    answer: "Na área de perfil, você pode ver todos os cursos cadastrados, com informações do curso, prazo para desistência e status da matrícula. Essa aba ajuda a acompanhar o que já foi inscrito e o que ainda está em andamento.",
-  },
-];
-
-function getChatSuggestions(input: string) {
-  const query = normalizeChatText(input);
-  if (query.length < 2) return [];
-  const queryWords = query.split(" ").filter(word => word.length >= 2);
-  const lastWord = queryWords.at(-1) ?? query;
-
-  const suggestions = CHAT_SUGGESTED_QUESTIONS
-    .filter(item => item.terms.some(term => queryWords.some(word => term.startsWith(word) || word.startsWith(term))))
-    .map(item => item.question);
-
-  const matchingCourses = COURSES
-    .filter(course => {
-      const searchable = normalizeChatText(`${course.title} ${course.category} ${course.location}`);
-      return searchable.includes(query) || searchable.split(" ").some(word => word.startsWith(lastWord));
-    })
-    .map(course => course.title);
-
-  return [...new Set([...matchingCourses, ...suggestions])].slice(0, 5);
-}
-
-function chatbotAnswer(message: string) {
-  const text = normalizeChatText(message);
-  if (!text) return "Posso ajudar com cadastro, inscrição, perfil, catálogo, vagas, requisitos, local, certificado e contato. Digite sua dúvida ou escolha uma sugestão.";
-
-  const words = text.split(" ");
-  const isGreeting = /^(oi|ola|bom dia|boa tarde|boa noite)(\s|$)/.test(text);
-  if (isGreeting) {
-    return "Olá! Posso ajudar com cadastro, inscrição, perfil, busca de cursos, vagas, requisitos, modalidades, localização, certificados, limite de 3 cursos e contato. O que você precisa saber?";
-  }
-
-  const matchingCourse = COURSES.find(course => {
-    const title = normalizeChatText(course.title);
-    if (text.includes(title)) return true;
-    return title.split(" ").some(word => word.length > 3 && words.includes(word));
-  });
-
-  if (matchingCourse) {
-    const course = matchingCourse;
-    const status = course.status === "open" ? "inscrições abertas" : course.status === "last-spots" ? "últimas vagas" : "início em breve";
-    const place = course.modality === "Online" ? "modalidade online" : `local: ${course.location || "a confirmar"}`;
-    const routeText = course.modality === "Online" ? "" : " Você pode abrir a rota no Maps pelo ícone de localização do curso.";
-    return `${course.title}: ${course.hours} horas, ${course.modality.toLowerCase()}, nível ${course.level}, ${status}, ${place}. ${course.description}${routeText}`;
-  }
-
-  const categories = Array.from(new Set(COURSES.map(course => course.category)));
-  const matchingCategory = categories.find(category => text.includes(normalizeChatText(category)));
-  if (matchingCategory) {
-    const titles = COURSES.filter(course => course.category === matchingCategory).map(course => course.title).join(", ");
-    return `Na categoria ${matchingCategory}, o catálogo tem: ${titles}.`;
-  }
-
-  const matchesKeyword = (keyword: string) => keyword === "conta" ? words.includes(keyword) : text.includes(keyword);
-  const faqMatch = PLATFORM_FAQS
-    .map(item => {
-      const keywords = item.keywords.map(normalizeChatText);
-      return {
-        item,
-        score: keywords.reduce((total, keyword) => total + (matchesKeyword(keyword) ? 1 : 0), 0),
-        exact: keywords.some(keyword => text === keyword || matchesKeyword(keyword) && text.length <= keyword.length + 8),
-      };
-    })
-    .filter(entry => entry.score > 0)
-    .sort((a, b) => Number(a.item.id === "catalogo") - Number(b.item.id === "catalogo") || Number(b.exact) - Number(a.exact) || b.score - a.score)[0];
-
-  if (faqMatch) return faqMatch.item.answer;
-
-  if (/(buscar|pesquisar|pesquisa|filtrar|filtro|encontrar curso|achar curso)/.test(text)) {
-    return "Na tela de cursos, você pode pesquisar por nome ou área e usar os filtros de categoria e modalidade. Para limpar, basta selecionar “Limpar filtros” e tentar outra busca.";
-  }
-
-  if (/(plataforma|qualificavix|site|como funciona|o que e|para que serve)/.test(text)) {
-    return "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode consultar o catálogo, filtrar por categoria e modalidade, verificar requisitos e vagas, e acompanhar os cursos cadastrados no seu perfil.";
-  }
-
-  if (/\b(vitoria|es|espirito santo|vitoriense)\b/.test(text)) {
-    return "A plataforma é voltada para a cidade de Vitória-ES, com cursos online e opções presenciais na região. Quando o curso for presencial, pode ser aberto o mapa de rota pelo ícone de localização do curso.";
-  }
-
-  if (/(horario|periodo|duracao|carga horaria|tempo|dias)/.test(text)) {
-    return "Na página do curso, você encontra a carga horária, a duração e o período de aulas. Se quiser, diga o nome do curso e eu te devolvo esse resumo com mais precisão.";
-  }
-
-  if (/(e? gratuito|e? pago|preco|valor|quanto custa|mensalidade)/.test(text)) {
-    return "Os cursos da plataforma são gratuitos. O valor da formação não é cobrado ao aluno, e o catálogo informa as condições de participação e os requisitos antes da inscrição.";
-  }
-
-  if (/(limite|3 cursos|tres cursos|mais cursos|maximo|máximo)/.test(text)) {
-    return "A plataforma permite até 3 inscrições por mês. Cancelar uma inscrição não reinicia a contagem mensal. Quando atingir esse limite, aguarde o próximo mês para se inscrever em outros cursos.";
-  }
-
-  return "Posso te ajudar com inscrição, perfil, catálogo, modalidades, vagas, requisitos, local/Maps, certificado, busca, limite de 3 cursos e contato. Se for sobre um curso específico, escreva o nome dele ou uma categoria, como tecnologia, marketing ou administração.";
-}
-
-function Chatbot() {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, role: "bot" as const, text: "Olá! 👋 Eu sou o assistente do Qualifica Vix. Como posso te ajudar hoje?", time: "agora" }
-  ]);
-  const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const suggestions = getChatSuggestions(input);
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
-
-  const quickActions = [
-    "Cursos de tecnologia",
-    "Como me inscrever?",
-    "Como edito meu perfil?",
-    "Como entro em contato?",
-    "Qual o limite de cursos?",
-  ];
-
-  function send(text?: string) {
-    const t = (text ?? input).trim();
-    if (!t || typing) return;
-    setInput("");
-    const messageId = Date.now();
-    setMessages(prev => [...prev, { id: messageId, role: "user", text: t, time: "agora" }]);
-    setTyping(true);
-    setTimeout(() => {
-      const resp = chatbotAnswer(t);
-      setMessages(prev => [...prev, { id: messageId + 1, role: "bot", text: resp, time: "agora" }]);
-      setTyping(false);
-    }, 450);
-  }
-
-  return (
-    <div className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
-      {open && (
-        <div className="w-[90vw] max-w-[360px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 120px)" }}>
-          {/* Header */}
-          <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100"
-            style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}>
-            <TurtleSmall size={36} />
-            <div className="flex-1">
-              <p className="text-white font-black text-sm">Tortuguita Vix</p>
-              <p className="text-blue-200 text-xs flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Online agora
-              </p>
-            </div>
-            <button onClick={() => setOpen(false)} aria-label="Fechar assistente virtual" className="text-white/70 hover:text-white">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-slate-50">
-            {messages.map(m => (
-              <div key={m.id} className={`flex gap-2 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-                {m.role === "bot" && <TurtleSmall size={28} />}
-                <div className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  m.role === "user"
-                    ? "text-white rounded-tr-sm"
-                    : "bg-white text-slate-700 border border-slate-200 rounded-tl-sm shadow-sm"
-                }`} style={m.role === "user" ? { background: C.blue } : {}}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {typing && (
-              <div className="flex gap-2">
-                <TurtleSmall size={28} />
-                <div className="bg-white border border-slate-200 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm">
-                  <div className="flex gap-1 items-center">
-                    {[0, 150, 300].map(d => (
-                      <span key={d} className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Quick actions */}
-          <div className="px-4 py-2 flex flex-wrap gap-1.5 border-t border-slate-100 bg-white">
-            {quickActions.map(a => (
-              <button key={a} onClick={() => send(a)} disabled={typing}
-                className="text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-colors">
-                {a}
-              </button>
-            ))}
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t border-slate-100 bg-white">
-            <form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2">
-              <div className="relative flex-1 min-w-0">
-                <input value={input} onChange={e => setInput(e.target.value)}
-                  placeholder="Digite sua dúvida ou curso..."
-                  autoComplete="off"
-                  aria-label="Sua dúvida ou busca"
-                  aria-autocomplete="list"
-                  aria-expanded={suggestions.length > 0}
-                  aria-controls="chat-suggestions"
-                  className="w-full text-sm bg-slate-100 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-400 font-medium" />
-                {suggestions.length > 0 && (
-                  <div id="chat-suggestions" role="group" aria-label="Sugestões de busca"
-                    className="absolute bottom-full left-0 right-0 mb-2 max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                    <p className="px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-400">Sugestões</p>
-                    {suggestions.map(suggestion => (
-                      <button key={suggestion} type="button" disabled={typing} onClick={() => send(suggestion)}
-                        className="w-full rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50">
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button type="submit" disabled={!input.trim() || typing}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white disabled:opacity-40 hover:opacity-90 transition-opacity shrink-0"
-                style={{ background: C.blue }}>
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* FAB */}
-      <div className="relative">
-        {!open && (
-          <div className="absolute -top-12 right-0 bg-white text-slate-700 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-xl shadow-lg border border-slate-100 whitespace-nowrap max-w-[150px]">
-            Olá! Sou a Tortuguita Vix 🐢
-            <div className="absolute -bottom-1.5 right-4 w-3 h-3 bg-white border-r border-b border-slate-100 rotate-45" />
-          </div>
-        )}
-        <button onClick={() => setOpen(!open)}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all duration-200 border-4 border-white"
-          style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}
-          aria-label={open ? "Fechar assistente virtual" : "Abrir assistente virtual"} aria-expanded={open}>
-          {open ? <X className="w-7 h-7 text-white" /> : <TurtleMascot size={52} />}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── App Root ─────────────────────────────────────────────────────────────────
 function resizeProfilePhoto(file: File): Promise<string> {
@@ -2880,16 +2385,7 @@ export default function App() {
     navigate("home");
   };
 
-  if (page === "register" || (page === "profile" && !profile)) {
-    return (
-      <RegisterPage
-        dark={darkMode}
-        onBack={() => navigate("home")}
-        courseId={registrationCourseId}
-        onProfileCreated={setProfile}
-      />
-    );
-  }
+  const registrationMode = page === "register" || (page === "profile" && !profile);
 
   return (
     <>
@@ -2929,60 +2425,68 @@ export default function App() {
         html.qualificavix-dark [class*="shadow"] { --tw-shadow-color: rgba(0,0,0,.45); }
       `}</style>
       <div className="min-h-screen bg-white" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
-        <Header
-          page={page}
-          navigate={navigate}
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-          increaseFont={increaseFont}
-          decreaseFont={decreaseFont}
-          profile={profile}
-          onSearch={handleSearchCourses}
-        />
-      <main>
-        {(isProfileSessionOnly() || isFavoritesSessionOnly()) && <p role="status" className="mx-auto max-w-7xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">Seu navegador não permitiu salvar os dados. As alterações ficam disponíveis apenas enquanto esta página estiver aberta.</p>}
-        {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} onEnrollCourse={handleEnrollFromStory} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} profile={profile} onSelectCategory={handleSelectCategory} />}
-        {page === "cursos" && <CoursesPage catalogRequest={catalogRequest} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
-        {page === "favorites" && <FavoritesPage favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} onViewCourse={handleViewCourse} navigate={navigate} />}
-        {page === "enrollment-confirmation" && selectedCourse && profile && (
-          <CourseEnrollmentPage course={selectedCourse} profile={profile} onBack={() => navigate("course-detail")}
-            onConfirm={handleConfirmCourseEnrollment} onEditProfile={handleEditProfileForEnrollment} />
-        )}
-        {page === "course-detail" && selectedCourse && (
-          <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse}
-            isFavorite={favoriteCourseIds.includes(selectedCourse.id)} onToggleFavorite={handleToggleFavorite}
-            enrolled={profile?.enrolledCourseIds.includes(selectedCourse.id) ?? false}
-            enrollment={profile?.enrollments?.find(item => item.courseId === selectedCourse.id)}
-            onUnsubscribe={handleUnsubscribeCourse} />
-        )}
-        {page === "profile" && profile && <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} onOpenCourse={(course) => { handleViewCourse(course); navigate("course-detail"); }} onLogout={handleLogout} />}
-        {page === "sobre" && <SobrePage navigate={navigate} />}
-        {page === "categorias" && <CategoriasPage navigate={navigate} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
-        {page === "contato" && (
-          <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-            <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-32 h-28 object-contain mx-auto mb-6" />
-            <h1 className="text-3xl font-black text-slate-900 mb-3">Entre em contato</h1>
-            <p className="text-slate-500 mb-8">Estamos aqui para te ajudar a encontrar o curso ideal.</p>
-            <div className="space-y-3 text-left max-w-sm mx-auto">
-              {CONTACT_CHANNELS.map(channel => (
-                <a key={channel.label} href={channel.href} target={channel.href.startsWith("https:") ? "_blank" : undefined}
-                  rel={channel.href.startsWith("https:") ? "noopener noreferrer" : undefined}
-                  aria-label={`${channel.label}: ${channel.value}`}
-                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-colors">
-                  <channel.icon className="w-5 h-5 shrink-0" style={{ color: C.blue }} />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{channel.label}</p>
-                    <p className="font-semibold text-slate-800 break-words">{channel.value}</p>
+        {registrationMode ? (
+          <RegisterPage dark={darkMode} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
+        ) : (
+          <>
+            <Header
+              page={page}
+              navigate={navigate}
+              darkMode={darkMode}
+              toggleDarkMode={toggleDarkMode}
+              increaseFont={increaseFont}
+              decreaseFont={decreaseFont}
+              profile={profile}
+              onSearch={handleSearchCourses}
+            />
+            <main>
+              {(isProfileSessionOnly() || isFavoritesSessionOnly()) && <p role="status" className="mx-auto max-w-7xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">Seu navegador não permitiu salvar os dados. As alterações ficam disponíveis apenas enquanto esta página estiver aberta.</p>}
+              {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} onEnrollCourse={handleEnrollFromStory} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} profile={profile} onSelectCategory={handleSelectCategory} />}
+              {page === "cursos" && <CoursesPage catalogRequest={catalogRequest} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
+              {page === "favorites" && <FavoritesPage favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} onViewCourse={handleViewCourse} navigate={navigate} />}
+              {page === "enrollment-confirmation" && selectedCourse && profile && (
+                <CourseEnrollmentPage course={selectedCourse} profile={profile} onBack={() => navigate("course-detail")}
+                  onConfirm={handleConfirmCourseEnrollment} onEditProfile={handleEditProfileForEnrollment} />
+              )}
+              {page === "course-detail" && selectedCourse && (
+                <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse}
+                  isFavorite={favoriteCourseIds.includes(selectedCourse.id)} onToggleFavorite={handleToggleFavorite}
+                  enrolled={profile?.enrolledCourseIds.includes(selectedCourse.id) ?? false}
+                  enrollment={profile?.enrollments?.find(item => item.courseId === selectedCourse.id)}
+                  onUnsubscribe={handleUnsubscribeCourse} />
+              )}
+              {page === "profile" && profile && <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} onOpenCourse={(course) => { handleViewCourse(course); navigate("course-detail"); }} onLogout={handleLogout} />}
+              {page === "sobre" && <SobrePage navigate={navigate} />}
+              {page === "categorias" && <CategoriasPage navigate={navigate} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
+              {page === "contato" && (
+                <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+                  <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-32 h-28 object-contain mx-auto mb-6" />
+                  <h1 className="text-3xl font-black text-slate-900 mb-3">Entre em contato</h1>
+                  <p className="text-slate-500 mb-8">Estamos aqui para te ajudar a encontrar o curso ideal.</p>
+                  <div className="space-y-3 text-left max-w-sm mx-auto">
+                    {CONTACT_CHANNELS.map(channel => (
+                      <a key={channel.label} href={channel.href} target={channel.href.startsWith("https:") ? "_blank" : undefined}
+                        rel={channel.href.startsWith("https:") ? "noopener noreferrer" : undefined}
+                        aria-label={`${channel.label}: ${channel.value}`}
+                        className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-colors">
+                        <channel.icon className="w-5 h-5 shrink-0" style={{ color: C.blue }} />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{channel.label}</p>
+                          <p className="font-semibold text-slate-800 break-words">{channel.value}</p>
+                        </div>
+                      </a>
+                    ))}
                   </div>
-                </a>
-              ))}
-            </div>
-          </div>
+                </div>
+              )}
+            </main>
+            <Footer navigate={navigate} onSelectCategory={handleSelectCategory} />
+          </>
         )}
-      </main>
-      {page !== "register" && <Footer navigate={navigate} onSelectCategory={handleSelectCategory} />}
-        <Chatbot />
       </div>
+      <TortuguitaChat courses={COURSES} contacts={CONTACT_CHANNELS} profile={profile} page={page}
+        activeCourseId={page === "course-detail" || page === "enrollment-confirmation" ? selectedCourse?.id : undefined}
+        onNavigate={navigate} onViewCourse={handleViewCourse} />
     </>
   );
 }
