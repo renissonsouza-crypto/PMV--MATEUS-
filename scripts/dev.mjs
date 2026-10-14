@@ -1,19 +1,23 @@
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { getApiPort, requireSupportedNode } from "./dev-config.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const viteCli = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let apiProcess;
 let viteProcess;
 let stopping = false;
+let apiPort;
 
 async function isApiHealthy() {
   try {
-    const response = await fetch("http://127.0.0.1:3001/api/health");
+    const response = await fetch(`http://127.0.0.1:${apiPort}/api/health`, {
+      signal: AbortSignal.timeout(1000),
+    });
     if (!response.ok) return false;
     const health = await response.json();
-    return health.database === "connected";
+    return health.status === "ok" && health.database === "connected";
   } catch {
     return false;
   }
@@ -41,6 +45,14 @@ function watch(child, name) {
 }
 
 async function main() {
+  requireSupportedNode();
+  apiPort = getApiPort();
+  try {
+    await import("node:sqlite");
+  } catch {
+    throw new Error("O módulo node:sqlite não está disponível. Use uma instalação completa do Node.js 24 LTS ou superior.");
+  }
+
   if (!(await isApiHealthy())) {
     apiProcess = spawn(process.execPath, ["server/server.mjs"], {
       cwd: root,
@@ -49,7 +61,8 @@ async function main() {
     watch(apiProcess, "API local");
 
     let apiReady = false;
-    for (let attempt = 0; attempt < 50; attempt++) {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
       if (stopping || apiProcess.exitCode !== null) break;
       if (await isApiHealthy()) {
         apiReady = true;
@@ -59,12 +72,12 @@ async function main() {
     }
 
     if (!apiReady) {
-      console.error("A API local não ficou disponível na porta 3001.");
+      console.error(`A API local não ficou disponível na porta ${apiPort}. Confira o erro acima e se a porta está ocupada.`);
       stop(1);
       return;
     }
   } else {
-    console.log("API local já está disponível na porta 3001.");
+    console.log(`API local já está disponível na porta ${apiPort}.`);
   }
 
   if (stopping) return;
@@ -78,6 +91,6 @@ async function main() {
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 main().catch(error => {
-  console.error(error);
+  console.error(error.message);
   stop(1);
 });

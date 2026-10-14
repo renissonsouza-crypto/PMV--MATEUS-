@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { RegisterPage } from "./RegisterView";
 import { TurtleMascot } from "../components/TurtleMascot";
-import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, logoutUserProfile, removeUserEnrollmentFromCourse, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
-import { formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
+import { PlatformPolicyLink } from "../components/PlatformPolicy";
+import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, removeUserEnrollmentFromCourse, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
+import { canUnsubscribeFromCourse, countEnrollmentsInCurrentMonth, formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
 import { useAppController } from "../controllers/useAppController";
+import { isValidBrazilianPhone, lookupVitoriaCep } from "../services/registrationValidation";
 import type { Course } from "../models/Course";
 import type { Testimonial } from "../models/Testimonial";
 import type { Page } from "../models/navigation";
+import { getContactChannels } from "../models/platformContact";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "../components/ui/carousel";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
 import qualificavixInformatica from "../../assets/hero/qualificavix-informatica.jpg";
@@ -26,6 +29,11 @@ import {
   PlayCircle, BarChart3, Target, Zap, UserCheck, Camera, Trash2, Pause, Play,
   LogOut,
 } from "lucide-react";
+
+const CONTACT_CHANNELS = getContactChannels(import.meta.env).map(channel => ({
+  ...channel,
+  icon: channel.label === "Telefone" ? Phone : channel.label === "E-mail" ? Mail : Globe,
+}));
 
 // ─── Paleta de cores ─────────────────────────────────────────────────────────
 const C = {
@@ -217,15 +225,15 @@ const COURSE_IMAGES: Record<string, string> = {
 const courseImage = (course: Course) => (course.image && course.image.trim().length > 0 ? course.image : COURSE_IMAGES[course.category] ?? qualificavixCozinhaAula);
 
 const CATEGORIES = [
-  { id: 1, label: "Tecnologia",    count: 126, color: "#2563eb", icon: Laptop },
-  { id: 2, label: "Administração", count: 92,  color: "#16a34a", icon: Briefcase },
-  { id: 3, label: "Criatividade",  count: 74,  color: "#7c3aed", icon: Palette },
-  { id: 4, label: "Cursos Técnicos",count: 86, color: "#ca8a04", icon: Wrench },
-  { id: 5, label: "Educação",      count: 64,  color: "#d97706", icon: GraduationCap },
-  { id: 6, label: "Gastronomia",   count: 38,  color: "#ea580c", icon: Utensils },
-  { id: 7, label: "Marketing",     count: 44,  color: "#db2777", icon: BarChart3 },
-  { id: 8, label: "Saúde",         count: 29,  color: "#0891b2", icon: Heart },
-];
+  { id: 1, label: "Tecnologia",    category: "Tecnologia", color: "#2563eb", icon: Laptop },
+  { id: 2, label: "Administração", category: "Administração", color: "#16a34a", icon: Briefcase },
+  { id: 3, label: "Criatividade",  category: "Design", color: "#7c3aed", icon: Palette },
+  { id: 4, label: "Cursos Técnicos", category: "Técnico", color: "#ca8a04", icon: Wrench },
+  { id: 5, label: "Educação",      category: "Educação", color: "#d97706", icon: GraduationCap },
+  { id: 6, label: "Gastronomia",   category: "Gastronomia", color: "#ea580c", icon: Utensils },
+  { id: 7, label: "Marketing",     category: "Marketing", color: "#db2777", icon: BarChart3 },
+  { id: 8, label: "Saúde",         category: "Saúde", color: "#0891b2", icon: Heart },
+].map(category => ({ ...category, count: COURSES.filter(course => course.category === category.category).length }));
 
 
 const DEFAULT_TESTIMONIALS: Testimonial[] = [
@@ -698,7 +706,7 @@ function ProfileAvatar({ name, photo, size = "w-10 h-10" }: { name: string; phot
   );
 }
 
-function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decreaseFont, profile }: { page: Page; navigate: (p: Page) => void; darkMode: boolean; toggleDarkMode: () => void; increaseFont: () => void; decreaseFont: () => void; profile: UserProfile | null }) {
+function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decreaseFont, profile, onSearch }: { page: Page; navigate: (p: Page) => void; darkMode: boolean; toggleDarkMode: () => void; increaseFont: () => void; decreaseFont: () => void; profile: UserProfile | null; onSearch: (query: string) => void }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -706,8 +714,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
     event.preventDefault();
     const normalized = query.trim();
     if (!normalized) return;
-    sessionStorage.setItem("qualificavix-course-search", normalized);
-    navigate("cursos");
+    onSearch(normalized);
     setSearchOpen(false);
   };
 
@@ -718,10 +725,10 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
           <Logo navigate={navigate} />
 
           {/* Nav desktop */}
-          <nav className="hidden lg:flex items-center gap-1 flex-1">
+          <nav className="hidden xl:flex items-center gap-1 flex-1">
             {NAV.map(n => (
               <button key={n.id} onClick={() => navigate(n.id as Page)}
-                className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors relative ${
+                className={`px-2 2xl:px-4 py-2 text-sm font-bold rounded-xl transition-colors relative ${
                   page === n.id ? "" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                 }`}
                 style={page === n.id ? { color: C.blue } : {}}>
@@ -765,16 +772,15 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
-                    onKeyDown={event => { if (event.key === "Enter") submitSearch(event); }}
                     placeholder="Buscar cursos..."
-                    className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-40 sm:w-52 font-medium" />
+                    className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-32 sm:w-52 font-medium" />
                 </div>
-                <button type="button" onClick={() => setSearchOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <button type="button" aria-label="Fechar busca" onClick={() => setSearchOpen(false)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
               </form>
             ) : (
-              <button onClick={() => setSearchOpen(true)}
+              <button onClick={() => setSearchOpen(true)} aria-label="Buscar cursos"
                 className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-colors">
                 <Search className="w-4 h-4" />
               </button>
@@ -782,15 +788,15 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
             <button onClick={() => navigate(profile ? "profile" : "register")}
               aria-label={profile ? `Abrir perfil de ${profile.nome}` : "Entrar ou cadastrar"}
               title={profile ? `Perfil de ${profile.nome}` : "Entrar / Cadastrar"}
-              className={profile
+              className={searchOpen ? "hidden" : profile
                 ? "hidden sm:flex rounded-full p-0.5 ring-2 ring-orange-400 ring-offset-2 ring-offset-white hover:ring-orange-500 transition-all"
                 : "hidden sm:flex items-center gap-1.5 text-xs sm:text-sm font-black px-3 sm:px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
               }
               style={profile ? {} : { background: `linear-gradient(135deg, ${C.orangeDark} 0%, ${C.orangeActionEnd} 100%)` }}>
               {profile ? <ProfileAvatar name={profile.nome} photo={profile.fotoPerfil} /> : "Entrar / Cadastrar"}
             </button>
-            <button onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500">
+            <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen}
+              className="xl:hidden w-9 h-9 shrink-0 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500">
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
@@ -798,7 +804,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="lg:hidden border-t border-slate-100 py-3 flex flex-col gap-1">
+          <div className="xl:hidden border-t border-slate-100 py-3 flex flex-col gap-1">
             {NAV.map(n => (
               <button key={n.id} onClick={() => { navigate(n.id as Page); setMobileOpen(false); }}
                 className={`text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
@@ -854,6 +860,9 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
   const [quote, setQuote] = useState("");
   const [rating, setRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
+  const [testimonialError, setTestimonialError] = useState("");
+  const [testimonialSubmitting, setTestimonialSubmitting] = useState(false);
+  const testimonialSubmissionRef = useRef(false);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -887,13 +896,24 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
     const cleanCourse = course.trim();
     const cleanQuote = quote.trim();
 
-    if (!cleanName || !cleanRole || !cleanCourse || !cleanQuote) return;
+    if (testimonialSubmissionRef.current) return;
+    setTestimonialError("");
+    if (!cleanName || !cleanRole || !cleanCourse || !cleanQuote) {
+      setTestimonialError("Preencha todos os campos do depoimento.");
+      return;
+    }
 
     let testimonial: Testimonial;
+    testimonialSubmissionRef.current = true;
+    setTestimonialSubmitting(true);
     try {
       testimonial = await createTestimonial({ name: cleanName, role: cleanRole, course: cleanCourse, quote: cleanQuote, rating });
-    } catch {
+    } catch (error) {
+      setTestimonialError(error instanceof Error ? error.message : "Não foi possível enviar seu depoimento. Tente novamente.");
       return;
+    } finally {
+      testimonialSubmissionRef.current = false;
+      setTestimonialSubmitting(false);
     }
     setTestimonials(current => [testimonial, ...current]);
 
@@ -1127,18 +1147,19 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
 
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-2">
                 <p className="text-xs text-slate-400 max-w-md">
-                  Ao enviar, o depoimento é salvo localmente neste navegador. Para publicação pública real,
-                  será necessário conectar este formulário a um banco de dados/backend.
+                  Ao enviar, seu depoimento será salvo na plataforma e exibido para outros visitantes.
+                  Compartilhe apenas as informações que deseja tornar públicas.
                 </p>
 
                 <button
-                  type="submit"
-                  className="shrink-0 px-7 py-3.5 rounded-xl text-white font-black shadow-lg hover:scale-105 transition-all"
+                  type="submit" disabled={testimonialSubmitting}
+                  className="disabled:opacity-50 disabled:cursor-wait shrink-0 px-7 py-3.5 rounded-xl text-white font-black shadow-lg hover:scale-105 transition-all"
                   style={{ background: `linear-gradient(135deg, ${C.blue} 0%, ${C.blueDark} 100%)` }}
                 >
-                  Publicar depoimento
+                  {testimonialSubmitting ? "Enviando depoimento…" : "Publicar depoimento"}
                 </button>
               </div>
+              {testimonialError && <p role="alert" className="text-sm font-semibold text-red-600">{testimonialError}</p>}
             </form>
           </div>
         )}
@@ -1148,7 +1169,7 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
 }
 
 // ─── HomePage ─────────────────────────────────────────────────────────────────
-function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, onToggleFavorite, profile }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; onEnrollCourse: (course: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void; profile: UserProfile | null }) {
+function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, onToggleFavorite, profile, onSelectCategory }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; onEnrollCourse: (course: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void; profile: UserProfile | null; onSelectCategory: (category: string) => void }) {
   const [bgIdx, setBgIdx] = useState(0);
   const heroBgs = [
     { src: vitoriaDoisOlhos1, alt: "Vista panorâmica do skyline de Vitória-ES" },
@@ -1186,7 +1207,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
             <div>
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 mb-4 sm:mb-6">
                 <Zap className="w-3.5 h-3.5 text-yellow-300" />
-                <span className="text-[10px] sm:text-xs font-bold text-yellow-100">Cursos 100% gratuitos · Certificado incluso</span>
+                <span className="text-[10px] sm:text-xs font-bold text-yellow-100">Cursos 100% gratuitos · Qualificação profissional</span>
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.05] tracking-tight mb-4 sm:mb-5">
                 Encontre oportunidades para{" "}
@@ -1211,9 +1232,9 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
               {/* Mini stats */}
               <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-sm">
                 {[
-                  { n: "156+", l: "Cursos ativos" },
-                  { n: "12k+", l: "Formados" },
-                  { n: "20+", l: "Unidades" },
+                  { n: String(COURSES.filter(course => course.status !== "coming-soon").length), l: "Inscrições abertas" },
+                  { n: String(new Set(COURSES.map(course => course.category)).size), l: "Áreas no catálogo" },
+                  { n: String(new Set(COURSES.map(course => course.modality)).size), l: "Modalidades" },
                 ].map(s => (
                   <div key={s.l} className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 sm:p-3 text-center border border-white/10">
                     <p className="text-xl sm:text-2xl font-black text-amber-300">{s.n}</p>
@@ -1248,7 +1269,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
           {CATEGORIES.map(cat => (
-            <button key={cat.id} onClick={() => navigate("cursos")}
+            <button key={cat.id} onClick={() => onSelectCategory(cat.category)}
               className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-md hover:-translate-y-0.5 hover:border-blue-200 transition-all group">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"
                 style={{ backgroundColor: `${cat.color}18` }}>
@@ -1256,7 +1277,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
               </div>
               <div className="text-center">
                 <p className="text-[10px] sm:text-xs font-black text-slate-800 leading-tight">{cat.label}</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold mt-0.5">{cat.count} cursos</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold mt-0.5">{cat.count} {cat.count === 1 ? "curso" : "cursos"}</p>
               </div>
             </button>
           ))}
@@ -1330,7 +1351,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
             { step: "01", icon: UserCheck, title: "Crie sua conta", desc: "Cadastre-se gratuitamente com seus dados pessoais.", color: C.blue, action: () => navigate(profile ? "profile" : "register") },
             { step: "02", icon: Search, title: "Encontre o curso", desc: "Navegue pelo catálogo e escolha o que combina com você.", color: "#7c3aed", action: () => navigate("cursos") },
             { step: "03", icon: BookOpen, title: "Faça a inscrição", desc: "Inscreva-se no curso desejado com um clique.", color: C.orange, action: () => navigate("cursos") },
-            { step: "04", icon: Award, title: "Receba o certificado", desc: "Conclua o curso e consulte suas informações no perfil.", color: "#16a34a", action: () => navigate(profile ? "profile" : "cursos") },
+            { step: "04", icon: Award, title: "Confira a certificação", desc: "Consulte as condições de certificação nos detalhes do curso.", color: "#16a34a", action: () => navigate("cursos") },
           ].map((stepItem, index) => (
             <button key={stepItem.step} type="button" onClick={stepItem.action}
               style={{ animationDelay: `${index * 110}ms` }}
@@ -1359,7 +1380,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
           <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-32 h-28 object-contain mx-auto mb-4" />
           <h2 className="text-3xl font-black mb-3">Pronto para começar?</h2>
           <p className="text-blue-100 mb-7 font-medium">
-            Mais de 12 mil cidadãos já transformaram suas carreiras. Cadastre-se e comece hoje.
+            Explore as oportunidades do catálogo. Cadastre-se e comece sua jornada de qualificação.
           </p>
           <button onClick={() => navigate("register")}
             className="font-black text-slate-900 px-8 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all inline-flex items-center gap-2"
@@ -1373,25 +1394,29 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
 }
 
 // ─── CoursesPage ──────────────────────────────────────────────────────────────
-function CoursesPage({ navigate, onViewCourse, favoriteCourseIds, onToggleFavorite }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void }) {
-  const [search, setSearch] = useState(() => {
-    const initialSearch = sessionStorage.getItem("qualificavix-course-search") ?? "";
-    sessionStorage.removeItem("qualificavix-course-search");
-    return initialSearch;
-  });
-  const [catFilter, setCatFilter] = useState("Todas");
-  const [modalFilter, setModalFilter] = useState("Todas");
-  const [areaFilter, setAreaFilter] = useState("Todas");
+type CatalogRequest = { search: string; category: string };
 
+function CoursesPage({ onViewCourse, favoriteCourseIds, onToggleFavorite, catalogRequest }: { onViewCourse: (c: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void; catalogRequest: CatalogRequest | null }) {
+  const [search, setSearch] = useState(catalogRequest?.search ?? "");
+  const [catFilter, setCatFilter] = useState(catalogRequest?.category ?? "Todas");
+  const [modalFilter, setModalFilter] = useState("Todas");
+
+  useEffect(() => {
+    setSearch(catalogRequest?.search ?? "");
+    setCatFilter(catalogRequest?.category ?? "Todas");
+    setModalFilter("Todas");
+  }, [catalogRequest]);
+
+  const normalizedSearch = normalizeChatText(search);
   const filtered = COURSES.filter(c => {
-    const matchSearch = c.title.toLowerCase().includes(search.toLowerCase()) ||
-                        c.category.toLowerCase().includes(search.toLowerCase());
+    const searchable = normalizeChatText([c.title, c.category, c.description, ...c.whatYouLearn].join(" "));
+    const matchSearch = searchable.includes(normalizedSearch);
     const matchCat  = catFilter === "Todas"  || c.category === catFilter;
     const matchMod  = modalFilter === "Todas" || c.modality === modalFilter;
     return matchSearch && matchCat && matchMod;
   });
 
-  const cats = ["Todas", ...Array.from(new Set(COURSES.map(c => c.category)))];
+  const cats = ["Todas", ...Array.from(new Set([...CATEGORIES.map(category => category.category), ...COURSES.map(c => c.category)]))];
   const mods = ["Todas", "Online", "Presencial", "Híbrido"];
 
   return (
@@ -1415,8 +1440,9 @@ function CoursesPage({ navigate, onViewCourse, favoriteCourseIds, onToggleFavori
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar cursos, áreas ou palavras-chave..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-blue-400 transition-colors" />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-lg text-sm font-bold text-white"
+              aria-label="Buscar no catálogo"
+              className="w-full h-11 pl-10 pr-24 rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-blue-400 transition-colors" />
+            <button onClick={() => setSearch(search.trim())} className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-lg text-sm font-bold text-white"
               style={{ background: C.blue }}>
               Buscar
             </button>
@@ -1427,9 +1453,9 @@ function CoursesPage({ navigate, onViewCourse, favoriteCourseIds, onToggleFavori
               { label: "Modalidade", value: modalFilter, setter: setModalFilter, opts: mods },
             ].map(f => (
               <div key={f.label} className="relative">
-                <select value={f.value} onChange={e => f.setter(e.target.value)}
+                <select aria-label={f.label} value={f.value} onChange={e => f.setter(e.target.value)}
                   className="appearance-none h-9 pl-3 pr-8 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 outline-none cursor-pointer bg-white hover:border-blue-300 focus:border-blue-400 transition-colors">
-                  {f.opts.map(o => <option key={o}>{o === "Todas" ? `${f.label}: ${o}` : o}</option>)}
+                  {f.opts.map(o => <option key={o} value={o}>{o === "Todas" ? `${f.label}: ${o}` : o}</option>)}
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
@@ -1501,8 +1527,11 @@ function FavoritesPage({ favoriteCourseIds, onToggleFavorite, onViewCourse, navi
 }
 
 // ─── CourseDetailPage ─────────────────────────────────────────────────────────
-function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, onToggleFavorite, onUnsubscribe }: { course: Course; navigate: (p: Page) => void; onRegister: () => void; enrolled: boolean; isFavorite: boolean; onToggleFavorite: (id: number) => void; onUnsubscribe: (courseId: number) => void }) {
+function CourseDetailPage({ course, navigate, onRegister, enrolled, enrollment, isFavorite, onToggleFavorite, onUnsubscribe }: { course: Course; navigate: (p: Page) => void; onRegister: () => void; enrolled: boolean; enrollment?: { enrolledAt: string }; isFavorite: boolean; onToggleFavorite: (id: number) => void; onUnsubscribe: (courseId: number) => void }) {
   const [tab, setTab] = useState<"sobre" | "conteudo" | "instrutor" | "requisitos" | "certificado" | "instituicao">(enrolled ? "conteudo" : "sobre");
+
+  const unsubscribeAllowed = canUnsubscribeFromCourse(enrollment);
+  const enrollmentOpen = course.status !== "coming-soon";
 
   const handlePrimaryAction = () => {
     if (enrolled) {
@@ -1621,10 +1650,10 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, 
             </div>
 
             <div className="flex gap-3">
-              <button onClick={handlePrimaryAction}
-                className="flex-1 flex items-center justify-center gap-2 font-black text-slate-950 py-3.5 rounded-xl hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg"
+              <button onClick={handlePrimaryAction} disabled={enrolled ? !unsubscribeAllowed : !enrollmentOpen}
+                className="disabled:opacity-50 disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-2 font-black text-slate-950 py-3.5 rounded-xl hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg"
                 style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
-                {enrolled ? "Desinscrever-se" : "Inscrever-se"} <ArrowRight className="w-5 h-5" />
+                {enrolled ? (unsubscribeAllowed ? "Desinscrever-se" : "Prazo de desistência encerrado") : (enrollmentOpen ? "Inscrever-se" : "Inscrições em breve")} <ArrowRight className="w-5 h-5" />
               </button>
               <button onClick={() => onToggleFavorite(course.id)}
                 aria-label={isFavorite ? `Remover ${course.title} dos favoritos` : `Adicionar ${course.title} aos favoritos`}
@@ -1634,6 +1663,8 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, isFavorite, 
                 <Heart className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
               </button>
             </div>
+            {!enrolled && !enrollmentOpen && <p role="status" className="mt-3 text-sm text-slate-500">Esta turma ainda não está recebendo inscrições.</p>}
+            {enrolled && !unsubscribeAllowed && <p role="status" className="mt-3 text-sm text-slate-500">O cancelamento fica disponível por 3 dias após a inscrição. Para outras solicitações, procure o atendimento.</p>}
           </div>
         </div>
 
@@ -1837,10 +1868,10 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             {[
-              { n: "12.000+", l: "Alunos formados desde 2019", color: C.blue },
-              { n: "156",     l: "Cursos ativos no catálogo",  color: C.orange },
-              { n: "20+",     l: "Unidades de atendimento",    color: "#7c3aed" },
-              { n: "89%",     l: "Taxa de empregabilidade",    color: "#16a34a" },
+              { n: String(new Set(COURSES.map(course => course.category)).size), l: "Áreas no catálogo", color: C.blue },
+              { n: String(COURSES.length), l: "Cursos no catálogo", color: C.orange },
+              { n: String(new Set(COURSES.map(course => course.modality)).size), l: "Modalidades disponíveis", color: "#7c3aed" },
+              { n: String(COURSES.filter(course => course.status !== "coming-soon").length), l: "Cursos com inscrições abertas", color: "#16a34a" },
             ].map(s => (
               <div key={s.l} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm text-center">
                 <p className="text-3xl font-black mb-1" style={{ color: s.color }}>{s.n}</p>
@@ -1891,7 +1922,7 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
             {[
               { icon: Target,    title: "Curadoria de qualidade",    color: C.blue,   desc: "Todos os cursos passam por rigorosa avaliação pedagógica antes de entrar no catálogo. Trabalhamos apenas com instituições credenciadas pelo MEC ou com histórico comprovado de excelência." },
               { icon: Users,     title: "Para todos os perfis",      color: C.orange, desc: "Do jovem aprendiz ao profissional sênior, do desempregado ao empreendedor em potencial — nosso catálogo tem trilhas de aprendizado para cada momento da vida profissional." },
-              { icon: Award,     title: "Certificação reconhecida",  color: "#16a34a",desc: "Todos os cursos emitem certificado digital reconhecido pela Prefeitura de Vitória, com validade para comprovação em carteira de trabalho e processos seletivos." },
+              { icon: Award,     title: "Informações de certificação", color: "#16a34a", desc: "Consulte a aba Certificado na ficha do curso e confirme os critérios de frequência, aproveitamento e emissão com a instituição ofertante." },
             ].map(item => (
               <div key={item.title} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
@@ -1957,25 +1988,29 @@ function CategoriasPage({ navigate, onViewCourse, favoriteCourseIds, onToggleFav
             Todas as áreas
           </button>
           {CATEGORIES.map(cat => (
-            <button key={cat.id} onClick={() => setSelected(cat.label === selected ? null : cat.label)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selected === cat.label ? "text-white border-transparent shadow" : "border-slate-200 text-slate-600 hover:border-blue-300 bg-white"}`}
-              style={selected === cat.label ? { background: cat.color } : {}}>
+            <button key={cat.id} onClick={() => setSelected(cat.category === selected ? null : cat.category)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selected === cat.category ? "text-white border-transparent shadow" : "border-slate-200 text-slate-600 hover:border-blue-300 bg-white"}`}
+              style={selected === cat.category ? { background: cat.color } : {}}>
               <cat.icon className="w-4 h-4" />
               {cat.label}
               <span className="text-xs opacity-70">({cat.count})</span>
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filtered.map(c => <CourseCard key={c.id} course={c} onView={onViewCourse} isFavorite={favoriteCourseIds.includes(c.id)} onToggleFavorite={onToggleFavorite} />)}
-        </div>
+        {filtered.length ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filtered.map(c => <CourseCard key={c.id} course={c} onView={onViewCourse} isFavorite={favoriteCourseIds.includes(c.id)} onToggleFavorite={onToggleFavorite} />)}
+          </div>
+        ) : (
+          <p role="status" className="py-16 text-center font-semibold text-slate-500">Nenhum curso disponível nesta área no momento.</p>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
-function Footer({ navigate }: { navigate: (p: Page) => void }) {
+function Footer({ navigate, onSelectCategory }: { navigate: (p: Page) => void; onSelectCategory: (category: string) => void }) {
   return (
     <footer className="bg-slate-900 text-slate-300 pt-14 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2011,14 +2046,23 @@ function Footer({ navigate }: { navigate: (p: Page) => void }) {
               {col.title === "Contato" ? (
                 <ul className="space-y-2.5 text-sm">
                   <li className="flex items-start gap-2 text-slate-400"><MapPin className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" /> Vitória, Espírito Santo, Brasil</li>
-                  <li className="flex items-center gap-2 text-slate-400"><Phone className="w-4 h-4 shrink-0 text-amber-400" /> 0800 123 4567</li>
-                  <li className="flex items-center gap-2 text-slate-400"><Mail className="w-4 h-4 shrink-0 text-amber-400" /> contato@qualificavix.es.gov.br</li>
+                  {CONTACT_CHANNELS.map(channel => (
+                    <li key={channel.label}>
+                      <a href={channel.href} target={channel.href.startsWith("https:") ? "_blank" : undefined}
+                        rel={channel.href.startsWith("https:") ? "noopener noreferrer" : undefined}
+                        aria-label={`${channel.label}: ${channel.value}`}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                        <channel.icon className="w-4 h-4 shrink-0 text-amber-400" />
+                        <span className="min-w-0 break-words">{channel.value}</span>
+                      </a>
+                    </li>
+                  ))}
                 </ul>
               ) : (
                 <ul className="space-y-2">
                   {col.links.map((l: any) => (
                     <li key={l.label}>
-                      <button onClick={() => l.page && navigate(l.page as Page)}
+                      <button onClick={() => l.page ? navigate(l.page as Page) : onSelectCategory(l.label)}
                         className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 group font-semibold">
                         <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                         {l.label}
@@ -2033,9 +2077,9 @@ function Footer({ navigate }: { navigate: (p: Page) => void }) {
         <div className="border-t border-white/10 pt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 font-semibold">
           <p>© {new Date().getFullYear()} QualificaVix · Prefeitura Municipal de Vitória · Todos os direitos reservados</p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-slate-300 transition-colors">Termos de Uso</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">Política de Privacidade</a>
-            <a href="#" className="hover:text-slate-300 transition-colors">LGPD</a>
+            <PlatformPolicyLink kind="terms" className="hover:text-slate-300 transition-colors">Termos de Uso</PlatformPolicyLink>
+            <PlatformPolicyLink kind="privacy" className="hover:text-slate-300 transition-colors">Política de Privacidade</PlatformPolicyLink>
+            <PlatformPolicyLink kind="data" className="hover:text-slate-300 transition-colors">LGPD</PlatformPolicyLink>
           </div>
         </div>
       </div>
@@ -2096,12 +2140,12 @@ const PLATFORM_FAQS = [
   {
     id: "certificado",
     keywords: ["certific", "diploma", "conclusao", "aproveitamento", "certificado"],
-    answer: "A página do curso traz as regras de certificação, incluindo aproveitamento mínimo e condições de emissão. Em geral, é necessário concluir as atividades e obter a aprovação mínima informada no curso.",
+    answer: "Consulte a aba “Certificado” nos detalhes do curso. O catálogo atual não informa o emissor nem os critérios de frequência e aproveitamento; confirme essas condições com a instituição ofertante antes da inscrição.",
   },
   {
     id: "contato",
     keywords: ["contato", "telefone", "email", "ajuda", "falar", "atendimento", "suporte", "mais informacoes", "mais informações", "falar com a plataforma", "contato da plataforma", "quero falar com a plataforma", "entrar em contato com a plataforma"],
-    answer: "Para mais informações sobre a plataforma, entre em contato pelo telefone 0800 123 4567 ou pelo e-mail contato@qualificavix.es.gov.br. A tortuguita também pode te orientar sobre cursos, inscrição e dúvidas gerais.",
+    answer: `Abra Contato no menu para acessar os canais de atendimento: ${CONTACT_CHANNELS.map(channel => `${channel.label}: ${channel.value}${channel.label === "Atendimento" ? ` (${channel.href})` : ""}`).join("; ")}. A tortuguita também pode orientar sobre cursos, inscrição e dúvidas gerais.`,
   },
   {
     id: "catalogo",
@@ -2136,7 +2180,12 @@ const PLATFORM_FAQS = [
   {
     id: "limite",
     keywords: ["limite", "3 cursos", "três cursos", "mais cursos", "inscricoes limitadas", "quantos cursos posso fazer"],
-    answer: "A plataforma permite até 3 cursos cadastrados ao mesmo tempo. Se você já estiver com 3 inscrições ativas, só poderá fazer novos cadastros após concluir ou finalizar algum curso em andamento.",
+    answer: "A plataforma permite até 3 inscrições por mês. Cancelar uma inscrição não reinicia a contagem mensal. Quando atingir esse limite, aguarde o próximo mês para se inscrever em outros cursos.",
+  },
+  {
+    id: "cancelamento",
+    keywords: ["cancel", "desist", "desinscrev", "desinscri", "sair do curso"],
+    answer: "Você pode cancelar uma inscrição por até 3 dias após o cadastro no curso. Acesse Meu perfil, abra Cursos cadastrados e selecione Ver curso; dentro do prazo, use Desinscrever-se. Depois desse prazo, procure o atendimento.",
   },
   {
     id: "cursos cadastrados",
@@ -2177,9 +2226,7 @@ function chatbotAnswer(message: string) {
 
   const matchingCourse = COURSES.find(course => {
     const title = normalizeChatText(course.title);
-    const category = normalizeChatText(course.category);
     if (text.includes(title)) return true;
-    if (text.includes(category)) return true;
     return title.split(" ").some(word => word.length > 3 && words.includes(word));
   });
 
@@ -2198,14 +2245,18 @@ function chatbotAnswer(message: string) {
     return `Na categoria ${matchingCategory}, o catálogo tem: ${titles}.`;
   }
 
+  const matchesKeyword = (keyword: string) => keyword === "conta" ? words.includes(keyword) : text.includes(keyword);
   const faqMatch = PLATFORM_FAQS
-    .map(item => ({
-      item,
-      score: item.keywords.reduce((total, keyword) => total + (text.includes(keyword) ? 1 : 0), 0),
-      exact: item.keywords.some(keyword => text === keyword || text.includes(keyword) && text.length <= keyword.length + 8),
-    }))
+    .map(item => {
+      const keywords = item.keywords.map(normalizeChatText);
+      return {
+        item,
+        score: keywords.reduce((total, keyword) => total + (matchesKeyword(keyword) ? 1 : 0), 0),
+        exact: keywords.some(keyword => text === keyword || matchesKeyword(keyword) && text.length <= keyword.length + 8),
+      };
+    })
     .filter(entry => entry.score > 0)
-    .sort((a, b) => Number(b.exact) - Number(a.exact) || b.score - a.score)[0];
+    .sort((a, b) => Number(a.item.id === "catalogo") - Number(b.item.id === "catalogo") || Number(b.exact) - Number(a.exact) || b.score - a.score)[0];
 
   if (faqMatch) return faqMatch.item.answer;
 
@@ -2217,7 +2268,7 @@ function chatbotAnswer(message: string) {
     return "O QualificaVix é a plataforma de cursos profissionalizantes gratuitos da Prefeitura de Vitória. Nela, você pode consultar o catálogo, filtrar por categoria e modalidade, verificar requisitos e vagas, e acompanhar os cursos cadastrados no seu perfil.";
   }
 
-  if (/(vitoria|es|espirito santo|vitoriense)/.test(text)) {
+  if (/\b(vitoria|es|espirito santo|vitoriense)\b/.test(text)) {
     return "A plataforma é voltada para a cidade de Vitória-ES, com cursos online e opções presenciais na região. Quando o curso for presencial, pode ser aberto o mapa de rota pelo ícone de localização do curso.";
   }
 
@@ -2230,7 +2281,7 @@ function chatbotAnswer(message: string) {
   }
 
   if (/(limite|3 cursos|tres cursos|mais cursos|maximo|máximo)/.test(text)) {
-    return "A plataforma permite até 3 cursos cadastrados ao mesmo tempo. Se você já estiver com 3 inscrições ativas, só poderá fazer novos cadastros após concluir ou finalizar algum curso em andamento.";
+    return "A plataforma permite até 3 inscrições por mês. Cancelar uma inscrição não reinicia a contagem mensal. Quando atingir esse limite, aguarde o próximo mês para se inscrever em outros cursos.";
   }
 
   return "Posso te ajudar com inscrição, perfil, catálogo, modalidades, vagas, requisitos, local/Maps, certificado, busca, limite de 3 cursos e contato. Se for sobre um curso específico, escreva o nome dele ou uma categoria, como tecnologia, marketing ou administração.";
@@ -2271,7 +2322,7 @@ function Chatbot() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
       {open && (
         <div className="w-[90vw] max-w-[360px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{ maxHeight: "calc(100vh - 120px)" }}>
           {/* Header */}
@@ -2284,7 +2335,7 @@ function Chatbot() {
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Online agora
               </p>
             </div>
-            <button onClick={() => setOpen(false)} className="text-white/70 hover:text-white">
+            <button onClick={() => setOpen(false)} aria-label="Fechar assistente virtual" className="text-white/70 hover:text-white">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -2374,7 +2425,7 @@ function Chatbot() {
         <button onClick={() => setOpen(!open)}
           className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all duration-200 border-4 border-white"
           style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}
-          aria-label="Abrir assistente virtual">
+          aria-label={open ? "Fechar assistente virtual" : "Abrir assistente virtual"} aria-expanded={open}>
           {open ? <X className="w-7 h-7 text-white" /> : <TurtleMascot size={52} />}
         </button>
       </div>
@@ -2476,19 +2527,23 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
   });
   const [photo, setPhoto] = useState(profile.fotoPerfil ?? "");
   const [photoError, setPhotoError] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const profileSavingRef = useRef(false);
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<"dados" | "cadastrados">("dados");
   const enrolledCourses = courses
     .filter(course => profile.enrolledCourseIds.includes(course.id))
     .map(course => {
       const enrollment = profile.enrollments?.find(item => item.courseId === course.id);
-      const deadline = enrollment?.unsubscribeDeadline ? new Date(enrollment.unsubscribeDeadline) : getUnsubscribeDeadline(new Date().toISOString()) ? new Date(getUnsubscribeDeadline(new Date().toISOString()) as string) : null;
+      const deadline = getUnsubscribeDeadline(enrollment?.enrolledAt);
       return { course, enrollment, deadline };
     });
   const registeredCourses = enrolledCourses;
 
   function updateField(field: keyof typeof form, value: string) {
     setForm(current => ({ ...current, [field]: value }));
+    setProfileError("");
     setSaved(false);
   }
 
@@ -2514,12 +2569,42 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
     }
   }
 
-  function saveProfile(event: FormEvent<HTMLFormElement>) {
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const updated = updateUserProfile({ ...form, fotoPerfil: photo || undefined });
-    if (updated) {
+    if (profileSavingRef.current) return;
+    setProfileError("");
+    setSaved(false);
+    const cleanForm = Object.fromEntries(Object.entries(form).map(([key, value]) => [key, value.trim()])) as typeof form;
+    if (["nome", "email", "telefone", "cep", "bairro", "rua", "numero", "escolaridade"].some(key => !cleanForm[key as keyof typeof cleanForm])) {
+      setProfileError("Preencha os campos obrigatórios sem usar apenas espaços.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanForm.email)) {
+      setProfileError("Informe um e-mail válido.");
+      return;
+    }
+    if (!/^(?:\d{5}-\d{3}|\d{8})$/.test(cleanForm.cep)) {
+      setProfileError("Informe um CEP válido com 8 dígitos.");
+      return;
+    }
+    if ([cleanForm.telefone, cleanForm.whatsapp].some(value => value && !isValidBrazilianPhone(value))) {
+      setProfileError("Informe um telefone com DDD, com 10 ou 11 dígitos.");
+      return;
+    }
+    profileSavingRef.current = true;
+    setProfileSaving(true);
+    try {
+      if (cleanForm.cep.replace(/\D/g, "") !== profile.cep.replace(/\D/g, "")) await lookupVitoriaCep(cleanForm.cep);
+      const updated = updateUserProfile({ ...cleanForm, email: cleanForm.email.toLowerCase(), fotoPerfil: photo || undefined });
+      if (!updated) { setProfileError("Não foi possível atualizar o perfil. Faça seu cadastro novamente."); return; }
       onProfileUpdated(updated);
+      setForm(cleanForm);
       setSaved(true);
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : "Não foi possível atualizar o perfil.");
+    } finally {
+      profileSavingRef.current = false;
+      setProfileSaving(false);
     }
   }
 
@@ -2572,9 +2657,9 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
                   <label htmlFor="profile-photo" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:border-blue-300 cursor-pointer">
                     <Camera className="w-4 h-4" /> Escolher foto
                   </label>
-                  <input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} className="sr-only" />
+                  <input id="profile-photo" disabled={profileSaving} type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} className="sr-only" />
                   {photo && (
-                    <button type="button" onClick={() => { setPhoto(""); setSaved(false); setPhotoError(""); }} className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:text-red-600">
+                    <button type="button" disabled={profileSaving} onClick={() => { setPhoto(""); setSaved(false); setPhotoError(""); }} className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:text-red-600">
                       <Trash2 className="w-4 h-4" /> Remover foto
                     </button>
                   )}
@@ -2587,15 +2672,17 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
               {fields.map(field => (
                 <label key={field.key} className="flex flex-col gap-1.5 text-sm font-bold text-slate-700">
                   {field.label}
-                  <input required={!['whatsapp', 'complemento', 'situacaoEmprego'].includes(field.key)}
+                  <input disabled={profileSaving} required={!['whatsapp', 'complemento', 'situacaoEmprego'].includes(field.key)}
+                    maxLength={field.key === "email" ? 180 : field.key === "cep" ? 9 : ['telefone', 'whatsapp'].includes(field.key) ? 30 : 160}
                     type={field.type ?? "text"} value={form[field.key]}
                     onChange={event => updateField(field.key, event.target.value)}
                     className="w-full px-3 py-2.5 rounded-lg border border-slate-200 font-medium outline-none focus:border-blue-500" />
                 </label>
               ))}
+              {profileError && <p role="alert" className="sm:col-span-2 text-sm font-bold text-red-600">{profileError}</p>}
               <div className="sm:col-span-2 flex flex-wrap items-center gap-3 pt-2">
-                <button type="submit" className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-black" style={{ background: C.blue }}>
-                  <CheckCircle2 className="w-4 h-4" /> Salvar alterações
+                <button type="submit" disabled={profileSaving} className="disabled:opacity-50 disabled:cursor-wait inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-black" style={{ background: C.blue }}>
+                  <CheckCircle2 className="w-4 h-4" /> {profileSaving ? "Salvando alterações…" : "Salvar alterações"}
                 </button>
                 <button type="button" onClick={onLogout} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-red-200 bg-red-50 text-red-700 font-black hover:bg-red-100">
                   <LogOut className="w-4 h-4" /> Sair da plataforma
@@ -2649,8 +2736,8 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
 
                     <div className="mt-5 rounded-xl border border-orange-200 bg-orange-50 p-4">
                       <p className="text-[10px] font-black uppercase tracking-wide text-orange-700 mb-2">Prazo final para desistência</p>
-                      <p className="text-sm font-bold text-slate-800">{deadline ? formatDateBR(deadline.toISOString()) : "Prazo não informado"}</p>
-                      <p className="text-xs text-slate-600 mt-1">Você pode cancelar sua inscrição até essa data, conforme o prazo do curso e da plataforma.</p>
+                      <p className="text-sm font-bold text-slate-800">{deadline ? formatDateBR(deadline) : "Prazo não informado"}</p>
+                      <p className="text-xs text-slate-600 mt-1">O cancelamento está disponível por 3 dias após a inscrição. Abra o curso para solicitar dentro desse prazo.</p>
                     </div>
                   </article>
                 ))
@@ -2665,36 +2752,41 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
 
 export default function App() {
   const {
-    page, selectedCourse, darkMode, navigate, viewCourse: handleViewCourse,
+    page, selectedCourse, darkMode, navigate: navigatePage, viewCourse: handleViewCourse,
     toggleDarkMode, increaseFont, decreaseFont,
   } = useAppController<Course>();
   const [favoriteCourseIds, setFavoriteCourseIds] = useState<number[]>(getFavoriteCourseIds);
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [returnToEnrollmentConfirmation, setReturnToEnrollmentConfirmation] = useState(false);
+  const [registrationCourseId, setRegistrationCourseId] = useState<number | undefined>();
+  const [catalogRequest, setCatalogRequest] = useState<CatalogRequest | null>(null);
+  const navigate = (destination: Page) => {
+    if (destination === "register" || (destination === "profile" && !profile)) setRegistrationCourseId(undefined);
+    if (destination !== "profile") setReturnToEnrollmentConfirmation(false);
+    if (destination === "cursos") setCatalogRequest(null);
+    navigatePage(destination === "register" && profile ? "profile" : destination === "profile" && !profile ? "register" : destination);
+  };
+  const handleSearchCourses = (search: string) => {
+    setCatalogRequest({ search, category: "Todas" });
+    navigatePage("cursos");
+  };
+  const handleSelectCategory = (category: string) => {
+    setCatalogRequest({ search: "", category });
+    navigatePage("cursos");
+  };
   const handleToggleFavorite = (courseId: number) => {
     setFavoriteCourseIds(current => saveFavoriteCourseIds(
       current.includes(courseId) ? current.filter(id => id !== courseId) : [...current, courseId],
     ));
   };
-  const getMonthlyEnrollmentCount = (userProfile: UserProfile | null) => {
-    if (!userProfile?.enrollments) return 0;
-
-    const now = new Date();
-    const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-
-    return userProfile.enrollments.filter(item => {
-      const date = new Date(item.enrolledAt);
-      if (Number.isNaN(date.getTime())) return false;
-      const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-      return monthKey === currentMonthKey;
-    }).length;
-  };
+  const getMonthlyEnrollmentCount = (userProfile: UserProfile | null) => countEnrollmentsInCurrentMonth(userProfile?.enrollmentHistory ?? userProfile?.enrollments);
 
   const handleRegisterFromCourse = () => {
-    if (!selectedCourse) return;
+    if (!selectedCourse || selectedCourse.status === "coming-soon") return;
 
     if (!profile) {
-      navigate("register");
+      setRegistrationCourseId(selectedCourse.id);
+      navigatePage("register");
       return;
     }
 
@@ -2711,6 +2803,7 @@ export default function App() {
     navigate("enrollment-confirmation");
   };
   const handleEnrollFromStory = (course: Course) => {
+    if (course.status === "coming-soon") { handleViewCourse(course); return; }
     if (profile && profile.enrolledCourseIds.includes(course.id)) {
       alert("Você já está inscrito neste curso e não pode se inscrever novamente.");
       return;
@@ -2722,10 +2815,16 @@ export default function App() {
     }
 
     handleViewCourse(course);
-    navigate(profile ? "enrollment-confirmation" : "register");
+    setRegistrationCourseId(profile ? undefined : course.id);
+    navigatePage(profile ? "enrollment-confirmation" : "register");
   };
   const handleConfirmCourseEnrollment = () => {
-    if (!selectedCourse) return;
+    if (!selectedCourse || selectedCourse.status === "coming-soon") return;
+    if (!profile) {
+      setRegistrationCourseId(selectedCourse.id);
+      navigatePage("register");
+      return;
+    }
 
     if (profile && profile.enrolledCourseIds.includes(selectedCourse.id)) {
       alert("Você já está inscrito neste curso e não pode se inscrever novamente.");
@@ -2755,6 +2854,10 @@ export default function App() {
     if (!confirmed) return;
 
     const updatedProfile = removeUserEnrollmentFromCourse(courseId);
+    if (updatedProfile && "unsubscribeBlocked" in updatedProfile && updatedProfile.unsubscribeBlocked) {
+      alert("O prazo para cancelar esta inscrição já terminou.");
+      return;
+    }
     if (updatedProfile) setProfile(updatedProfile);
   };
   const handleProfileBack = () => {
@@ -2772,16 +2875,17 @@ export default function App() {
 
     logoutUserProfile();
     setProfile(null);
+    setFavoriteCourseIds([]);
+    setRegistrationCourseId(undefined);
     navigate("home");
   };
 
   if (page === "register" || (page === "profile" && !profile)) {
-    if (profile) return <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} onLogout={handleLogout} />;
     return (
       <RegisterPage
         dark={darkMode}
         onBack={() => navigate("home")}
-        courseId={selectedCourse?.id}
+        courseId={registrationCourseId}
         onProfileCreated={setProfile}
       />
     );
@@ -2833,10 +2937,12 @@ export default function App() {
           increaseFont={increaseFont}
           decreaseFont={decreaseFont}
           profile={profile}
+          onSearch={handleSearchCourses}
         />
       <main>
-        {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} onEnrollCourse={handleEnrollFromStory} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} profile={profile} />}
-        {page === "cursos" && <CoursesPage navigate={navigate} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
+        {(isProfileSessionOnly() || isFavoritesSessionOnly()) && <p role="status" className="mx-auto max-w-7xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">Seu navegador não permitiu salvar os dados. As alterações ficam disponíveis apenas enquanto esta página estiver aberta.</p>}
+        {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} onEnrollCourse={handleEnrollFromStory} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} profile={profile} onSelectCategory={handleSelectCategory} />}
+        {page === "cursos" && <CoursesPage catalogRequest={catalogRequest} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}
         {page === "favorites" && <FavoritesPage favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} onViewCourse={handleViewCourse} navigate={navigate} />}
         {page === "enrollment-confirmation" && selectedCourse && profile && (
           <CourseEnrollmentPage course={selectedCourse} profile={profile} onBack={() => navigate("course-detail")}
@@ -2846,6 +2952,7 @@ export default function App() {
           <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse}
             isFavorite={favoriteCourseIds.includes(selectedCourse.id)} onToggleFavorite={handleToggleFavorite}
             enrolled={profile?.enrolledCourseIds.includes(selectedCourse.id) ?? false}
+            enrollment={profile?.enrollments?.find(item => item.courseId === selectedCourse.id)}
             onUnsubscribe={handleUnsubscribeCourse} />
         )}
         {page === "profile" && profile && <ProfilePage profile={profile} courses={COURSES} onBack={handleProfileBack} onProfileUpdated={setProfile} onOpenCourse={(course) => { handleViewCourse(course); navigate("course-detail"); }} onLogout={handleLogout} />}
@@ -2857,23 +2964,23 @@ export default function App() {
             <h1 className="text-3xl font-black text-slate-900 mb-3">Entre em contato</h1>
             <p className="text-slate-500 mb-8">Estamos aqui para te ajudar a encontrar o curso ideal.</p>
             <div className="space-y-3 text-left max-w-sm mx-auto">
-              {[
-                { icon: Phone, label: "Telefone", value: "0800 123 4567" },
-                { icon: Mail,  label: "E-mail",   value: "contato@qualificavix.es.gov.br" },
-              ].map(c => (
-                <div key={c.label} className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200">
-                  <c.icon className="w-5 h-5 shrink-0" style={{ color: C.blue }} />
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{c.label}</p>
-                    <p className="font-semibold text-slate-800">{c.value}</p>
+              {CONTACT_CHANNELS.map(channel => (
+                <a key={channel.label} href={channel.href} target={channel.href.startsWith("https:") ? "_blank" : undefined}
+                  rel={channel.href.startsWith("https:") ? "noopener noreferrer" : undefined}
+                  aria-label={`${channel.label}: ${channel.value}`}
+                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-400 transition-colors">
+                  <channel.icon className="w-5 h-5 shrink-0" style={{ color: C.blue }} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{channel.label}</p>
+                    <p className="font-semibold text-slate-800 break-words">{channel.value}</p>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
         )}
       </main>
-      {page !== "register" && <Footer navigate={navigate} />}
+      {page !== "register" && <Footer navigate={navigate} onSelectCategory={handleSelectCategory} />}
         <Chatbot />
       </div>
     </>

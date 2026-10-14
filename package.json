@@ -3,15 +3,25 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "allowScripts": {
+    "@tailwindcss/oxide@4.1.12": true,
+    "esbuild@0.25.12": true
+  },
   "scripts": {
     "build": "vite build",
     "dev": "node scripts/dev.mjs",
     "server": "node server/server.mjs",
     "db:migrate": "node scripts/migrate-postgres.mjs",
+    "test": "npm run test:unit && npm run test:validation && npm run test:security && npm run test:db && npm run test:serverless",
+    "test:unit": "node --test \"tests/*.test.mjs\"",
     "test:db": "node tests/database.mjs",
     "test:security": "node tests/security.mjs",
     "test:validation": "node tests/validation.mjs",
     "test:postgres": "node tests/postgres.mjs",
+    "test:serverless": "node tests/serverless.mjs",
     "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {
@@ -62,6 +72,8 @@
     "react-dnd-html5-backend": "16.0.1",
     "react-hook-form": "7.55.0",
     "react-popper": "2.3.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-resizable-panels": "2.1.7",
     "react-responsive-masonry": "2.7.1",
     "react-router": "7.18.3",
@@ -78,18 +90,6 @@
     "playwright-core": "^1.62.1",
     "tailwindcss": "4.1.12",
     "vite": "6.4.3"
-  },
-  "peerDependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
   },
   "pnpm": {
     "overrides": {

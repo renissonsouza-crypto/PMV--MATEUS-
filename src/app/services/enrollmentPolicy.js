@@ -16,7 +16,7 @@ export function countEnrollmentsInCurrentMonth(enrollments = [], now = new Date(
   }).length;
 }
 
-export function isEnrollmentAllowed(enrollments = [], courseId, now = new Date()) {
+export function isEnrollmentAllowed(enrollments = [], courseId, now = new Date(), enrollmentHistory = enrollments) {
   const targetCourseId = Number(courseId);
   const duplicate = Array.isArray(enrollments)
     && enrollments.some(({ courseId: enrolledCourseId }) => Number(enrolledCourseId) === targetCourseId);
@@ -25,7 +25,7 @@ export function isEnrollmentAllowed(enrollments = [], courseId, now = new Date()
     return { allowed: false, reason: 'duplicate' };
   }
 
-  if (countEnrollmentsInCurrentMonth(enrollments, now) >= 3) {
+  if (countEnrollmentsInCurrentMonth(enrollmentHistory, now) >= 3) {
     return { allowed: false, reason: 'monthly_limit' };
   }
 
@@ -49,6 +49,14 @@ export function getUnsubscribeDeadline(enrolledAt, days = DEFAULT_UNSUBSCRIBE_DA
   const deadline = new Date(date.getTime());
   deadline.setUTCDate(deadline.getUTCDate() + days);
   return deadline.toISOString();
+}
+
+export function canUnsubscribeFromCourse(enrollment, now = new Date()) {
+  const deadline = getUnsubscribeDeadline(enrollment?.enrolledAt);
+  if (!deadline) return false;
+  const currentTime = new Date(now).getTime();
+  const enrolledTime = new Date(enrollment.enrolledAt).getTime();
+  return Number.isFinite(currentTime) && currentTime >= enrolledTime && currentTime <= new Date(deadline).getTime();
 }
 
 export function formatDateBR(value) {

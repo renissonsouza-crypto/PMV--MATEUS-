@@ -1,0 +1,60 @@
+import type { ReactNode } from "react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
+} from "./ui/dialog";
+
+type PolicyKind = "terms" | "privacy" | "data";
+
+const policies: Record<PolicyKind, { title: string; description: string; content: ReactNode }> = {
+  terms: {
+    title: "Termos de uso",
+    description: "Regras de cadastro e inscrição no Qualifica Vix.",
+    content: <>
+      <p>Informe dados verdadeiros e confira os requisitos, a modalidade e a disponibilidade do curso antes de se inscrever.</p>
+      <p>O cadastro aceita endereços de Vitória-ES. Menores de 18 anos precisam informar um responsável legal.</p>
+      <p>O perfil permite até três inscrições por mês. Cursos com inscrições ainda indisponíveis não podem receber novas inscrições.</p>
+      <p>O cancelamento pode ser feito no perfil até três dias após a inscrição. O prazo de cada curso aparece na lista de cursos cadastrados.</p>
+      <p>Ao publicar um depoimento, compartilhe somente informações que deseja tornar públicas e evite incluir dados pessoais de terceiros.</p>
+    </>,
+  },
+  privacy: {
+    title: "Política de privacidade",
+    description: "Como os dados informados são utilizados nesta plataforma.",
+    content: <>
+      <p>O cadastro envia ao serviço da plataforma seus dados pessoais, endereço, contato, escolaridade e os demais campos preenchidos, incluindo informações opcionais e autorizações.</p>
+      <p>O perfil, a foto, os favoritos e as inscrições em cursos também ficam salvos no navegador utilizado. Em um navegador que bloqueie esse armazenamento, a plataforma informa quando os dados estarão disponíveis somente enquanto a página estiver aberta.</p>
+      <p>O CEP informado é consultado no ViaCEP para verificar se o endereço pertence a Vitória-ES. As imagens externas do catálogo são carregadas do Unsplash.</p>
+      <p>Depoimentos enviados são armazenados pelo serviço e podem ser exibidos publicamente com nome, curso, avaliação e texto.</p>
+      <p>O botão Sair limpa o perfil e os favoritos deste navegador. Essa ação não exclui automaticamente o cadastro ou os depoimentos enviados ao serviço.</p>
+    </>,
+  },
+  data: {
+    title: "Informações sobre dados pessoais",
+    description: "Uso do perfil e informações sobre a LGPD.",
+    content: <>
+      <p>Você pode consultar e editar os dados disponíveis na página Meu perfil. Campos de acessibilidade, renda e autorização de imagem são opcionais no cadastro.</p>
+      <p>Autorizações de cadastro e depoimentos são informações diferentes: um depoimento publicado fica visível aos visitantes da plataforma.</p>
+      <p>Evite cadastrar dados de outras pessoas sem autorização, com exceção das informações do responsável legal necessárias para um cadastro de menor de idade.</p>
+      <p>A exclusão de dados enviados ao serviço precisa ser tratada com o responsável pela operação da plataforma; o botão Sair remove somente os dados deste navegador.</p>
+      <p>Consulte o texto oficial da <a href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm" target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-700 underline">Lei Geral de Proteção de Dados Pessoais</a> para conhecer os direitos e deveres previstos na legislação.</p>
+    </>,
+  },
+};
+
+export function PlatformPolicyLink({ kind, children, className }: { kind: PolicyKind; children: ReactNode; className?: string }) {
+  const policy = policies[kind];
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button type="button" className={className}>{children}</button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl bg-white text-slate-900">
+        <DialogHeader>
+          <DialogTitle className="pr-6 text-xl">{policy.title}</DialogTitle>
+          <DialogDescription>{policy.description}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-sm leading-relaxed text-slate-700">{policy.content}</div>
+      </DialogContent>
+    </Dialog>
+  );
+}

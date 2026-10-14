@@ -1,143 +1,540 @@
+import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
+import { findBrowserExecutable, startTestEnvironment } from "./e2e-support.mjs";
 
-const baseURL = process.env.TEST_URL || "http://127.0.0.1:5173";
-const executablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const results = [];
-let consoleErrors = [];
-let failedResources = [];
+const tests = [];
+const optionalResources = new Set();
+const test = (name, run, options = {}) => tests.push({ name, run, options });
+const courseTitles = ["Introdução à Programação", "Excel do Básico ao Avançado", "Design Gráfico para Iniciantes", "Marketing Digital na Prática", "Desenvolvimento Web Completo", "Gestão de Projetos", "Informática para o Mercado", "Atendimento ao Cliente", "Gastronomia Brasileira", "Eletricista Predial"];
+const PROFILE_KEY = "qualificavix-profile";
+const FAVORITES_KEY = "qualificavix-favorite-courses";
+const profileFixture = () => ({ id: 1000, nome: "Pessoa Teste", email: "browser@example.test", telefone: "27999999999", cep: "29050-945", bairro: "Bento Ferreira", rua: "Avenida Marechal Mascarenhas de Moraes", numero: "10", escolaridade: "Ensino médio completo", enrolledCourseIds: [], enrollments: [] });
+const isOptionalResource = url => {
+  try { return ["images.unsplash.com", "fonts.googleapis.com", "fonts.gstatic.com"].includes(new URL(url).hostname); }
+  catch { return false; }
+};
 
-function test(name, fn) { results.push({ name, fn }); }
-function ok(value, message) { if (!value) throw new Error(message); }
-
-const browser = await chromium.launch({ executablePath, headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.setDefaultTimeout(6000);
-page.setDefaultNavigationTimeout(10000);
-page.on("console", msg => { if (msg.type() === "error") consoleErrors.push(msg.text()); });
-page.on("pageerror", error => consoleErrors.push(error.message));
-page.on("response", response => { if (response.status() >= 400) failedResources.push(`${response.status()} ${response.url()}`); });
-
-test("carregamento da página inicial", async () => {
-  const response = await page.goto(baseURL, { waitUntil: "networkidle" });
-  ok(response?.status() === 200, `HTTP ${response?.status()}`);
+async function navigate(page, label) {
+  await page.locator("header").getByRole("button", { name: label, exact: true }).first().click();
+}
+async function catalog(page) {
+  await navigate(page, "Cursos");
+  await page.getByRole("heading", { name: /Encontre o curso ideal/i }).waitFor();
+}
+async function expectCourses(page, titles) {
+  await page.waitForFunction(expected => {
+    const actual = [...document.querySelectorAll("main article h3")].map(el => el.textContent);
+    return actual.length === expected.length && actual.every((title, i) => title === expected[i]);
+  }, titles);
+  assert.deepEqual(await page.locator("main article h3").allTextContents(), titles);
+}
+async function openCourse(page, title) {
+  await catalog(page);
+  await page.getByPlaceholder(/Buscar cursos, áreas/i).fill(title);
+  await expectCourses(page, [title]);
+  await page.locator("main article").getByRole("button", { name: /Ver curso/i }).click();
+  await page.getByRole("heading", { name: title, exact: true }).waitFor();
+}
+async function seedProfile(page, profile) {
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: PROFILE_KEY, value: profile });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
-  ok(await page.getByLabel(/Tortuguita Vix/i).count() > 0, "Mascote não renderizada");
+}
+const storedProfile = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)), PROFILE_KEY);
+async function openProfile(page) {
+  await page.getByRole("button", { name: /Abrir perfil de/i }).first().click();
+  await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
+}
+async function fillPersonalData(page, overrides = {}) {
+  const values = { nome: "Pessoa Teste Navegador", cpf: "529.982.247-25", dataNascimento: "1990-01-01", telefone: "27999999999", email: "registration-browser@example.test", emailConfirm: "registration-browser@example.test", ...overrides };
+  for (const [name, value] of Object.entries(values)) await page.locator(`[name="${name}"]`).fill(value);
+  await page.locator('[name="sexo"]').selectOption("Prefiro não informar");
+  await page.locator('[name="escolaridade"]').selectOption("Ensino médio completo");
+  await page.locator('[name="situacaoEmprego"]').selectOption("Desempregado");
+}
+async function fillAddress(page) {
+  const cep = page.locator('[name="cep"]');
+  await cep.fill("29050-945");
+  await cep.blur();
+  await page.waitForFunction(() => document.querySelector('[name="bairro"]')?.value === "Bento Ferreira");
+  await page.locator('[name="numero"]').fill("10");
+}
+
+// Every case gets a new context, so viewport, dialogs and browser storage never leak.
+test("carregamento da página inicial e API SQLite", async (page, environment) => {
+  assert(await page.getByLabel(/Tortuguita Vix/i).count() > 0, "Mascote não renderizada");
+  const response = await page.request.get(`${process.env.TEST_URL ? environment.apiURL : environment.baseURL}/api/health`);
+  assert.equal(response.status(), 200);
+  assert.equal((await response.json()).database, "connected");
 });
 
-test("navegação principal", async () => {
-  const cases = [
-    ["Cursos", /Encontre o curso ideal/i], ["Categorias", /^Categorias$/i],
-    ["Sobre", /Sobre o QualificaVix/i], ["Contato", /Entre em contato/i], ["Início", /Encontre oportunidades/i]
-  ];
-  for (const [link, heading] of cases) {
-    await page.getByRole("button", { name: link, exact: true }).first().click();
+test("navegação principal", async page => {
+  for (const [label, heading] of [["Cursos", /Encontre o curso ideal/i], ["Categorias", /^Categorias$/i], ["Sobre", /Sobre o QualificaVix/i], ["Contato", /Entre em contato/i], ["Início", /Encontre oportunidades/i]]) {
+    await navigate(page, label);
     await page.getByRole("heading", { name: heading }).first().waitFor();
+    if (label === "Contato") {
+      for (const landmark of ["main", "footer"]) {
+        const portal = page.locator(landmark).getByRole("link", { name: "Atendimento: Portal da Prefeitura de Vitória", exact: true });
+        assert.equal(await portal.getAttribute("href"), "https://www.vitoria.es.gov.br/");
+        assert.equal(await portal.getAttribute("target"), "_blank");
+        assert.match(await portal.getAttribute("rel"), /noopener/);
+      }
+      assert.doesNotMatch(await page.locator("body").innerText(), /0800 123 4567|contato@qualificavix\.es\.gov\.br/);
+    }
   }
 });
 
-test("zoom, limites e persistência", async () => {
+test("zoom: limites e persistência após recarregar", async page => {
   const plus = page.getByRole("button", { name: "Aumentar zoom" }).first();
   const minus = page.getByRole("button", { name: "Diminuir zoom" }).first();
   await plus.click();
-  ok((await page.locator("html").getAttribute("style"))?.includes("16.8px"), "Zoom não aumentou");
+  assert.equal(await page.locator("html").evaluate(el => el.style.fontSize), "16.8px");
   for (let i = 0; i < 10; i++) await plus.click();
-  ok((await page.locator("html").getAttribute("style"))?.includes("20px"), "Limite superior incorreto");
+  assert.equal(await page.locator("html").evaluate(el => el.style.fontSize), "20px");
   for (let i = 0; i < 12; i++) await minus.click();
-  ok((await page.locator("html").getAttribute("style"))?.includes("13.6px"), "Limite inferior incorreto");
-  ok(await page.evaluate(() => localStorage.getItem("qualificavix-font-scale")) === "0.85", "Zoom não persistiu");
+  assert.equal(await page.locator("html").evaluate(el => el.style.fontSize), "13.6px");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => document.documentElement.style.fontSize === "13.6px");
 });
 
-test("modo escuro e persistência", async () => {
-  const theme = page.getByRole("button", { name: "Ativar modo escuro" }).first();
-  await theme.click();
-  ok(await page.locator("html").evaluate(el => el.classList.contains("qualificavix-dark")), "Classe escura ausente");
-  ok(await page.evaluate(() => localStorage.getItem("qualificavix-dark-mode")) === "true", "Tema não persistiu");
+test("modo escuro: persistência após recarregar", async page => {
+  await page.getByRole("button", { name: "Ativar modo escuro" }).first().click();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => document.documentElement.classList.contains("qualificavix-dark"));
   await page.getByRole("button", { name: "Ativar modo claro" }).first().click();
+  assert.equal(await page.evaluate(() => localStorage.getItem("qualificavix-dark-mode")), "false");
 });
 
-test("busca global do cabeçalho", async () => {
-  await page.locator("header button:has(svg.lucide-search)").click();
-  const input = page.getByPlaceholder("Buscar cursos...");
-  await input.fill("Programação");
-  await input.press("Enter");
-  await page.waitForTimeout(300);
-  ok(await page.getByRole("heading", { name: /Encontre o curso ideal/i }).count() > 0,
-    "A busca global aceita texto, mas não executa pesquisa nem abre o catálogo");
+test("busca do cabeçalho: primeira pesquisa e nova pesquisa no catálogo", async page => {
+  for (const title of ["Introdução à Programação", "Excel do Básico ao Avançado"]) {
+    await page.locator("header button:has(svg.lucide-search)").click();
+    const input = page.getByPlaceholder("Buscar cursos...");
+    await input.fill(title);
+    await input.press("Enter");
+    await expectCourses(page, [title]);
+  }
 });
 
-test("catálogo: busca, filtros e limpeza", async () => {
-  await page.getByRole("button", { name: "Cursos", exact: true }).first().click();
+test("catálogo: busca, filtros combinados, todas as categorias e limpeza", async page => {
+  await catalog(page);
+  await expectCourses(page, courseTitles);
   const search = page.getByPlaceholder(/Buscar cursos, áreas/i);
   await search.fill("Programação");
-  ok(await page.getByText("Introdução à Programação", { exact: true }).count() > 0, "Curso buscado não apareceu");
+  await expectCourses(page, [courseTitles[0]]);
   await search.fill("curso inexistente xyz");
   await page.getByText(/Nenhum curso encontrado/i).waitFor();
   await page.getByRole("button", { name: /Limpar busca/i }).click();
-  const modality = page.locator("select").nth(1);
+  await expectCourses(page, courseTitles);
+  const category = page.locator("main select").nth(0);
+  const modality = page.locator("main select").nth(1);
+  await category.selectOption("Tecnologia");
+  await expectCourses(page, [courseTitles[0], courseTitles[4], courseTitles[6]]);
   await modality.selectOption("Online");
-  ok(await page.locator("article").count() > 0, "Filtro eliminou resultados válidos");
+  await expectCourses(page, [courseTitles[0], courseTitles[4]]);
+  await category.selectOption({ label: "Categoria: Todas" });
+  await expectCourses(page, [courseTitles[0], courseTitles[1], courseTitles[3], courseTitles[4], courseTitles[5], courseTitles[7]]);
+  await modality.selectOption("Presencial");
+  await expectCourses(page, [courseTitles[2], courseTitles[6], courseTitles[8], courseTitles[9]]);
   await page.getByRole("button", { name: /Limpar filtros/i }).click();
-  const values = await page.locator("select").evaluateAll(items => items.map(item => item.value));
-  ok(values.every(value => value.endsWith("Todas")), `Filtros não foram totalmente limpos: ${values.join(", ")}`);
+  await expectCourses(page, courseTitles);
+  assert.deepEqual(await page.locator("main select").evaluateAll(items => items.map(item => item.value)), ["Todas", "Todas"]);
 });
 
-test("curso: detalhe, abas, favorito e inscrição", async () => {
-  await page.getByRole("button", { name: /Ver curso/i }).first().click();
-  await page.getByRole("heading", { name: /Introdução à Programação/i }).waitFor();
-  for (const tab of ["Conteúdo programático", "Instrutor", "Requisitos", "Certificado", "Instituição", "Sobre o curso"])
+test("categorias: rótulos mapeados e contagens reais", async page => {
+  await navigate(page, "Categorias");
+  await page.getByRole("button", { name: "Criatividade (1)", exact: true }).click();
+  await expectCourses(page, [courseTitles[2]]);
+  await page.getByRole("button", { name: "Cursos Técnicos (1)", exact: true }).click();
+  await expectCourses(page, [courseTitles[9]]);
+  await page.getByRole("button", { name: "Todas as áreas", exact: true }).click();
+  await expectCourses(page, courseTitles);
+});
+
+test("categorias: atalhos da página inicial e rodapé", async page => {
+  await page.locator("main").getByRole("button", { name: /Criatividade.*1 curso/i }).click();
+  await expectCourses(page, [courseTitles[2]]);
+  await page.locator("footer").getByRole("button", { name: "Tecnologia", exact: true }).click();
+  await expectCourses(page, [courseTitles[0], courseTitles[4], courseTitles[6]]);
+});
+
+test("curso: conteúdo de todas as abas e inscrição exige cadastro", async page => {
+  await openCourse(page, courseTitles[0]);
+  for (const [tab, heading] of [["Conteúdo programático", "Conteúdo programático"], ["Instrutor", "Instrutor da turma"], ["Requisitos", "Pré-requisitos"], ["Certificado", "Certificação"], ["Instituição", "Instituição e local do curso"], ["Sobre o curso", "O que você vai aprender"]]) {
     await page.getByRole("button", { name: tab, exact: true }).click();
-  await page.getByRole("button", { name: /Inscrever-se/i }).click();
-  await page.getByText(/Cadastro de usuário/i).waitFor();
-});
-
-test("cadastro: validação obrigatória e senha", async () => {
-  await page.getByRole("button", { name: /Entrar \/ Cadastrar/i }).first().click();
-  await page.getByRole("button", { name: /Próximo/i }).click();
-  ok(await page.locator("text=/obrigat|informe|inválid/i").count() > 0, "Formulário avançou sem validar campos");
-  const passwordToggle = page.getByRole("button", { name: /senha/i });
-  if (await passwordToggle.count()) await passwordToggle.first().click();
-});
-
-test("depoimentos: abertura e validação do formulário", async () => {
-  await page.getByRole("button", { name: "Início", exact: true }).first().click();
-  const add = page.getByRole("button", { name: /Compartilhar minha história|Escrever depoimento/i });
-  if (await add.count()) {
-    await add.first().click();
-    ok(await page.getByRole("heading", { name: /Como o curso mudou sua vida/i }).count() > 0, "Formulário de depoimento não abriu");
+    await page.locator("#curso-informacoes").getByRole("heading", { name: heading, exact: true }).waitFor();
   }
+  await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
+  await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).waitFor();
 });
 
-test("assistente: abrir, enviar e receber resposta", async () => {
-  const launcher = page.getByRole("button", { name: /Abrir assistente virtual/i });
-  await launcher.click();
-  const input = page.getByPlaceholder(/Digite sua mensagem/i);
+test("curso futuro: inscrição indisponível", async page => {
+  await openCourse(page, courseTitles[5]);
+  assert(await page.getByRole("button", { name: "Inscrições em breve", exact: true }).isDisabled());
+});
+
+test("favoritos: adicionar, persistir e remover", async page => {
+  await catalog(page);
+  await page.getByRole("button", { name: `Adicionar ${courseTitles[0]} aos favoritos`, exact: true }).click();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await navigate(page, "Favoritos");
+  await expectCourses(page, [courseTitles[0]]);
+  await page.getByRole("button", { name: `Remover ${courseTitles[0]} dos favoritos`, exact: true }).click();
+  assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), FAVORITES_KEY), []);
+  assert.equal(await page.locator("main article").count(), 0);
+});
+
+test("cadastro: obrigatórios e confirmação de e-mail", async page => {
+  await page.getByRole("button", { name: "Entrar ou cadastrar", exact: true }).first().click();
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByText("Nome obrigatório", { exact: true }).waitFor();
+  await fillPersonalData(page, { emailConfirm: "outro@example.test" });
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByText("Os e-mails não coincidem", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).waitFor();
+});
+
+test("cadastro: menor exige responsável e CEP fora de Vitória é rejeitado", async page => {
+  await page.getByRole("button", { name: "Entrar ou cadastrar", exact: true }).first().click();
+  await fillPersonalData(page, { dataNascimento: `${new Date().getFullYear() - 12}-01-01` });
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByRole("heading", { name: "Endereço de Moradia", exact: true }).waitFor();
+  await fillAddress(page);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByText("Obrigatório para menor de idade", { exact: true }).first().waitFor();
+  await page.locator('[name="cep"]').fill("29100-000");
+  await page.locator('[name="cep"]').blur();
+  await page.getByText(/apenas CEPs da cidade de Vitória-ES/i).waitFor();
+});
+
+test("cadastro: Enter valida emprego e data futura sem enviar antecipadamente", async page => {
+  let posts = 0;
+  page.on("request", request => {
+    if (request.url().endsWith("/api/registrations") && request.method() === "POST") posts++;
+  });
+  await page.getByRole("button", { name: "Entrar ou cadastrar", exact: true }).first().click();
+  await fillPersonalData(page);
+  await page.locator('[name="situacaoEmprego"]').selectOption("");
+  await page.locator('[name="telefone"]').press("Enter");
+  assert.equal(posts, 0);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByText("Campo obrigatório", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).waitFor();
+  assert.equal(posts, 0);
+  await page.locator('[name="situacaoEmprego"]').selectOption("Desempregado");
+  await page.locator('[name="dataNascimento"]').fill(`${new Date().getFullYear() + 1}-01-01`);
+  await page.locator('[name="telefone"]').press("Enter");
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByText("Data de nascimento inválida", { exact: true }).waitFor();
+  assert.equal(posts, 0);
+  await page.locator('[name="dataNascimento"]').fill("1990-01-01");
+  await page.locator('[name="telefone"]').press("Enter");
+  if (await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).count()) {
+    await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  }
+  await page.getByRole("heading", { name: "Endereço de Moradia", exact: true }).waitFor();
+  assert.equal(posts, 0);
+});
+
+test("cadastro completo: formulário, API real, SQLite e perfil persistido", async (page, environment) => {
+  await openCourse(page, courseTitles[0]);
+  await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
+  await fillPersonalData(page);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await fillAddress(page);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.locator('label').filter({ has: page.locator('input[name="possuiDeficiencia"][value="sim"]') }).click();
+  await page.locator('[name="tiposDeficiencia"]').selectOption("Deficiência visual");
+  await page.locator('label').filter({ has: page.locator('input[name="beneficioProgramaSocial"][value="sim"]') }).click();
+  await page.locator('input[name="quaisBeneficios"][value="BPC / LOAS"]').check();
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByRole("button", { name: "Anterior", exact: true }).click();
+  assert(await page.locator('input[name="possuiDeficiencia"][value="sim"]').isChecked());
+  assert(await page.locator('input[name="beneficioProgramaSocial"][value="sim"]').isChecked());
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.locator('[name="autorizaDados"]').check();
+  await page.locator('[name="aceitaTermos"]').check();
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.url().endsWith("/api/registrations") && response.request().method() === "POST"),
+    page.getByRole("button", { name: "Concluir cadastro", exact: true }).click(),
+  ]);
+  assert.equal(response.status(), 201, await response.text());
+  await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).waitFor();
+  const profile = await storedProfile(page);
+  assert.equal(profile.nome, "Pessoa Teste Navegador");
+  assert.deepEqual(profile.enrolledCourseIds, [1]);
+  const persisted = environment.registration(profile.id);
+  assert.equal(persisted.email, "registration-browser@example.test");
+  const payload = JSON.parse(persisted.payload);
+  assert.equal(payload.autorizaDados, true);
+  assert.equal(payload.possuiDeficiencia, "sim");
+  assert.equal(payload.beneficioProgramaSocial, "sim");
+  assert.deepEqual(payload.quaisBeneficios, ["BPC / LOAS"]);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await openProfile(page);
+  await page.getByRole("button", { name: "Cursos cadastrados (1)", exact: true }).click();
+  await page.getByRole("heading", { name: courseTitles[0], exact: true }).waitFor();
+});
+
+test("perfil: editar, persistir e sair", async page => {
+  await seedProfile(page, profileFixture());
+  await catalog(page);
+  await page.getByRole("button", { name: `Adicionar ${courseTitles[0]} aos favoritos`, exact: true }).click();
+  await openProfile(page);
+  await page.getByLabel("Nome completo", { exact: true }).fill("Pessoa Nome Atualizado");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Perfil atualizado." }).waitFor();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await openProfile(page);
+  assert.equal(await page.getByLabel("Nome completo", { exact: true }).inputValue(), "Pessoa Nome Atualizado");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Sair da plataforma", exact: true }).click();
+  await page.getByRole("button", { name: "Entrar ou cadastrar", exact: true }).first().waitFor();
+  assert.equal(await storedProfile(page), null);
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), FAVORITES_KEY), null);
+  await navigate(page, "Favoritos");
+  assert.equal(await page.locator("main article").count(), 0);
+});
+
+test("perfil: endereço de outra cidade é rejeitado sem alterar os dados salvos", async page => {
+  await seedProfile(page, profileFixture());
+  await openProfile(page);
+  await page.getByLabel("CEP", { exact: true }).fill("29100-000");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: /Vitória/i }).waitFor();
+  assert.equal((await storedProfile(page)).cep, "29050-945");
+  assert.equal(await page.getByRole("status").filter({ hasText: "Perfil atualizado." }).count(), 0);
+});
+
+test("inscrição: confirmação, edição do perfil e desistência dentro do prazo", async page => {
+  await seedProfile(page, profileFixture());
+  await openCourse(page, courseTitles[1]);
+  await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
+  await page.getByRole("heading", { name: "Confirmar inscrição", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Editar perfil", exact: true }).click();
+  await page.getByLabel("Nome completo", { exact: true }).fill("Pessoa Inscrição Atualizada");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await page.locator("main").getByRole("button", { name: "Voltar", exact: true }).click();
+  await page.getByRole("heading", { name: "Confirmar inscrição", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Confirmar inscrição", exact: true }).click();
+  await page.getByRole("button", { name: "Desinscrever-se", exact: true }).waitFor();
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [2]);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Desinscrever-se", exact: true }).click();
+  await page.getByRole("button", { name: "Inscrever-se", exact: true }).waitFor();
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, []);
+});
+
+test("inscrição: três cursos por mês bloqueiam o quarto", async page => {
+  await seedProfile(page, profileFixture());
+  for (const id of [1, 2, 3]) {
+    await openCourse(page, courseTitles[id - 1]);
+    await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar inscrição", exact: true }).click();
+    await page.getByRole("button", { name: "Desinscrever-se", exact: true }).waitFor();
+  }
+  await openCourse(page, courseTitles[3]);
+  const dialogPromise = page.waitForEvent("dialog").then(async dialog => {
+    const message = dialog.message();
+    await dialog.accept();
+    assert.match(message, /3 cursos por mês/i);
+  });
+  await Promise.all([page.getByRole("button", { name: "Inscrever-se", exact: true }).click(), dialogPromise]);
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds.toSorted((a, b) => a - b), [1, 2, 3]);
+  await openCourse(page, courseTitles[2]);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Desinscrever-se", exact: true }).click();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await openCourse(page, courseTitles[3]);
+  const afterCancellation = page.waitForEvent("dialog").then(async dialog => {
+    const message = dialog.message();
+    await dialog.accept();
+    assert.match(message, /3 cursos por mês/i);
+  });
+  await Promise.all([page.getByRole("button", { name: "Inscrever-se", exact: true }).click(), afterCancellation]);
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds.toSorted((a, b) => a - b), [1, 2]);
+});
+
+test("inscrição: desistência encerrada permanece inscrita", async page => {
+  const profile = profileFixture();
+  const enrolledAt = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+  const unsubscribeDeadline = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  profile.enrolledCourseIds = [1];
+  profile.enrollments = [{ courseId: 1, enrolledAt, unsubscribeDeadline }];
+  await seedProfile(page, profile);
+  await openCourse(page, courseTitles[0]);
+  assert(await page.getByRole("button", { name: "Prazo de desistência encerrado", exact: true }).isDisabled());
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [1]);
+});
+
+test("depoimentos: formulário obrigatório e publicação pela API real", async (page, environment) => {
+  await page.getByRole("button", { name: "Compartilhar minha história", exact: true }).click();
+  await page.getByRole("heading", { name: "Como o curso mudou sua vida?", exact: true }).waitFor();
+  const form = page.locator("form").filter({ has: page.getByPlaceholder("Ex.: João Silva") });
+  assert.equal(await form.evaluate(el => el.checkValidity()), false);
+  await page.getByPlaceholder("Ex.: João Silva").fill("Pessoa Depoimento Teste");
+  await page.getByPlaceholder("Ex.: Auxiliar administrativo").fill("Aluno");
+  await page.getByPlaceholder("Ex.: Introdução à Programação").fill(courseTitles[0]);
+  await form.locator("textarea").fill("Aprendi lógica e pratiquei a criação de pequenos programas.");
+  const [published] = await Promise.all([
+    page.waitForResponse(response => response.url().endsWith("/api/testimonials") && response.request().method() === "POST"),
+    form.getByRole("button", { name: "Publicar depoimento", exact: true }).click(),
+  ]);
+  assert.equal(published.status(), 201);
+  await page.getByText(/Depoimento enviado com sucesso/i).waitFor();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const response = await page.request.get(`${process.env.TEST_URL ? environment.apiURL : environment.baseURL}/api/testimonials`);
+  assert((await response.json()).some(item => item.name === "Pessoa Depoimento Teste"));
+});
+
+test("assistente: resposta às mensagens de categoria e limite mensal", async page => {
+  await page.getByRole("button", { name: "Abrir assistente virtual", exact: true }).click();
+  const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
   await input.fill("Quero cursos de tecnologia");
   await input.press("Enter");
-  await page.waitForTimeout(1300);
-  ok(await page.getByText(/tecnologia|opções/i).count() > 0, "Assistente não respondeu");
+  await page.getByText(/Introdução à Programação.*Desenvolvimento Web Completo.*Informática para o Mercado/i).waitFor();
+  await input.fill("Qual o limite de cursos?");
+  await input.press("Enter");
+  await page.getByText(/3 cursos.*mês/i).waitFor();
+  await input.fill("Como entro em contato?");
+  await input.press("Enter");
+  await page.getByText(/Abra Contato.*https:\/\/www\.vitoria\.es\.gov\.br\//i).waitFor();
 });
 
-test("responsividade e menu móvel", async () => {
+test("responsividade: menu e catálogo no celular", async page => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator("header button.lg\\:hidden").click();
-  ok(await page.getByRole("button", { name: "Cursos", exact: true }).count() > 0, "Menu móvel não abriu");
+  await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
+  await page.locator("header").getByRole("button", { name: "Cursos", exact: true }).click();
+  await page.getByRole("heading", { name: /Encontre o curso ideal/i }).waitFor();
+  await expectCourses(page, courseTitles);
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Layout ultrapassa largura da tela");
 });
 
-for (const item of results) {
-  try {
-    if (item.name !== "carregamento da página inicial") {
-      await page.goto(baseURL, { waitUntil: "domcontentloaded" });
-      await page.evaluate(() => localStorage.clear());
-      await page.reload({ waitUntil: "networkidle" });
-    }
-    await item.fn(); item.status = "PASS";
+test("políticas: termos, privacidade e dados pessoais abrem e fecham", async page => {
+  const cases = [
+    ["Termos de Uso", "Termos de uso", /três inscrições por mês/i],
+    ["Política de Privacidade", "Política de privacidade", /não exclui automaticamente o cadastro/i],
+    ["LGPD", "Informações sobre dados pessoais", /responsável pela operação da plataforma/i],
+  ];
+  for (const [label, title, content] of cases) {
+    await page.locator("footer").getByRole("button", { name: label, exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("heading", { name: title, exact: true }).waitFor();
+    await dialog.getByText(content).waitFor();
+    await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+    await dialog.waitFor({ state: "hidden" });
   }
-  catch (error) { item.status = "FAIL"; item.error = error.message; }
-}
+});
 
-await browser.close();
-for (const item of results) console.log(`${item.status}\t${item.name}${item.error ? `\t${item.error}` : ""}`);
-console.log(`CONSOLE_ERRORS\t${consoleErrors.length}`);
-for (const error of consoleErrors) console.log(`BROWSER_ERROR\t${error}`);
-for (const resource of [...new Set(failedResources)]) console.log(`FAILED_RESOURCE\t${resource}`);
-if (results.some(item => item.status === "FAIL") || consoleErrors.length) process.exitCode = 1;
+test("armazenamento inválido: página, catálogo e preferências continuam funcionando", async page => {
+  await page.evaluate(({ profileKey, favoritesKey }) => {
+    localStorage.setItem(profileKey, '{"id":1,"enrolledCourseIds":"inválido","enrollments":"inválido"}');
+    localStorage.setItem(favoritesKey, '"inválido"');
+    localStorage.setItem("qualificavix-font-scale", "NaN");
+  }, { profileKey: PROFILE_KEY, favoritesKey: FAVORITES_KEY });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
+  await catalog(page);
+  await expectCourses(page, courseTitles);
+  await page.getByRole("button", { name: "Aumentar zoom" }).first().click();
+  assert.equal(await page.locator("html").evaluate(el => el.style.fontSize), "16.8px");
+});
+
+test("armazenamento bloqueado: catálogo, busca, favoritos e preferências", async page => {
+  await catalog(page);
+  await page.getByRole("button", { name: `Adicionar ${courseTitles[0]} aos favoritos`, exact: true }).click();
+  await navigate(page, "Favoritos");
+  await expectCourses(page, [courseTitles[0]]);
+  await page.getByRole("button", { name: "Ativar modo escuro" }).first().click();
+  assert(await page.locator("html").evaluate(el => el.classList.contains("qualificavix-dark")));
+  await page.locator("header button:has(svg.lucide-search)").click();
+  const input = page.getByPlaceholder("Buscar cursos...");
+  await input.fill(courseTitles[1]);
+  await input.press("Enter");
+  await expectCourses(page, [courseTitles[1]]);
+}, { blockedStorage: true });
+
+test("armazenamento bloqueado: cadastro genérico mantém perfil durante a sessão sem matricular curso visitado", async (page, environment) => {
+  await openCourse(page, courseTitles[0]);
+  await page.getByRole("button", { name: "Entrar ou cadastrar", exact: true }).first().click();
+  await fillPersonalData(page, { cpf: "111.444.777-35", email: "session-browser@example.test", emailConfirm: "session-browser@example.test" });
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await fillAddress(page);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.locator('[name="autorizaDados"]').check();
+  await page.locator('[name="aceitaTermos"]').check();
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.url().endsWith("/api/registrations") && response.request().method() === "POST"),
+    page.getByRole("button", { name: "Concluir cadastro", exact: true }).click(),
+  ]);
+  assert.equal(response.status(), 201);
+  const saved = await response.json();
+  assert.equal(environment.registration(saved.id).email, "session-browser@example.test");
+  await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).waitFor();
+  await page.getByRole("status").filter({ hasText: /apenas enquanto esta página estiver aberta/i }).waitFor();
+  await page.getByRole("button", { name: "Voltar ao início", exact: true }).click();
+  await openProfile(page);
+  await page.getByRole("button", { name: "Cursos cadastrados (0)", exact: true }).click();
+  await page.getByText("Nenhum curso cadastrado", { exact: true }).waitFor();
+}, { blockedStorage: true });
+
+const environment = await startTestEnvironment();
+let browser;
+try {
+  browser = await chromium.launch({ executablePath: findBrowserExecutable(), headless: true });
+  console.log(`TEST_URL\t${environment.baseURL}`);
+  console.log("TEST_ISOLATION\tAPI real, SQLite temporário e ViaCEP determinístico; dados locais preservados");
+  for (const item of tests) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, baseURL: environment.baseURL, reducedMotion: "reduce" });
+    const errors = [];
+    try {
+      await environment.prepareContext(context);
+      if (item.options.blockedStorage) {
+        await context.addInitScript(() => {
+          for (const name of ["localStorage", "sessionStorage"]) {
+            Object.defineProperty(window, name, { configurable: true, get() { throw new DOMException("Armazenamento bloqueado", "SecurityError"); } });
+          }
+        });
+      }
+      const page = await context.newPage();
+      page.setDefaultTimeout(8000);
+      page.setDefaultNavigationTimeout(15000);
+      page.on("pageerror", error => errors.push(error.message));
+      page.on("console", message => {
+        if (message.type() !== "error") return;
+        const url = message.location().url;
+        if (isOptionalResource(url) && /Failed to load resource/.test(message.text())) optionalResources.add(`${message.text()} ${url}`);
+        else errors.push(message.text());
+      });
+      page.on("response", response => {
+        if (response.status() < 400) return;
+        if (isOptionalResource(response.url())) optionalResources.add(`${response.status()} ${response.url()}`);
+        else errors.push(`HTTP ${response.status()} ${response.url()}`);
+      });
+      page.on("requestfailed", request => {
+        const detail = `${request.failure()?.errorText} ${request.url()}`;
+        if (isOptionalResource(request.url())) optionalResources.add(detail);
+        else if (request.failure()?.errorText !== "net::ERR_ABORTED") errors.push(detail);
+      });
+      const response = await page.goto(environment.baseURL, { waitUntil: "domcontentloaded" });
+      assert.equal(response?.status(), 200);
+      await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
+      await item.run(page, environment);
+      assert.deepEqual(errors, [], "Erros inesperados de JavaScript/recursos locais");
+      item.status = "PASS";
+    } catch (error) {
+      item.status = "FAIL";
+      item.error = `${error.message}${errors.length ? `; BROWSER_ERRORS: ${errors.join(" | ")}` : ""}`;
+    } finally {
+      await context.close();
+    }
+    console.log(`${item.status}\t${item.name}${item.error ? `\t${item.error}` : ""}`);
+  }
+} finally {
+  if (browser) await browser.close();
+  await environment.cleanup();
+}
+for (const resource of optionalResources) console.log(`OPTIONAL_EXTERNAL_RESOURCE\t${resource}`);
+const passed = tests.filter(item => item.status === "PASS").length;
+console.log(`RESULT\t${passed}/${tests.length} verificações aprovadas`);
+if (passed !== tests.length) process.exitCode = 1;

@@ -3,6 +3,12 @@ import { validateJsonMutation } from "../server/controllers/requestSecurity.mjs"
 import { validateVitoriaCep } from "../server/models/validation.mjs";
 
 assert.equal(validateJsonMutation({ headers: { "content-type": "application/json; charset=utf-8" } }), null);
+for (const body of [null, [], "json", true, 5])
+  assert.deepEqual(validateJsonMutation({ headers: { "content-type": "application/json" }, body }),
+    { status: 400, error: "Corpo JSON inválido" });
+const cyclic = {}; cyclic.self = cyclic;
+assert.deepEqual(validateJsonMutation({ headers: { "content-type": "application/json" }, body: cyclic }),
+  { status: 400, error: "Corpo JSON inválido" });
 assert.deepEqual(
   validateJsonMutation({ headers: { "content-type": "text/plain" } }),
   { status: 415, error: "Content-Type deve ser application/json" },

@@ -1,4 +1,4 @@
-const MAX_JSON_BODY_BYTES = 64_000;
+export const MAX_JSON_BODY_BYTES = 64_000;
 
 export function validateJsonMutation(req, { checkOrigin = true } = {}) {
   const contentType = String(req.headers?.["content-type"] ?? "")
@@ -7,6 +7,10 @@ export function validateJsonMutation(req, { checkOrigin = true } = {}) {
     .toLowerCase();
   if (contentType !== "application/json") {
     return { status: 415, error: "Content-Type deve ser application/json" };
+  }
+
+  if (req.body !== undefined && (req.body === null || typeof req.body !== "object" || Array.isArray(req.body))) {
+    return { status: 400, error: "Corpo JSON inválido" };
   }
 
   let bodySize;
