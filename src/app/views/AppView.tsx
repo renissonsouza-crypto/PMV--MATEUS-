@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type FormEvent } from "react";
 import { RegisterPage } from "./RegisterView";
 import { TurtleMascot } from "../components/TurtleMascot";
 import { TortuguitaChat } from "../components/TortuguitaChat";
+import { HomeHeroBackground } from "../components/HomeHeroBackground";
 import { COURSES } from "../data/courses";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
 import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, removeUserEnrollmentFromCourse, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
@@ -14,14 +15,7 @@ import type { Page } from "../models/navigation";
 import { getContactChannels } from "../models/platformContact";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "../components/ui/carousel";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
-import qualificavixInformatica from "../../assets/hero/qualificavix-informatica.jpg";
-import qualificavixCulinaria from "../../assets/hero/qualificavix-culinaria.jpg";
 import qualificavixCozinhaAula from "../../assets/hero/qualificavix-cozinha-aula.jpg";
-import qualificavixPanificacao from "../../assets/hero/qualificavix-panificacao.jpg";
-import qualificavixTecnologia from "../../assets/hero/qualificavix-tecnologia.jpg";
-import vitoriaDoisOlhos1 from "../../assets/hero/vitoria-dois-olhos-1.jpg";
-import vitoriaDoisOlhos2 from "../../assets/hero/vitoria-dois-olhos-2.jpg";
-import vitoriaTerceiraPonte from "../../assets/hero/vitoria-terceira-ponte-panorama.jpg";
 import {
   Search, X, Clock, MapPin, ChevronRight, ChevronDown, Menu, Moon, Sun, Minus, Plus,
   ArrowRight, ArrowLeft, BookOpen, Filter, Star, Users, Award,
@@ -1019,39 +1013,13 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
 
 // ─── HomePage ─────────────────────────────────────────────────────────────────
 function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, onToggleFavorite, profile, onSelectCategory }: { navigate: (p: Page) => void; onViewCourse: (c: Course) => void; onEnrollCourse: (course: Course) => void; favoriteCourseIds: number[]; onToggleFavorite: (id: number) => void; profile: UserProfile | null; onSelectCategory: (category: string) => void }) {
-  const [bgIdx, setBgIdx] = useState(0);
-  const heroBgs = [
-    { src: vitoriaDoisOlhos1, alt: "Vista panorâmica do skyline de Vitória-ES" },
-    { src: vitoriaTerceiraPonte, alt: "Panorama da Terceira Ponte em Vitória-ES" },
-    { src: vitoriaDoisOlhos2, alt: "Vista da cidade de Vitória-ES a partir da Pedra dos Dois Olhos" },
-    { src: qualificavixTecnologia, alt: "Curso profissionalizante de tecnologia do QualificaVix" },
-    { src: qualificavixInformatica, alt: "Aula de informática e capacitação profissional do QualificaVix" },
-    { src: qualificavixCulinaria, alt: "Curso profissionalizante de culinária do QualificaVix" },
-    { src: qualificavixCozinhaAula, alt: "Sala de aula de gastronomia do QualificaVix" },
-    { src: qualificavixPanificacao, alt: "Curso profissionalizante de panificação do QualificaVix" },
-  ];
-  useEffect(() => {
-    const t = setInterval(() => setBgIdx(i => (i + 1) % heroBgs.length), 5000);
-    return () => clearInterval(t);
-  }, []);
-
   const featured = COURSES.filter(c => c.featured).sort((a, b) => (a.featured ?? 0) - (b.featured ?? 0));
 
   return (
     <div>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 60%, ${C.blueMid} 100%)` }}>
-        {heroBgs.map((bg, i) => (
-          <div key={bg.src} className={`absolute inset-0 transition-opacity duration-1000 ${i === bgIdx ? "opacity-45" : "opacity-0"}`}>
-            <img src={bg.src} alt={bg.alt} loading={i < 2 ? "eager" : "lazy"}
-              className="w-full h-full object-cover object-center scale-[1.01]" />
-          </div>
-        ))}
-        {/* Dot pattern */}
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 0)", backgroundSize: "28px 28px" }} />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 lg:py-24">
+      <HomeHeroBackground>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6 sm:pt-16 sm:pb-10 lg:pt-24 lg:pb-12">
           <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 mb-4 sm:mb-6">
@@ -1096,13 +1064,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
           </div>
         </div>
 
-        {/* Wave bottom */}
-        <div className="absolute bottom-0 left-0 right-0 overflow-hidden">
-          <svg viewBox="0 0 1440 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="block -mt-px" style={{ display: "block" }}>
-            <path d="M0 48L1440 48L1440 0C1440 0 1200 40 720 40C240 40 0 0 0 0L0 48Z" fill="white"/>
-          </svg>
-        </div>
-      </section>
+      </HomeHeroBackground>
 
       {/* ── Categorias ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
