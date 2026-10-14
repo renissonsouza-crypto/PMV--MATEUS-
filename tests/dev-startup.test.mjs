@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, mkdir, writeFile, copyFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
-import { getApiPort, requireSupportedNode } from "../scripts/dev-config.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { getApiPort, requireSupportedNode, resolveViteCli } from "../scripts/dev-config.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
@@ -27,6 +27,50 @@ test("local startup rejects unsupported Node and invalid ports with actionable m
     assert.throws(() => getApiPort({ API_PORT }), /API_PORT/);
   }
   assert.equal(getApiPort({ API_PORT: "0" }, { allowEphemeral: true }), 0);
+});
+
+test("Vite resolution supports hoisted dependencies and detects an incomplete installation", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "qualificavix cli "));
+  try {
+    const app = join(directory, "packages", "app");
+    const vite = join(directory, "node_modules", "vite");
+    await mkdir(join(vite, "bin"), { recursive: true });
+    await mkdir(join(app, "scripts"), { recursive: true });
+    await writeFile(join(vite, "package.json"), JSON.stringify({ name: "vite", bin: { vite: "bin/vite.js" } }));
+    await writeFile(join(vite, "bin", "vite.js"), "// fixture\n");
+    const fromUrl = pathToFileURL(join(app, "scripts", "dev-config.mjs"));
+    assert.equal(await resolveViteCli(fromUrl), join(vite, "bin", "vite.js"));
+    await rm(join(vite, "bin", "vite.js"));
+    await assert.rejects(resolveViteCli(fromUrl), /npm(?:\.cmd)? ci --include=dev/);
+    await mkdir(join(vite, "bin", "vite.js"));
+    await assert.rejects(resolveViteCli(fromUrl), /Vite não está instalado corretamente/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("missing Vite stops before API startup with the dependency recovery command", { timeout: 10_000 }, async () => {
+  const directory = await mkdtemp(join(tmpdir(), "qualificavix-no-vite-"));
+  try {
+    await mkdir(join(directory, "scripts"));
+    await mkdir(join(directory, "server"));
+    for (const file of ["dev.mjs", "dev-config.mjs"]) await copyFile(join(root, "scripts", file), join(directory, "scripts", file));
+    await writeFile(join(directory, "server", "server.mjs"), "import {writeFileSync} from 'node:fs'; writeFileSync('api-started', 'yes'); process.exit(99);\n");
+    const child = spawn(process.execPath, [join(directory, "scripts", "dev.mjs")], {
+      cwd: directory, env: { ...process.env, API_PORT: String(await freePort()), NODE_PATH: "" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    child.stdout.on("data", data => { output += data; });
+    child.stderr.on("data", data => { output += data; });
+    const [code] = await once(child, "exit");
+    assert.equal(code, 1);
+    assert.match(output, /npm(?:\.cmd)? ci --include=dev/);
+    assert.doesNotMatch(output, /Cannot find module|API local encerrou/);
+    await assert.rejects(stat(join(directory, "api-started")), { code: "ENOENT" });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("dev starts API and Vite on alternate ports and proxies real database mutations", { timeout: 30_000 }, async () => {

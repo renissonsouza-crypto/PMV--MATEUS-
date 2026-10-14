@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { getApiPort, requireSupportedNode } from "./dev-config.mjs";
+import { getApiPort, requireSupportedNode, resolveViteCli } from "./dev-config.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const viteCli = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
+let viteCli;
 let apiProcess;
 let viteProcess;
 let stopping = false;
@@ -47,6 +47,7 @@ function watch(child, name) {
 async function main() {
   requireSupportedNode();
   apiPort = getApiPort();
+  viteCli = await resolveViteCli();
   try {
     await import("node:sqlite");
   } catch {

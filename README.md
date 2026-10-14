@@ -27,14 +27,14 @@ O fluxo segue `View → Controller → Service/Route → Controller → Model �
 Requisitos: **Node.js 24 LTS ou superior** e npm. A API local usa o módulo `node:sqlite`, incluído nessa versão do Node. O arquivo `.nvmrc` indica a versão principal utilizada pelo projeto.
 
 ```bash
-npm ci
+npm ci --include=dev
 npm run dev
 ```
 
 No **Windows PowerShell**, use o inicializador `.cmd` caso a política de scripts bloqueie `npm.ps1`:
 
 ```powershell
-npm.cmd ci
+npm.cmd ci --include=dev
 npm.cmd run dev
 ```
 
@@ -49,7 +49,7 @@ $env:API_PORT = "3002"
 npm.cmd run dev
 ```
 
-Se o terminal não mostrar `VITE` e `Local:`, confira o erro da API acima: versão antiga do Node, porta ocupada ou caminho do banco sem acesso impedem a inicialização. Se o Vite iniciar e a página não carregar, confirme o endereço e consulte o Console do navegador (F12). Não é necessário alterar a política de segurança do PowerShell para usar `npm.cmd`.
+Se o terminal não mostrar `VITE` e `Local:`, confira o erro acima: versão antiga do Node, dependências ausentes, porta ocupada ou caminho do banco sem acesso impedem a inicialização. Se houver `Cannot find module ...vite.js` ou a mensagem de Vite não instalado, execute `npm ci --include=dev` (`npm.cmd ci --include=dev` no PowerShell). O Vite é uma dependência de desenvolvimento; essa opção também o instala quando a configuração do npm omite essas dependências. Se o Vite iniciar e a página não carregar, confirme o endereço e consulte o Console do navegador (F12). Não é necessário alterar a política de segurança do PowerShell para usar `npm.cmd`.
 
 O desenvolvimento local não precisa de `DATABASE_URL`. Cadastros reais consultam `viacep.com.br` e imagens do catálogo usam `images.unsplash.com`. Em ambientes com proxy HTTP(S), preserve as configurações de proxy e certificados; o Node 24 pode usar `NODE_USE_ENV_PROXY=1` quando necessário.
 
