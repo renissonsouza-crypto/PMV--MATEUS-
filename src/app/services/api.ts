@@ -83,7 +83,9 @@ const profileText = (value: unknown) => typeof value === "string" ? value.trim()
 function persistProfile(profile: UserProfile): UserProfile {
   cachedProfile = profile;
   try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    const serialized = JSON.stringify(profile);
+    localStorage.setItem(PROFILE_KEY, serialized);
+    if (localStorage.getItem(PROFILE_KEY) !== serialized) throw new Error("Profile storage could not be verified");
     useSessionProfile = false;
     profileSessionOnly = false;
   } catch {
@@ -248,6 +250,17 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
     enrollmentHistory: normalizeEnrollmentHistory(sameProfile, nextEnrollments),
   };
   return persistProfile(profile);
+}
+
+// A successful HTTP response alone is not enough: the profile must be usable.
+export async function createRegistrationProfile(data: Record<string, unknown>, courseId?: number): Promise<UserProfile> {
+  const result = await createRegistration(data);
+  const saved = saveUserProfile(data, result.id, courseId);
+  const available = getUserProfile();
+  if (!available || available.id !== saved.id || available.email !== saved.email) {
+    throw new Error("O servidor recebeu seu cadastro, mas não foi possível disponibilizar seu perfil. Tente acessar Meu perfil ou entre em contato com o atendimento.");
+  }
+  return available;
 }
 
 export function enrollUserInCourse(courseId: number) {

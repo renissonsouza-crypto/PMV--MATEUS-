@@ -291,6 +291,10 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   assert.equal(payload.possuiDeficiencia, "sim");
   assert.equal(payload.beneficioProgramaSocial, "sim");
   assert.deepEqual(payload.quaisBeneficios, ["BPC / LOAS"]);
+  await page.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
+  await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Nome completo", { exact: true }).inputValue(), profile.nome);
+  assert.equal(await page.getByLabel("E-mail", { exact: true }).inputValue(), profile.email);
   await page.reload({ waitUntil: "domcontentloaded" });
   await openProfile(page);
   await page.getByRole("button", { name: "Cursos cadastrados (1)", exact: true }).click();
@@ -314,7 +318,7 @@ test("cadastro: falhas ficam visíveis no celular e nova tentativa grava os mesm
   await page.locator('[name="autorizaDados"]').check();
   await page.locator('[name="aceitaTermos"]').check();
   // Fail the actual submission transport, not validation or profile storage.
-  for (const [status, message] of [[503, "Não foi possível validar o CEP agora. Tente novamente."], [409, "CPF ou e-mail já cadastrado"], [500, "Erro ao realizar cadastro"]]) {
+  for (const [status, message] of [[503, "Não foi possível validar o CEP agora. Tente novamente."], [409, "CPF ou e-mail já cadastrado"], [500, "Erro ao realizar cadastro"], [200, "Resposta de cadastro inválida"]]) {
     let release;
     const pending = status === 503 ? new Promise(resolve => { release = resolve; }) : Promise.resolve();
     const handler = async route => { await pending; await route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ error: message }) }); };
@@ -822,11 +826,41 @@ test("armazenamento bloqueado: cadastro genérico mantém perfil durante a sess�
   assert.equal(environment.registration(saved.id).email, "session-browser@example.test");
   await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).waitFor();
   await page.getByRole("status").filter({ hasText: /apenas enquanto esta página estiver aberta/i }).waitFor();
-  await page.getByRole("button", { name: "Voltar ao início", exact: true }).click();
-  await openProfile(page);
+  await page.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
+  await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
   await page.getByRole("button", { name: "Cursos cadastrados (0)", exact: true }).click();
   await page.getByText("Nenhum curso cadastrado", { exact: true }).waitFor();
 }, { blockedStorage: true });
+
+test("cadastro: gravação silenciosamente bloqueada mantém perfil acessível com aviso", async (page, environment) => {
+  await page.evaluate(() => {
+    const write = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key !== "qualificavix-profile") write.call(this, key, value);
+    };
+  });
+  await page.getByRole("button", { name: "Entrar ou cadastrar", exact: true }).click();
+  await fillPersonalData(page, { cpf: "935.411.347-80", email: "silent-storage@example.test", emailConfirm: "silent-storage@example.test" });
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await fillAddress(page);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.locator('[name="autorizaDados"]').check();
+  await page.locator('[name="aceitaTermos"]').check();
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.url().endsWith("/api/registrations") && response.request().method() === "POST"),
+    page.getByRole("button", { name: "Concluir cadastro", exact: true }).click(),
+  ]);
+  assert.equal(response.status(), 201);
+  const { id } = await response.json();
+  assert.equal(environment.registration(id).email, "silent-storage@example.test");
+  await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).waitFor();
+  await page.getByRole("status").getByText(/apenas enquanto esta página estiver aberta/i).waitFor();
+  assert.equal(await storedProfile(page), null, "Storage silently ignored the write");
+  await page.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
+  await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
+  assert.equal(await page.getByLabel("E-mail", { exact: true }).inputValue(), "silent-storage@example.test");
+});
 
 const environment = await startTestEnvironment();
 let browser;

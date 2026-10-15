@@ -2417,7 +2417,7 @@ export default function App() {
       `}</style>
       <div className="min-h-screen bg-white" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
         {registrationMode ? (
-          <RegisterPage dark={darkMode} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
+          <RegisterPage dark={darkMode} onOpenProfile={() => navigate("profile")} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
         ) : (
           <>
             <a href="#main-content" className="skip-link">Pular para o conteúdo</a>
