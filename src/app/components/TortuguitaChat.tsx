@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowUpRight, RotateCcw, Send, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowUpRight, RotateCcw, Send, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
 import { ASSISTANT_CAPABILITIES, QUICK_QUESTIONS } from "../data/tortuguitaKnowledge";
 import type { Course } from "../models/Course";
 import type { Page } from "../models/navigation";
@@ -10,16 +10,13 @@ import {
   answerTortuguita,
   getTortuguitaSuggestions,
   type AssistantAction,
-  type AssistantContext,
 } from "../services/tortuguita";
+import {
+  clearAssistantMemory, emptyAssistantMemory, loadAssistantMemory, MAX_CHAT_MESSAGES,
+  mostSoughtCourses, rememberCourse, rememberReply, saveAssistantMemory,
+  type AssistantMemory, type ChatMessage,
+} from "../services/tortuguitaMemory";
 import { TurtleMascot } from "./TurtleMascot";
-
-type ChatMessage = {
-  id: number;
-  role: "assistant" | "user";
-  text: string;
-  actions?: AssistantAction[];
-};
 
 type TortuguitaChatProps = {
   courses: Course[];
@@ -32,7 +29,6 @@ type TortuguitaChatProps = {
 };
 
 const MAX_INPUT_LENGTH = 1000;
-const MAX_MESSAGES = 41;
 const WELCOME: ChatMessage = {
   id: 0,
   role: "assistant",
@@ -50,55 +46,70 @@ function initialSuggestions(page: Page): string[] {
 }
 
 export function TortuguitaChat({ courses, contacts, profile, page, activeCourseId, onNavigate, onViewCourse }: TortuguitaChatProps) {
+  const [restored] = useState(() => loadAssistantMemory(profile?.id ?? null, courses));
+  const [memory, setMemory] = useState(restored.memory);
+  const memoryRef = useRef(restored.memory);
+  const [persistent, setPersistent] = useState(restored.persistent);
+  const [memoryNotice, setMemoryNotice] = useState("");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [messages, setMessages] = useState<ChatMessage[]>(restored.memory.messages.length ? restored.memory.messages : [WELCOME]);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
-  const contextRef = useRef<AssistantContext>({});
   const sendingRef = useRef(false);
-  const nextIdRef = useRef(1);
+  const nextIdRef = useRef(Math.max(0, ...restored.memory.messages.map(item => item.id)) + 1);
   const lastSubmissionRef = useRef({ text: "", time: 0 });
   const launcherRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
-  const previousProfileIdRef = useRef(profile?.id);
+
+  const commitMemory = (next: AssistantMemory) => {
+    memoryRef.current = next;
+    setMemory(next);
+    if (next.profileId !== null) setPersistent(saveAssistantMemory(next));
+  };
 
   const querySuggestions = draft.trim().length >= 2 ? getTortuguitaSuggestions(draft, courses) : [];
   const suggestions = (querySuggestions.length > 0
     ? querySuggestions
-    : followUps.length > 0 ? followUps : initialSuggestions(page)).slice(0, 4);
+    : followUps.length > 0 ? followUps : profile && memory.messages.length > 0
+      ? ["Continuar de onde paramos", "Quais cursos mais procurei?", "Quais cursos já concluí?", "Recomende um curso para mim"]
+      : initialSuggestions(page)).slice(0, 4);
 
   useEffect(() => {
     if (open && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [open, messages]);
 
   useEffect(() => {
-    // Opening another course changes the subject; later explicit chat questions
-    // can still select a different course without changing the underlying page.
+    // A course opened manually becomes the subject and contributes to interests.
     if (activeCourseId !== undefined && courses.some(course => course.id === activeCourseId)) {
-      contextRef.current = { ...contextRef.current, courseIds: [activeCourseId] };
+      const next = { ...memoryRef.current, context: { ...memoryRef.current.context, courseIds: [activeCourseId] } };
+      commitMemory(profile ? rememberCourse(next, activeCourseId, "views") : next);
     }
-  }, [activeCourseId, courses]);
-
-  useEffect(() => {
-    // A new or removed local profile must not inherit another person's conversation.
-    if (previousProfileIdRef.current !== profile?.id) {
-      contextRef.current = {};
-      setMessages([WELCOME]);
-      setFollowUps([]);
-      setDraft("");
-      lastSubmissionRef.current = { text: "", time: 0 };
-    }
-    previousProfileIdRef.current = profile?.id;
-  }, [profile?.id]);
+  }, [activeCourseId, courses, profile?.id]);
 
   const resetConversation = () => {
-    contextRef.current = {};
+    commitMemory({ ...memoryRef.current, context: { preferences: memoryRef.current.context.preferences }, messages: [] });
     setMessages([WELCOME]);
     setFollowUps([]);
     setDraft("");
     lastSubmissionRef.current = { text: "", time: 0 };
+    inputRef.current?.focus();
+  };
+
+  const forgetMemory = () => {
+    if (!profile || !window.confirm("Apagar as conversas, interesses e conclusões informadas à Tortuguita para este perfil neste navegador? Suas inscrições serão mantidas.")) return;
+    const removed = clearAssistantMemory(profile.id);
+    const empty = emptyAssistantMemory(profile.id);
+    memoryRef.current = empty;
+    setMemory(empty);
+    setMessages([WELCOME]);
+    setFollowUps([]);
+    setDraft("");
+    nextIdRef.current = 1;
+    lastSubmissionRef.current = { text: "", time: 0 };
+    setPersistent(removed);
+    setMemoryNotice(removed ? "Memória deste perfil apagada. Suas inscrições foram mantidas." : "A memória foi limpa nesta página, mas o navegador não permitiu apagar os dados salvos. Libere o armazenamento e tente novamente antes de fechar.");
     inputRef.current?.focus();
   };
 
@@ -116,7 +127,8 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       const reply = answerTortuguita(text, {
         courses,
         contacts,
-        context: contextRef.current,
+        context: memoryRef.current.context,
+        memory: profile ? memoryRef.current : undefined,
         page,
         activeCourseId,
         // Questions about inscriptions need only course IDs and dates.
@@ -126,9 +138,10 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           enrollmentHistory: profile.enrollmentHistory,
         } : null,
       });
-      contextRef.current = reply.context;
       const response: ChatMessage = { id: nextIdRef.current++, role: "assistant", text: reply.text, actions: reply.actions };
-      setMessages(current => [...current, userMessage, response].slice(-MAX_MESSAGES));
+      const nextMessages = [...messages, userMessage, response].slice(-MAX_CHAT_MESSAGES);
+      commitMemory({ ...rememberReply(memoryRef.current, reply), messages: nextMessages });
+      setMessages(nextMessages);
       setFollowUps(reply.suggestions);
       if (reply.navigation) {
         const { courseId, page: destination } = reply.navigation;
@@ -138,12 +151,14 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
         if (!alreadyThere) followAction(reply.navigation);
       }
     } catch {
-      setMessages(current => [...current, userMessage, {
+      const nextMessages: ChatMessage[] = [...messages, userMessage, {
         id: nextIdRef.current++,
         role: "assistant" as const,
         text: "Não consegui responder a esta pergunta. Tente reformular ou abra Contato para buscar orientação.",
         actions: [{ label: "Abrir Contato", page: "contato" as const }],
-      }].slice(-MAX_MESSAGES));
+      }].slice(-MAX_CHAT_MESSAGES);
+      commitMemory({ ...memoryRef.current, messages: nextMessages });
+      setMessages(nextMessages);
       setFollowUps(["Como entro em contato?", "Quero ajuda para escolher um curso"]);
     } finally {
       setDraft("");
@@ -215,6 +230,21 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
             </Dialog.Close>
           </div>
 
+          {profile && <details className="shrink-0 max-h-52 overflow-y-auto border-b border-slate-200 bg-blue-50 px-4 py-2 text-xs text-slate-700">
+            <summary className="cursor-pointer font-semibold">Sua memória com a Tortuguita</summary>
+            <div className="mt-2 space-y-2">
+              <div>Conversas e interesses deste perfil ficam neste navegador. Cursos concluídos são informações suas, sem comprovação de certificado.</div>
+              <div className="font-semibold">Cursos mais consultados por você</div>
+              {mostSoughtCourses(memory).slice(0, 3).map(item => <div key={item.courseId}>{courses.find(course => course.id === item.courseId)?.title} · {item.questions} perguntas · {item.views} visitas</div>)}
+              {memory.interests.length === 0 && <div>Ainda não há consultas salvas.</div>}
+              <div className="font-semibold">Conclusões informadas por você</div>
+              <div>{courses.filter(course => memory.completedCourseIds.includes(course.id)).map(course => course.title).join(", ") || "Nenhuma. Para registrar, diga “já concluí Excel”, por exemplo."}</div>
+              <button type="button" onClick={forgetMemory} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-2 font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700"><Trash2 className="h-3 w-3" aria-hidden="true" />Apagar minha memória</button>
+            </div>
+          </details>}
+          {memoryNotice && <div role="status" className="shrink-0 px-4 py-2 text-xs text-slate-700">{memoryNotice}</div>}
+          {profile && !persistent && <div role="status" className="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-900">O navegador não permitiu salvar sua memória. Ela fica disponível somente enquanto esta página estiver aberta.</div>}
+
           <div ref={logRef} role="log" aria-label="Conversa com a Tortuguita" aria-live="polite" aria-relevant="additions text"
             className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50 px-4 py-5">
             {messages.map(message => (
@@ -269,7 +299,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
             <div id="tortuguita-input-help" className="mt-2 flex justify-between gap-2 text-[10px] text-slate-500">
               <span>Enter envia · Shift + Enter quebra a linha</span><span aria-live="off">{draft.length}/{MAX_INPUT_LENGTH}</span>
             </div>
-            <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-500"><ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />Não envie CPF, senhas ou documentos. Esta conversa fica apenas enquanto a página estiver aberta.</p>
+            <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-500"><ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />Não envie CPF, senhas ou documentos. {profile ? "Sua memória fica neste navegador, separada por perfil. Você pode apagá-la acima." : "Sem perfil, a conversa fica apenas nesta página."}</p>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

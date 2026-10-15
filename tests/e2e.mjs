@@ -8,6 +8,7 @@ const test = (name, run, options = {}) => tests.push({ name, run, options });
 const courseTitles = ["Introdução à Programação", "Excel do Básico ao Avançado", "Design Gráfico para Iniciantes", "Marketing Digital na Prática", "Desenvolvimento Web Completo", "Gestão de Projetos", "Informática para o Mercado", "Atendimento ao Cliente", "Gastronomia Brasileira", "Eletricista Predial"];
 const PROFILE_KEY = "qualificavix-profile";
 const FAVORITES_KEY = "qualificavix-favorite-courses";
+const MEMORY_KEY = "qualificavix-tortuguita-memory:";
 const profileFixture = () => ({ id: 1000, nome: "Pessoa Teste", email: "browser@example.test", telefone: "27999999999", cep: "29050-945", bairro: "Bento Ferreira", rua: "Avenida Marechal Mascarenhas de Moraes", numero: "10", escolaridade: "Ensino médio completo", enrolledCourseIds: [], enrollments: [] });
 const isOptionalResource = url => {
   try { return ["images.unsplash.com", "fonts.googleapis.com", "fonts.gstatic.com"].includes(new URL(url).hostname); }
@@ -452,6 +453,126 @@ test("assistente: negações e cursos ambíguos aguardam escolha no chat", async
   }
   await page.getByRole("button", { name: "Fechar assistente virtual", exact: true }).click();
   await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
+});
+
+test("assistente: memória retoma conversa e curso após fechar a aba", async (page, environment) => {
+  await seedProfile(page, profileFixture());
+  await openAssistant(page);
+  await askAssistant(page, "Me conte sobre Excel");
+  assert.match(await askAssistant(page, "Já concluí Excel"), /Anotei.*Excel/s);
+  const context = page.context();
+  await page.close();
+  const reopened = await context.newPage();
+  reopened.setDefaultTimeout(8000);
+  const errors = [];
+  reopened.on("pageerror", error => errors.push(error.message));
+  await reopened.goto(environment.baseURL);
+  await openAssistant(reopened);
+  assert.match(await reopened.getByRole("log").innerText(), /Me conte sobre Excel.*Já concluí Excel/s);
+  assert.match(await askAssistant(reopened, "E quanto tempo dura?"), /2 meses/);
+  assert.match(await askAssistant(reopened, "Quais cursos mais procurei?"), /Excel.*perguntas.*visitas/s);
+  assert.match(await askAssistant(reopened, "Quais cursos já concluí?"), /Excel.*não comprovam certificação/s);
+  assert.deepEqual((await storedProfile(reopened)).enrolledCourseIds, []);
+  assert.deepEqual(errors, []);
+});
+
+test("assistente: recomendações usam preferências salvas e excluem inscritos e conclusões", async page => {
+  const profile = profileFixture();
+  profile.enrolledCourseIds = [1];
+  await seedProfile(page, profile);
+  await openAssistant(page);
+  await askAssistant(page, "Quero cursos online de tecnologia");
+  await askAssistant(page, "Já concluí Excel");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await openAssistant(page);
+  const recommendation = await askAssistant(page, "Recomende um curso para mim");
+  assert.match(recommendation, /Desenvolvimento Web Completo/);
+  assert.doesNotMatch(recommendation, /Excel do Básico|Introdução à Programação|Gestão de Projetos|Informática para o Mercado/);
+  assert.match(recommendation, /inscritos.*conclusões/s);
+  const memory = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), `${MEMORY_KEY}${profile.id}`);
+  assert.equal(memory.context.preferences.modality, "Online");
+  assert.equal(memory.context.preferences.category, "Tecnologia");
+  assert.deepEqual(memory.completedCourseIds, [2]);
+});
+
+test("assistente: sair e alternar perfis não mistura conversas", async page => {
+  await seedProfile(page, profileFixture());
+  await openAssistant(page);
+  await askAssistant(page, "Me conte sobre Excel");
+  await page.getByRole("button", { name: "Fechar assistente virtual", exact: true }).click();
+  await openProfile(page);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Sair da plataforma", exact: true }).click();
+  await openAssistant(page);
+  assert.doesNotMatch(await page.getByRole("log").innerText(), /Me conte sobre Excel/);
+  assert.equal(await page.getByText("Sua memória com a Tortuguita", { exact: true }).count(), 0);
+  await seedProfile(page, { ...profileFixture(), id: 1001, nome: "Outro Perfil", email: "other@example.test" });
+  await openAssistant(page);
+  assert.doesNotMatch(await page.getByRole("log").innerText(), /Me conte sobre Excel/);
+  await askAssistant(page, "Me conte sobre Introdução à Programação");
+  await seedProfile(page, profileFixture());
+  await openAssistant(page);
+  const history = await page.getByRole("log").innerText();
+  assert.match(history, /Me conte sobre Excel/);
+  assert.doesNotMatch(history, /Me conte sobre Introdução à Programação/);
+});
+
+test("assistente: reiniciar mantém interesses e apagar memória remove somente dados do chat", async page => {
+  const profile = profileFixture();
+  profile.enrolledCourseIds = [1];
+  await seedProfile(page, profile);
+  await openAssistant(page);
+  await askAssistant(page, "Já concluí Excel");
+  await askAssistant(page, "Me conte sobre Excel");
+  await page.getByRole("button", { name: "Reiniciar conversa", exact: true }).click();
+  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.match(await askAssistant(page, "Quais cursos já concluí?"), /Excel/);
+  assert.match(await askAssistant(page, "Quais cursos mais procurei?"), /Excel/);
+  await page.getByText("Sua memória com a Tortuguita", { exact: true }).click();
+  page.once("dialog", dialog => dialog.dismiss());
+  await page.getByRole("button", { name: "Apagar minha memória", exact: true }).click();
+  assert(await page.evaluate(key => localStorage.getItem(key) !== null, `${MEMORY_KEY}${profile.id}`));
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Apagar minha memória", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: /Memória deste perfil apagada/ }).waitFor();
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), `${MEMORY_KEY}${profile.id}`), null);
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [1]);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await openAssistant(page);
+  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.match(await askAssistant(page, "Quais cursos já concluí?"), /ainda não informou/);
+});
+
+test("assistente: memória corrompida recupera e gravação bloqueada avisa sem perder a sessão", async page => {
+  const profile = profileFixture();
+  await page.evaluate(key => localStorage.setItem(key, '{invalid'), `${MEMORY_KEY}${profile.id}`);
+  await seedProfile(page, profile);
+  await openAssistant(page);
+  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("qualificavix-tortuguita-memory:")) throw new DOMException("Quota", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await askAssistant(page, "Já concluí Excel");
+  await page.getByRole("status").filter({ hasText: /não permitiu salvar sua memória/ }).waitFor();
+  assert.match(await askAssistant(page, "Quais cursos já concluí?"), /Excel/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByText("Sua memória com a Tortuguita", { exact: true }).click();
+  assert(await page.getByRole("textbox", { name: "Sua dúvida ou busca" }).isVisible());
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+});
+
+test("assistente: visitantes não guardam conversas entre recarregamentos", async page => {
+  await openAssistant(page);
+  await askAssistant(page, "Me conte sobre Excel");
+  assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("qualificavix-tortuguita-memory:")).length), 0);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await openAssistant(page);
+  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.match(await askAssistant(page, "Quais cursos mais procurei?"), /crie um perfil/);
 });
 
 test("assistente: resposta às mensagens de categoria e limite mensal", async page => {

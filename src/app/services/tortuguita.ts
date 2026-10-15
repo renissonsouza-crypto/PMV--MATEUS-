@@ -5,6 +5,7 @@ import { PLATFORM_KNOWLEDGE, QUICK_QUESTIONS } from "../data/tortuguitaKnowledge
 import type { KnowledgeIntent } from "../data/tortuguitaKnowledge.ts";
 import { countEnrollmentsInCurrentMonth, canUnsubscribeFromCourse, getUnsubscribeDeadline } from "./enrollmentPolicy.js";
 import { normalizeTortuguitaText, meaningfulWords, wordSimilarity, hasPhrase, hasAny } from "./tortuguitaText.ts";
+import { mostSoughtCourses, type AssistantMemory } from "./tortuguitaMemory.ts";
 
 export type AssistantPreferences = {
   category?: string; modality?: string; period?: string; level?: string;
@@ -20,11 +21,13 @@ export type AssistantReply = {
   text: string; intent: string; confidence: "high" | "medium" | "low";
   actions: AssistantAction[]; suggestions: string[]; context: AssistantContext;
   navigation?: AssistantAction;
+  completedCourseUpdate?: { courseId: number; completed: boolean };
 };
 export type AssistantOptions = {
   courses: Course[]; contacts: ContactChannel[]; context?: AssistantContext; now?: Date;
   profile?: { enrolledCourseIds: number[]; enrollments?: { courseId: number; enrolledAt: string }[]; enrollmentHistory?: { courseId: number; enrolledAt: string }[] } | null;
   page?: Page; activeCourseId?: number;
+  memory?: AssistantMemory;
 };
 export type TortuguitaContext = AssistantContext;
 export type TortuguitaAction = AssistantAction;
@@ -374,9 +377,61 @@ function answerConversation(message: string, options: AssistantOptions): Assista
   return result;
 }
 
+function memoryReply(message: string, options: AssistantOptions): AssistantReply | undefined {
+  const text = normalizeTortuguitaText(message);
+  const context = cleanContext(options.context, options.courses);
+  const memory = options.profile ? options.memory : undefined;
+  const completion = /^(?:eu )?(?:(?:ja )?(?:conclui|terminei|completei|finalizei)|ja fiz)\b/.test(text);
+  const undoCompletion = /^(?:eu )?(?:ainda )?nao (?:conclui|terminei|fiz|completei|finalizei)\b/.test(text);
+  const asksCompleted = /\b(?:quais|que cursos|meus cursos|liste|listar|mostrar|mostre)\b/.test(text) && /\b(?:conclui|concluidos|feitos|ja fiz|terminei|completos)\b/.test(text);
+  const asksInterests = /\b(?:mais (?:procurei|consultei|busquei|pesquisei|procurados|consultados)|meus interesses)\b/.test(text);
+  const asksHistory = /\b(?:continuar de onde paramos|retomar (?:a )?conversa|sobre o que conversamos|minhas conversas|meu historico|minha memoria|lembra de mim|lembra sobre mim|o que voce lembra)\b/.test(text);
+  const recommendation = /\b(?:recomende|recomendar|indique|sugira|recomendacao|sugestao)\b/.test(text) && /\b(?:para mim|meu perfil|meus interesses|meu historico)\b/.test(text);
+  if (!completion && !undoCompletion && !asksCompleted && !asksInterests && !asksHistory && !recommendation) return undefined;
+  if (!memory) return reply("Para guardar conversas e interesses entre visitas, crie um perfil neste navegador. Sem perfil, a conversa fica apenas nesta página. A memória não é sincronizada entre dispositivos.", "memory-unavailable", context, [{ label: "Cadastro", page: "register" }]);
+
+  if ((completion || undoCompletion) && !asksCompleted && !message.includes("?") && !/\b(?:se|talvez|quero|vou|pretendo|gostaria|nunca)\b/.test(text)) {
+    const mentions = findCourseMentions(text, options.courses);
+    const refersBack = /\b(?:esse|este|aquele|ele|primeiro|segundo|terceiro|ultimo)\b/.test(text);
+    const referenced = mentions.length ? mentions : refersBack ? contextualCourses(text, context, options.courses) : [];
+    if (referenced.length !== 1) return reply("Qual curso você concluiu ou quer corrigir? Diga um nome do catálogo por vez para eu atualizar sua memória corretamente.", "memory-clarification", context, courseActions(referenced));
+    const course = referenced[0];
+    const completed = !undoCompletion;
+    return { ...reply(completed ? `Anotei que você informou ter concluído ${course.title}. Vou considerar isso nas próximas recomendações. Esse registro é uma informação sua; não é uma certificação nem altera sua inscrição.` : `Retirei ${course.title} da lista de conclusões informadas. Suas inscrições continuam como estavam.`, "memory-completion", { ...context, courseIds: [course.id] }, courseActions([course]), ["Quais cursos já concluí?", "Recomende um curso para mim"]), completedCourseUpdate: { courseId: course.id, completed } };
+  }
+  const completed = options.courses.filter(course => memory.completedCourseIds.includes(course.id));
+  if (asksCompleted) return reply(completed.length ? `Você informou ter concluído:\n${completed.map(course => `• ${course.title}`).join("\n")}\n\nInscrições não contam como conclusão. Esses registros são informados por você e não comprovam certificação. Para corrigir, diga “ainda não concluí” seguido do nome do curso.` : "Você ainda não informou nenhum curso concluído. Uma inscrição não significa conclusão. Se já fez um curso, diga, por exemplo, “já concluí Excel”.", "memory-completed", context, courseActions(completed));
+  const interests = mostSoughtCourses(memory).flatMap(item => {
+    const course = options.courses.find(course => course.id === item.courseId);
+    return course ? [{ ...item, course }] : [];
+  });
+  if (asksInterests) return reply(interests.length ? `Os cursos mais consultados por você neste navegador são:\n${interests.slice(0, 5).map(item => `• ${item.course.title}: ${item.questions} perguntas e ${item.views} visitas à ficha`).join("\n")}\n\nEsse é seu histórico pessoal, não um ranking de todos os alunos.` : "Ainda não há cursos consultados na sua memória. Pergunte sobre uma formação ou abra uma ficha para começar seu histórico pessoal.", "memory-interests", context, courseActions(interests.map(item => item.course)));
+  if (recommendation) {
+    // Reuse the existing search constraints, including negative preferences.
+    const pool = options.courses.filter(course => !memory.completedCourseIds.includes(course.id) && !options.profile?.enrolledCourseIds.includes(course.id) && course.status !== "coming-soon");
+    const preferences = extractPreferences(text, memory.context.preferences).preferences;
+    const filtered = searchCourses("", { ...options, courses: pool }, { ...context, lastIntent: "course-search", preferences }, findCourseMentions(text, pool));
+    const candidates = pool.filter(course => filtered.context.candidateCourseIds?.includes(course.id));
+    const affinity = (course: Course) => interests.reduce((score, interest) => score + (interest.course.category === course.category ? interest.questions + interest.views : 0), 0);
+    candidates.sort((a, b) => affinity(b) - affinity(a) || a.id - b.id);
+    const selected = candidates.slice(0, 3);
+    return reply(selected.length ? `Considerando seus interesses e preferências salvos, estas são opções para você:\n\n${selected.map(courseLine).join("\n\n")}\n\nDeixei de fora cursos já inscritos, conclusões que você informou e cursos em breve. As condições de cada turma precisam ser confirmadas.` : "Não encontrei novas opções disponíveis que atendam às suas preferências salvas e ainda não estejam inscritas ou concluídas por você. Você pode pedir “limpar filtros” para ampliar a busca.", "memory-recommendation", { ...context, preferences, candidateCourseIds: selected.map(course => course.id), courseIds: [] }, courseActions(selected), ["Quais cursos mais procurei?", "Quais cursos já concluí?", "Limpar filtros"]);
+  }
+  if (asksHistory) {
+    const lastCourses = options.courses.filter(course => context.courseIds?.includes(course.id));
+    const previous = memory.messages.filter(item => item.role === "user").slice(-3);
+    return reply(previous.length ? `Podemos continuar de onde paramos. Suas últimas mensagens foram:\n${previous.map(item => `• ${item.text}`).join("\n")}\n\n${lastCourses.length ? `Último assunto de curso: ${lastCourses.map(course => course.title).join(", ")}. Pode perguntar sobre ele sem repetir o nome.` : "Também guardo seus interesses e as conclusões que você informar."}` : "Sua memória está pronta para guardar as próximas conversas deste perfil neste navegador. Pergunte sobre cursos ou suas preferências para começar.", "memory-history", context, courseActions(lastCourses), ["Quais cursos mais procurei?", "Quais cursos já concluí?", "Recomende um curso para mim"]);
+  }
+  return undefined;
+}
+
 export function answerTortuguita(message: string, options: AssistantOptions): AssistantReply {
   const result = answerConversation(message, options);
   const text = normalizeTortuguitaText(message);
+  if (String(message).length <= 1000 && result.intent !== "privacy" && !result.intent.includes("+")) {
+    const remembered = memoryReply(message, options);
+    if (remembered) return remembered;
+  }
   // Navigation is a separate decision: suggested actions in an explanation are
   // not permission to choose a destination. Unclear or negative requests stay in chat.
   if (String(message).length > 1000 || /\b(?:nao|nunca|sem|talvez|se|ou)\b/.test(text) ||
