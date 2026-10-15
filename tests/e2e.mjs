@@ -297,6 +297,57 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   await page.getByRole("heading", { name: courseTitles[0], exact: true }).waitFor();
 });
 
+test("cadastro: falhas ficam visíveis no celular e nova tentativa grava os mesmos dados", async (page, environment) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
+  await page.getByRole("dialog", { name: "Menu", exact: true }).getByRole("button", { name: "Entrar / Cadastrar", exact: true }).click();
+  await fillPersonalData(page, { cpf: "123.456.789-09", email: "registration-retry@example.test", emailConfirm: "registration-retry@example.test" });
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await fillAddress(page);
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  const finish = page.getByRole("button", { name: "Concluir cadastro", exact: true });
+  await finish.click();
+  await page.getByRole("alert").getByText("Consentimento obrigatório", { exact: true }).waitFor();
+  await page.waitForFunction(() => document.activeElement?.getAttribute("name") === "autorizaDados");
+  assert.equal(await storedProfile(page), null);
+  await page.locator('[name="autorizaDados"]').check();
+  await page.locator('[name="aceitaTermos"]').check();
+  // Fail the actual submission transport, not validation or profile storage.
+  for (const [status, message] of [[503, "Não foi possível validar o CEP agora. Tente novamente."], [409, "CPF ou e-mail já cadastrado"], [500, "Erro ao realizar cadastro"]]) {
+    let release;
+    const pending = status === 503 ? new Promise(resolve => { release = resolve; }) : Promise.resolve();
+    const handler = async route => { await pending; await route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ error: message }) }); };
+    await page.route("**/api/registrations", handler);
+    // These error responses are intentional and must not be treated as page failures.
+    await finish.click();
+    if (release) {
+      await page.getByRole("status").getByText("Salvando seu cadastro. Aguarde a confirmação.", { exact: true }).waitFor();
+      assert(await page.locator('form button[type="submit"]').isDisabled(), "Pending submission must prevent duplicate clicks");
+      assert.equal(await page.locator("form[aria-busy]").getAttribute("aria-busy"), "true");
+      release();
+    }
+    const alert = page.getByRole("alert");
+    await alert.getByText(message, { exact: true }).waitFor();
+    await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "alert");
+    const bounds = await alert.boundingBox();
+    assert(bounds.y >= 0 && bounds.y + bounds.height <= 700, "Submission error must be visible without scrolling");
+    assert(await finish.isEnabled(), "Submission must unlock after an API error");
+    assert.equal(await storedProfile(page), null, "Failed submission must not create a profile");
+    await page.unroute("**/api/registrations", handler);
+  }
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.url().endsWith("/api/registrations") && response.request().method() === "POST"),
+    finish.click(),
+  ]);
+  assert.equal(response.status(), 201);
+  await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).waitFor();
+  const profile = await storedProfile(page);
+  assert.equal(profile.email, "registration-retry@example.test");
+  assert.equal(environment.registration(profile.id).email, profile.email);
+  assert(await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).evaluate(el => el === document.activeElement));
+}, { registrationFailures: true });
+
 test("perfil: editar, persistir e sair", async page => {
   await seedProfile(page, profileFixture());
   await catalog(page);
@@ -802,11 +853,13 @@ try {
       page.on("console", message => {
         if (message.type() !== "error") return;
         const url = message.location().url;
+        if (item.options.registrationFailures && url.includes("/api/registrations") && /Failed to load resource/.test(message.text())) return;
         if (isOptionalResource(url) && /Failed to load resource/.test(message.text())) optionalResources.add(`${message.text()} ${url}`);
         else errors.push(message.text());
       });
       page.on("response", response => {
         if (response.status() < 400) return;
+        if (item.options.registrationFailures && new URL(response.url()).pathname === "/api/registrations" && [409, 500, 503].includes(response.status())) return;
         if (isOptionalResource(response.url())) optionalResources.add(`${response.status()} ${response.url()}`);
         else errors.push(`HTTP ${response.status()} ${response.url()}`);
       });

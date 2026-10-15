@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
 import { createRegistration, isProfileSessionOnly, saveUserProfile, type UserProfile } from "../services/api";
 import { getBirthDateAge, isValidBrazilianPhone, lookupVitoriaCep, type VitoriaAddress } from "../services/registrationValidation";
@@ -188,6 +188,22 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [sessionOnly, setSessionOnly] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
+  const submissionErrorRef = useRef<HTMLDivElement>(null);
+  const invalidFieldRef = useRef<keyof RegisterData | null>(null);
+  const successTitleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!submissionError) return;
+    const field = invalidFieldRef.current;
+    const target = (field ? formRef.current?.querySelector<HTMLElement>(`[name="${field}"]`) : null) ?? submissionErrorRef.current;
+    invalidFieldRef.current = null;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "center", behavior: "instant" });
+  }, [submissionError]);
+  useEffect(() => {
+    if (!submitted) return;
+    successTitleRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [submitted]);
   const cepLookupId = useRef(0);
   const cepCache = useRef(new Map<string, VitoriaAddress>());
   const filledCep = useRef("");
@@ -261,7 +277,19 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
     }
   }
 
+  function onInvalid(invalid: FieldErrors<RegisterData>) {
+    const first = Object.keys(invalid)[0] as keyof RegisterData | undefined;
+    if (!first) return;
+    const addressFields = ["cep", "bairro", "rua", "numero", "complemento", "nomeResponsavel", "cpfResponsavel", "grauParentesco", "telefoneResponsavel"];
+    const consentFields = ["autorizaDados", "aceitaTermos"];
+    const target = consentFields.includes(first) ? 4 : addressFields.includes(first) ? 2 : 1;
+    invalidFieldRef.current = first;
+    setStep(target);
+    setSubmissionError(typeof invalid[first]?.message === "string" ? invalid[first].message : "Revise os campos indicados antes de concluir o cadastro.");
+  }
+
   async function onSubmit(data: RegisterData) {
+    invalidFieldRef.current = null;
     setSubmissionError("");
     if (data.whatsapp?.trim() && !isValidBrazilianPhone(data.whatsapp)) {
       setSubmissionError("Informe um WhatsApp com DDD, com 10 ou 11 dígitos.");
@@ -294,7 +322,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}>
               <CheckCircle2 className="w-12 h-12 text-amber-300" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-3">
+            <h2 ref={successTitleRef} tabIndex={-1} className="text-3xl font-black text-slate-900 dark:text-white mb-3">
               Cadastro realizado!
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
@@ -375,14 +403,9 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
           </div>
 
           {/* ─── Formulário ─── */}
-          {submissionError && (
-            <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-              {submissionError}
-            </div>
-          )}
-          <form ref={formRef} noValidate onSubmit={event => {
+          <form ref={formRef} aria-busy={isSubmitting} noValidate onSubmit={event => {
             if (step < 4) { event.preventDefault(); void nextStep(); }
-            else void handleSubmit(onSubmit)(event);
+            else void handleSubmit(onSubmit, onInvalid)(event);
           }}>
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
               <div className="p-4 sm:p-8">
@@ -897,12 +920,20 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                 )}
               </div>
 
+              {submissionError && (
+                <div ref={submissionErrorRef} role="alert" tabIndex={-1} className="mx-4 sm:mx-8 mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 focus-visible:outline-2 focus-visible:outline-red-600">
+                  <p>{submissionError}</p>
+                  <p className="mt-1 text-xs font-medium">Não foi possível confirmar a conclusão do cadastro. Os dados preenchidos foram mantidos; corrija o que foi indicado ou tente novamente.</p>
+                </div>
+              )}
+              {isSubmitting && <p role="status" className="mx-4 sm:mx-8 mb-4 text-sm font-semibold text-blue-700">Salvando seu cadastro. Aguarde a confirmação.</p>}
+
               {/* ─── Rodapé do formulário (botões de navegação) ─── */}
               <div className="registration-actions grid grid-cols-1 min-[400px]:grid-cols-2 sm:flex sm:items-center sm:justify-between gap-3 px-4 sm:px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                 <button
                   type="button"
                   disabled={isAdvancing || isSubmitting}
-                  onClick={step === 1 ? onBack : () => setStep(s => s - 1)}
+                  onClick={step === 1 ? onBack : () => { setSubmissionError(""); setStep(s => s - 1); }}
                   className="flex items-center justify-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300 px-5 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-white dark:hover:bg-slate-800 transition-all"
                 >
                   <ArrowLeft className="w-4 h-4" />
