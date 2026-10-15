@@ -23,9 +23,11 @@ const policies: Record<PolicyKind, { title: string; description: string; content
     content: <>
       <p>O cadastro envia ao serviço da plataforma seus dados pessoais, endereço, contato, escolaridade e os demais campos preenchidos, incluindo informações opcionais e autorizações.</p>
       <p>O perfil, a foto, os favoritos e as inscrições em cursos também ficam salvos no navegador utilizado. Em um navegador que bloqueie esse armazenamento, a plataforma informa quando os dados estarão disponíveis somente enquanto a página estiver aberta.</p>
+      <p>Com um perfil cadastrado, as conversas recentes com a Tortuguita, os interesses, as preferências e as conclusões de cursos informadas por você são guardados neste navegador, separados por perfil, para retomar o atendimento. Essa memória não é enviada a um serviço de IA nem sincronizada entre dispositivos. Você pode consultá-la e apagá-la em Sua memória com a Tortuguita, sem alterar suas inscrições.</p>
       <p>O CEP informado é consultado no ViaCEP para verificar se o endereço pertence a Vitória-ES. As imagens externas do catálogo são carregadas do Unsplash.</p>
       <p>Depoimentos enviados são armazenados pelo serviço e podem ser exibidos publicamente com nome, curso, avaliação e texto.</p>
       <p>O botão Sair limpa o perfil e os favoritos deste navegador. Essa ação não exclui automaticamente o cadastro ou os depoimentos enviados ao serviço.</p>
+      <p>Sair também oculta a memória do chat, mas não apaga seu histórico salvo. Use Apagar minha memória no chat antes de sair se quiser remover essas conversas e interesses deste navegador.</p>
     </>,
   },
   data: {

@@ -2446,7 +2446,7 @@ export default function App() {
           </>
         )}
       </div>
-      <TortuguitaChat courses={COURSES} contacts={CONTACT_CHANNELS} profile={profile} page={page}
+      <TortuguitaChat key={profile?.id ?? "guest"} courses={COURSES} contacts={CONTACT_CHANNELS} profile={profile} page={page}
         activeCourseId={page === "course-detail" || page === "enrollment-confirmation" ? selectedCourse?.id : undefined}
         onNavigate={navigate} onViewCourse={handleViewCourse} />
     </>
