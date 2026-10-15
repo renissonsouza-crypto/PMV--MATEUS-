@@ -29,12 +29,12 @@ export function sqliteEnrollmentRepository(db) {
       return transaction(() => {
         const row = db.prepare('SELECT * FROM course_enrollment_requests WHERE token_hash = ?').get(hash);
         if (!row) throw fail('Link de confirmação inválido.', 404);
-        if (row.expires_at <= now || row.delivery === 'failed') throw fail('Este link venceu ou foi invalidado. Solicite outro e-mail na plataforma.', 410);
+        if (row.expires_at <= now || row.delivery !== 'sent') throw fail('Este link venceu ou foi invalidado. Solicite outro e-mail na plataforma.', 410);
         if (row.cancelled_at) throw fail('Esta inscrição já foi cancelada.', 409);
-        if (row.confirmed_at) return row;
+        if (row.confirmed_at) throw fail('Este link já foi utilizado. A inscrição permanece confirmada; consulte o perfil no navegador utilizado na confirmação.', 409);
         if (!COURSES.some(course => course.id === row.course_id && course.status !== 'coming-soon')) throw fail('Este curso não está disponível.', 409);
         const existing = active(row);
-        if (existing) return existing;
+        if (existing) throw fail('Você já confirmou sua inscrição neste curso. Este link não pode gerar outro acesso ao perfil.', 409);
         if (count(row) >= 3) throw fail('Você já atingiu o limite de três inscrições neste mês.', 409);
         db.prepare('UPDATE course_enrollment_requests SET confirmed_at = ? WHERE id = ? AND confirmed_at IS NULL').run(now, row.id);
         return { ...row, confirmed_at: now };

@@ -48,7 +48,8 @@ test('PostgreSQL production schema and request/confirm/status/cancel operate on 
   const confirmed = await service.confirm({ token: mails[0].token });
   assert.equal(confirmed.status, 'confirmed');
   assert.equal(confirmed.profile.email, input.email);
-  assert.equal((await service.confirm({ token: mails[0].token })).enrolledAt, confirmed.enrolledAt);
+  await assert.rejects(service.confirm({ token: mails[0].token }), error => error.statusCode === 409);
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM profile_sessions')).rows[0].n, 1);
   assert.equal((await service.status(pending)).status, 'confirmed');
   await assert.rejects(repository.cancel(confirmed.requestId, digest('b'.repeat(64)), new Date().toISOString()), error => error.statusCode === 403);
   assert.equal((await service.cancel({ requestId: confirmed.requestId }, confirmed.profile.profileToken)).status, 'cancelled');
@@ -73,4 +74,14 @@ test('PostgreSQL expired and failed-delivery links cannot finalize an enrollment
   await assert.rejects(service.confirm({ token: mails[0].token }), error => error.statusCode === 410);
   assert.equal((await service.status(pending)).status, 'expired');
   await assert.rejects(service.status({ ...pending, statusToken: 'f'.repeat(64) }), error => error.statusCode === 404);
+});
+
+
+test('PostgreSQL concurrent reuse of the same token creates exactly one profile session', async () => {
+  const { service, mails, input } = await fixture();
+  await service.request(input);
+  const results = await Promise.allSettled(Array.from({ length: 8 }, () => service.confirm({ token: mails[0].token })));
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert(results.filter(result => result.status === 'rejected').every(result => result.reason.statusCode === 409));
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM profile_sessions')).rows[0].n, 1);
 });

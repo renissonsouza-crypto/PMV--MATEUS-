@@ -79,8 +79,8 @@ test('enrollment stays pending until the private email token is confirmed and to
     assert.equal(confirmed.profile.id, 1);
     assert.equal(confirmed.profile.profileToken.length, 64);
     assert(db.prepare('SELECT 1 FROM profile_sessions WHERE token_hash = ?').get(digest(confirmed.profile.profileToken)));
-    const again = await service.confirm({ token: mails[0].token });
-    assert.equal(again.enrolledAt, confirmed.enrolledAt);
+    await assert.rejects(service.confirm({ token: mails[0].token }), error => error.statusCode === 409);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 1, 'Replay must not mint another session');
     assert.equal(db.prepare('SELECT count(*) AS n FROM course_enrollment_requests WHERE confirmed_at IS NOT NULL').get().n, 1);
     const status = await service.status(pending);
     assert.equal(status.status, 'confirmed');
@@ -145,5 +145,41 @@ test('GET and cross-origin requests cannot confirm enrollment', async () => {
     };
     assert.equal((await invoke({ method: 'GET', headers: {}, body: {} })).code, 405);
     assert.equal((await invoke({ method: 'POST', headers: { 'content-type': 'application/json', host: 'example.test', origin: 'https://evil.test', 'x-forwarded-proto': 'https' }, body: { action: 'confirm', token: 'a'.repeat(64) } })).code, 403);
+  } finally { db.close(); }
+});
+
+
+test('concurrent reuse of one email token issues only one authenticated session', async () => {
+  const { db, service, input, mails } = fixture();
+  try {
+    await service.request(input);
+    const results = await Promise.allSettled(Array.from({ length: 8 }, () => service.confirm({ token: mails[0].token })));
+    assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+    assert(results.filter(result => result.status === 'rejected').every(result => result.reason.statusCode === 409));
+    assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 1);
+  } finally { db.close(); }
+});
+
+test('cross-user sessions, expired sessions, tampered tokens and status credentials cannot authorize cancellation', async () => {
+  const { db, repository, service, input, mails } = fixture();
+  try {
+    const pending = await service.request(input);
+    for (const token of [null, {}, "' OR 1=1 --", 'a'.repeat(63), 'A'.repeat(64)]) {
+      await assert.rejects(service.confirm({ token }), error => error.statusCode === 400);
+    }
+    await assert.rejects(service.status({ ...pending, statusToken: 'f'.repeat(64) }), error => error.statusCode === 404);
+    db.prepare("UPDATE course_enrollment_requests SET delivery = 'sending'").run();
+    await assert.rejects(service.confirm({ token: mails[0].token }), error => error.statusCode === 410);
+    db.prepare("UPDATE course_enrollment_requests SET delivery = 'sent'").run();
+    const confirmed = await service.confirm({ token: mails[0].token });
+    db.prepare('INSERT INTO registrations VALUES (2, ?, ?, ?)').run('Other', 'other@example.test', '{}');
+    const foreignToken = 'b'.repeat(64);
+    await repository.session(2, digest(foreignToken));
+    for (const token of [foreignToken, pending.statusToken, mails[0].token]) {
+      await assert.rejects(service.cancel({ requestId: confirmed.requestId }, token), error => error.statusCode === 403);
+    }
+    db.prepare("UPDATE profile_sessions SET expires_at = '2000-01-01T00:00:00.000Z'").run();
+    await assert.rejects(service.cancel({ requestId: confirmed.requestId }, confirmed.profile.profileToken), error => error.statusCode === 403);
+    assert.equal(db.prepare('SELECT cancelled_at FROM course_enrollment_requests').get().cancelled_at, null);
   } finally { db.close(); }
 });
