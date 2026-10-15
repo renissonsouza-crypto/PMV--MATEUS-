@@ -18,7 +18,7 @@ As fotografias são armazenadas localmente, sem alteração dos arquivos baixado
 | `qualificavix-eletricista-predial.jpg` | 1600 × 1066 | Leonardo Silveira / PMV — [notícia de qualificação](https://www.vitoria.es.gov.br/noticia/vixcursos-abre-270-vagas-em-qualificacao-profissional-com-estreia-do-ensino-online-57023), [fotografia publicada](https://www.vitoria.es.gov.br/recursos/imagens/banco/2023/04/05/111723/ampliada@2x.jpg) |
 | `qualificavix-manutencao-automotiva.jpg` | 1600 × 1065 | Jansen Lube / PMV — [notícia QualificaVix](https://www.vitoria.es.gov.br/noticia/ainda-da-tempo-cursos-do-qualificavix-tem-vagas-abertas-com-inicio-das-aulas-em-outubro-57433), [fotografia publicada](https://www.vitoria.es.gov.br/recursos/imagens/banco/2025/03/11/137424/ampliada@2x.jpg) |
 
-As fotos da Prefeitura seguem o [regulamento de uso do Banco de Imagens](https://www.vitoria.es.gov.br/imprensa/regulamento-para-uso-das-fotos-disponiveis-na-sala-de-imprensa): uso informativo sobre o município e suas ações, com crédito ao fotógrafo; comercialização e uso comercial não são autorizados. Os créditos e links das fontes estão disponíveis no topo da página.
+As fotos da Prefeitura seguem o [regulamento de uso do Banco de Imagens](https://www.vitoria.es.gov.br/imprensa/regulamento-para-uso-das-fotos-disponiveis-na-sala-de-imprensa): uso informativo sobre o município e suas ações, com crédito ao fotógrafo; comercialização e uso comercial não são autorizados. Os créditos e links das fontes estão preservados neste documento e em `src/app/data/heroImages.ts`.
 
 ## Créditos das fotografias municipais anteriores
 

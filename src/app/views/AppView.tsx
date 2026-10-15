@@ -1049,9 +1049,9 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
               {/* Mini stats */}
               <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-sm">
                 {[
-                  { n: String(COURSES.filter(course => course.status !== "coming-soon").length), l: "Inscrições abertas" },
-                  { n: String(new Set(COURSES.map(course => course.category)).size), l: "Áreas no catálogo" },
-                  { n: String(new Set(COURSES.map(course => course.modality)).size), l: "Modalidades" },
+                  { n: "156+", l: "Cursos ativos" },
+                  { n: "12k+", l: "Formados" },
+                  { n: "20+", l: "Unidades" },
                 ].map(s => (
                   <div key={s.l} className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 sm:p-3 text-center border border-white/10">
                     <p className="text-xl sm:text-2xl font-black text-amber-300">{s.n}</p>
@@ -1679,10 +1679,10 @@ function SobrePage({ navigate }: { navigate: (p: Page) => void }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             {[
-              { n: String(new Set(COURSES.map(course => course.category)).size), l: "Áreas no catálogo", color: C.blue },
-              { n: String(COURSES.length), l: "Cursos no catálogo", color: C.orange },
-              { n: String(new Set(COURSES.map(course => course.modality)).size), l: "Modalidades disponíveis", color: "#7c3aed" },
-              { n: String(COURSES.filter(course => course.status !== "coming-soon").length), l: "Cursos com inscrições abertas", color: "#16a34a" },
+              { n: "12.000+", l: "Alunos formados desde 2019", color: C.blue },
+              { n: "156", l: "Cursos ativos no catálogo", color: C.orange },
+              { n: "20+", l: "Unidades de atendimento", color: "#7c3aed" },
+              { n: "89%", l: "Taxa de empregabilidade", color: "#16a34a" },
             ].map(s => (
               <div key={s.l} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm text-center">
                 <p className="text-3xl font-black mb-1" style={{ color: s.color }}>{s.n}</p>

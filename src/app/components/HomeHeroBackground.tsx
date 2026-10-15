@@ -54,7 +54,6 @@ export function HomeHeroBackground({ children }: { children: ReactNode }) {
   };
   const visibleIndex = currentLoaded || slide.previous === null ? slide.current : slide.previous;
   const active = HERO_IMAGES[visibleIndex];
-  const credit = <span>Foto: {active.credit}</span>;
   const controlClass = "inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-slate-950/35 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white";
 
   return (
@@ -104,19 +103,8 @@ export function HomeHeroBackground({ children }: { children: ReactNode }) {
 
       <div className="relative z-10">{children}</div>
 
-      <div className="relative z-10 mx-auto flex max-w-7xl flex-col items-start gap-3 px-4 pb-16 sm:flex-row sm:items-end sm:justify-between sm:px-6 lg:px-8">
-        <div className="min-w-0 rounded-xl border border-white/15 bg-slate-950/35 px-3 py-2 text-white backdrop-blur-sm" role="group" aria-roledescription="carrossel" aria-label="Fotos de Vitória e da qualificação profissional" aria-busy={!currentLoaded}>
-          <p className="text-xs font-semibold leading-relaxed sm:text-sm" aria-live="off">{active.caption}</p>
-          <p className="mt-0.5 text-[10px] leading-relaxed text-slate-200 sm:text-xs">
-            {active.sourceUrl ? (
-              <a href={active.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline decoration-white/35 underline-offset-2 hover:decoration-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                {credit}
-                <span className="sr-only"> · Abrir fonte da fotografia em nova aba</span>
-              </a>
-            ) : credit}
-          </p>
-        </div>
-
+      <div className="relative z-10 mx-auto flex max-w-7xl justify-end px-4 pb-16 sm:px-6 lg:px-8" role="group" aria-roledescription="carrossel" aria-label="Fotos de Vitória e da qualificação profissional" aria-busy={!currentLoaded}>
+        <span className="sr-only" aria-live="off">{active.alt}</span>
         <div className="flex shrink-0 items-center gap-2" aria-label="Controles das fotografias">
           <button type="button" className={controlClass} onClick={() => moveSlide(-1)} aria-label="Mostrar foto anterior">
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
