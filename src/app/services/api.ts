@@ -350,6 +350,8 @@ export function updateUserProfile(updates: Partial<UserProfile>) {
 }
 
 export function logoutUserProfile() {
+  const token = getUserProfile()?.profileToken;
+  void request("/auth?action=logout", { method: "POST", headers: { "x-profile-token": token ?? "" }, body: "{}" }).catch(() => { /* Local sign-out still works offline; server session expires independently. */ });
   cachedProfile = null;
   cachedFavorites = [];
   profileSessionOnly = false;
@@ -422,4 +424,14 @@ export async function cancelConfirmedEnrollment(courseId: number) {
     if (result.status !== "cancelled") throw new Error("Não foi possível confirmar o cancelamento.");
   }
   return removeUserEnrollmentFromCourse(courseId);
+}
+
+
+export async function restoreGoogleProfile(): Promise<UserProfile> {
+  const result = await request<{ profile: UserProfile }>("/auth?action=session");
+  const incoming = result.profile;
+  if (!incoming || !Number.isSafeInteger(incoming.id) || typeof incoming.profileToken !== "string" || !/^[a-f0-9]{64}$/.test(incoming.profileToken)) throw new Error("Não foi possível recuperar o perfil com segurança.");
+  const saved = saveUserProfile(incoming as unknown as Record<string, unknown>, incoming.id);
+  const enrollments = normalizeEnrollments(incoming);
+  return persistProfile({ ...saved, enrollments, enrolledCourseIds: enrollments.map(entry => entry.courseId), enrollmentHistory: normalizeEnrollmentHistory(incoming, enrollments) });
 }

@@ -1,3 +1,4 @@
+import { GoogleLoginResult } from "../components/GoogleLogin";
 import { EnrollmentEmailRequest, EnrollmentEmailConfirmation } from "../components/EnrollmentEmail";
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -2262,9 +2263,17 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [returnToEnrollmentConfirmation, setReturnToEnrollmentConfirmation] = useState(false);
   const [registrationCourseId, setRegistrationCourseId] = useState<number | undefined>();
+  const [googleLogin, setGoogleLogin] = useState(() => {
+    const hash = window.location.hash.slice(1);
+    return hash === 'google-login' ? 'success' : new URLSearchParams(hash).get('google-login-error');
+  });
   const [confirmationToken, setConfirmationToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("confirm-enrollment"));
   useEffect(() => {
     const receiveLink = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash === 'google-login') setGoogleLogin('success');
+      const error = new URLSearchParams(hash).get('google-login-error');
+      if (error) setGoogleLogin(error);
       const token = new URLSearchParams(window.location.hash.slice(1)).get("confirm-enrollment");
       if (token) setConfirmationToken(token);
     };
@@ -2420,7 +2429,9 @@ export default function App() {
         html.qualificavix-dark [class*="shadow"] { --tw-shadow-color: rgba(0,0,0,.45); }
       `}</style>
       <div className="min-h-screen bg-white" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
-        {confirmationToken ? (
+        {googleLogin ? (
+          <GoogleLoginResult error={googleLogin === 'success' ? undefined : googleLogin} onProfile={value => { setProfile(value); setGoogleLogin(null); navigatePage('profile'); }} onHome={() => { setGoogleLogin(null); navigate('home'); }} />
+        ) : confirmationToken ? (
           <EnrollmentEmailConfirmation key={confirmationToken} token={confirmationToken} onProfileUpdated={setProfile} onOpenProfile={() => { setConfirmationToken(null); navigate("profile"); }} onHome={() => { setConfirmationToken(null); navigate("home"); }} />
         ) : registrationMode ? (
           <RegisterPage dark={darkMode} onOpenProfile={() => navigate("profile")} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />

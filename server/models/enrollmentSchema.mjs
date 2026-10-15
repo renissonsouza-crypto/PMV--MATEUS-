@@ -1,4 +1,7 @@
 export const sqliteEnrollmentSchema = `
+CREATE TABLE IF NOT EXISTS google_identities (
+  subject TEXT PRIMARY KEY, registration_id INTEGER NOT NULL UNIQUE REFERENCES registrations(id) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS profile_sessions (
   token_hash TEXT PRIMARY KEY, registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
   expires_at TEXT NOT NULL
@@ -12,6 +15,9 @@ CREATE TABLE IF NOT EXISTS course_enrollment_requests (
 CREATE INDEX IF NOT EXISTS enrollment_requests_person ON course_enrollment_requests(registration_id, created_at);
 `;
 export const postgresEnrollmentSchema = [
+  `CREATE TABLE IF NOT EXISTS google_identities (
+    subject TEXT PRIMARY KEY, registration_id BIGINT NOT NULL UNIQUE REFERENCES registrations(id) ON DELETE CASCADE
+  )`,
   `CREATE TABLE IF NOT EXISTS profile_sessions (
     token_hash TEXT PRIMARY KEY, registration_id BIGINT NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
     expires_at TIMESTAMPTZ NOT NULL

@@ -69,3 +69,9 @@ for (const rating of [true, false, [5], "5extra", null])
 assert.ok(validateTestimonial({ name: { text: "Ana" }, role: "Aluna", course: "Excel", quote: "Ótimo", rating: 5 }).error);
 assert.ok(validateTestimonial({ name: "Ana", role: "Aluna", course: "Excel", quote: "x".repeat(501), rating: 5 }).error);
 console.log("✓ validações de cadastro, menor de idade e depoimentos");
+
+for (const numero of ['', undefined, 'Sem número']) {
+  const result = validateRegistration({ ...adult, numero });
+  assert.equal(result.error, undefined, 'Address number is optional on the server');
+  assert.equal(result.data.numero, numero ?? '');
+}

@@ -71,7 +71,7 @@ async function requestAndConfirm(page, title) {
 }
 
 async function fillPersonalData(page, overrides = {}) {
-  const values = { nome: "Pessoa Teste Navegador", cpf: "529.982.247-25", dataNascimento: "1990-01-01", telefone: "27999999999", email: "registration-browser@example.test", emailConfirm: "registration-browser@example.test", ...overrides };
+  const values = { nome: "Pessoa Teste Navegador", cpf: "529.982.247-25", dataNascimento: "01/01/1990", telefone: "27999999999", email: "registration-browser@example.test", emailConfirm: "registration-browser@example.test", ...overrides };
   for (const [name, value] of Object.entries(values)) await page.locator(`[name="${name}"]`).fill(value);
   await page.locator('[name="sexo"]').selectOption("Prefiro não informar");
   await page.locator('[name="escolaridade"]').selectOption("Ensino médio completo");
@@ -285,8 +285,13 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   await openCourse(page, courseTitles[0]);
   await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
   await fillPersonalData(page);
+  const birthday = page.locator('[name="dataNascimento"]');
+  await birthday.fill('');
+  await birthday.pressSequentially('25081990');
+  assert.equal(await birthday.inputValue(), '25/08/1990');
   await page.getByRole("button", { name: "Próximo", exact: true }).click();
   await fillAddress(page);
+  await page.locator('[name="numero"]').fill('');
   await page.getByRole("button", { name: "Próximo", exact: true }).click();
   await page.locator('label').filter({ has: page.locator('input[name="possuiDeficiencia"][value="sim"]') }).click();
   await page.locator('[name="tiposDeficiencia"]').selectOption("Deficiência visual");
@@ -313,6 +318,8 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   const persisted = environment.registration(profile.id);
   assert.equal(persisted.email, "registration-browser@example.test");
   const payload = JSON.parse(persisted.payload);
+  assert.equal(payload.dataNascimento, '1990-08-25');
+  assert.equal(payload.numero, '');
   assert.equal(payload.autorizaDados, true);
   assert.equal(payload.possuiDeficiencia, "sim");
   assert.equal(payload.beneficioProgramaSocial, "sim");
@@ -925,6 +932,21 @@ test("cadastro: gravação silenciosamente bloqueada mantém perfil acessível c
   await page.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
   await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
   assert.equal(await page.getByLabel("E-mail", { exact: true }).inputValue(), "silent-storage@example.test");
+});
+
+test("Google: opção de entrada e recuperação do perfil após retorno autenticado", async page => {
+  await page.route('**/api/auth?action=config', route => route.fulfill({ json: { enabled: true } }));
+  await page.getByRole('button', { name: 'Entrar ou cadastrar', exact: true }).first().click();
+  const google = page.getByRole('link', { name: 'Continuar com Google' });
+  await google.waitFor();
+  assert.equal(await google.getAttribute('href'), '/api/auth?action=start');
+  // Provider verification is covered with signed JWTs in google-auth.test.mjs.
+  await page.route('**/api/auth?action=session', route => route.fulfill({ json: { profile: { ...profileFixture(), profileToken: 'a'.repeat(64) } } }));
+  await page.goto(`${new URL(page.url()).origin}/#google-login`);
+  await page.getByRole('button', { name: 'Acessar meu perfil', exact: true }).click();
+  await page.getByRole('heading', { name: 'Meu perfil', exact: true }).waitFor();
+  assert.equal((await storedProfile(page)).email, profileFixture().email);
+  assert.equal(new URL(page.url()).hash, '');
 });
 
 const environment = await startTestEnvironment();

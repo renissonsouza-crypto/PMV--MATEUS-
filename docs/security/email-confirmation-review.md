@@ -31,3 +31,8 @@ Validação final: `npm test` aprovado (232 testes unitários mais validação, 
 5. **Configuração externa:** ainda precisam ser verificados no ambiente publicado HTTPS, cabeçalhos efetivamente servidos, acesso ao banco, segredos, remetente verificado, SPF/DKIM/DMARC e entrega pelo Resend. Desativar rastreamento de cliques e não registrar corpos das requisições de confirmação. Scanners que executem JavaScript podem consumir links; GET isolado não confirma.
 
 Esses limites impedem afirmar que toda a autenticação da plataforma está resolvida. A revisão fortalece a confirmação e documenta separadamente as mudanças de infraestrutura e de autenticação que continuam necessárias.
+
+
+## Atualização posterior: entrada com Google
+
+A integração OAuth passou a permitir recuperação por identidade Google validada. A saída agora solicita revogação das credenciais da sessão atual e limpa cookies HttpOnly no servidor. Sem conexão, o cliente ainda consegue sair localmente, mas não garante a revogação remota. O cookie de sessão Google é HttpOnly/SameSite e Secure em produção; o token também é disponibilizado ao cliente autenticado para compatibilidade com as operações existentes. Portanto a migração completa das credenciais para cookies HttpOnly continua pendente. A proteção contra disparos abusivos de e-mail continua necessária. Consulte a configuração e as limitações no README.
