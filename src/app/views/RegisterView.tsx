@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
-import { createRegistration, isProfileSessionOnly, saveUserProfile, type UserProfile } from "../services/api";
+import { createRegistrationProfile, isProfileSessionOnly, type UserProfile } from "../services/api";
 import { getBirthDateAge, isValidBrazilianPhone, lookupVitoriaCep, type VitoriaAddress } from "../services/registrationValidation";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
 import {
@@ -173,7 +173,7 @@ const STEPS = [
 ];
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onBack: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
+export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileCreated }: { onBack: () => void; onOpenProfile: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
   const [step, setStep] = useState(1);
   const formRef = useRef<HTMLFormElement>(null);
   const previousStep = useRef(step);
@@ -303,8 +303,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
         ...(data.possuiDeficiencia === "sim" ? {} : { tiposDeficiencia: "", necessitaAdaptacao: "", tiposAdaptacao: "" }),
         ...(data.beneficioProgramaSocial === "sim" ? {} : { quaisBeneficios: [] }),
       };
-      const result = await createRegistration(registration);
-      const profile = saveUserProfile(registration, result.id, courseId);
+      const profile = await createRegistrationProfile(registration, courseId);
       setSessionOnly(isProfileSessionOnly());
       onProfileCreated(profile);
       setSubmitted(true);
@@ -329,11 +328,17 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente.
             </p>
             {sessionOnly && <p role="status" className="mb-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Seu navegador não permitiu salvar o perfil neste dispositivo. Ele ficará disponível apenas enquanto esta página estiver aberta.</p>}
-            <button onClick={onBack}
-              className="font-black text-white px-8 py-3.5 rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center gap-2"
-              style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}>
-              <ArrowLeft className="w-5 h-5" /> Voltar ao início
-            </button>
+            <div className="flex flex-col items-stretch gap-3">
+              <button type="button" onClick={onOpenProfile}
+                className="font-black text-white px-6 py-3.5 rounded-2xl shadow-lg hover:brightness-110 transition-all inline-flex items-center justify-center gap-2"
+                style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}>
+                <User className="w-5 h-5" /> Acessar meu perfil
+              </button>
+              <button type="button" onClick={onBack}
+                className="font-bold text-blue-700 dark:text-blue-300 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-800 inline-flex items-center justify-center gap-2">
+                <ArrowLeft className="w-5 h-5" /> Voltar ao início
+              </button>
+            </div>
           </div>
         </div>
       </div>
