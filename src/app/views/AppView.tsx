@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { RegisterPage } from "./RegisterView";
 import { TurtleMascot } from "../components/TurtleMascot";
 import { TortuguitaChat } from "../components/TortuguitaChat";
@@ -553,6 +554,11 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const closeSearch = () => {
+    setSearchOpen(false);
+    requestAnimationFrame(() => searchButtonRef.current?.focus());
+  };
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
     const normalized = query.trim();
@@ -561,95 +567,117 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
     setSearchOpen(false);
   };
 
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 sm:gap-6 h-14 sm:h-16">
-          <Logo navigate={navigate} />
+    <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
+      <header className="site-header sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 sm:gap-6 h-14 sm:h-16">
+            <Logo navigate={navigate} />
 
-          {/* Nav desktop */}
-          <nav className="hidden xl:flex items-center gap-1 flex-1">
-            {NAV.map(n => (
-              <button key={n.id} onClick={() => navigate(n.id as Page)}
-                className={`px-2 2xl:px-4 py-2 text-sm font-bold rounded-xl transition-colors relative ${
-                  page === n.id ? "" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                }`}
-                style={page === n.id ? { color: C.blue } : {}}>
-                {n.label}
-                {page === n.id && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
-                    style={{ backgroundColor: C.orange }} />
-                )}
-              </button>
-            ))}
-          </nav>
+            {/* Nav desktop */}
+            <nav className="hidden xl:flex items-center gap-1 flex-1">
+              {NAV.map(n => (
+                <button key={n.id} onClick={() => navigate(n.id as Page)}
+                  className={`px-2 2xl:px-4 py-2 text-sm font-bold rounded-xl transition-colors relative ${
+                    page === n.id ? "" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                  style={page === n.id ? { color: C.blue } : {}}>
+                  {n.label}
+                  {page === n.id && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
+                      style={{ backgroundColor: C.orange }} />
+                  )}
+                </button>
+              ))}
+            </nav>
 
-          {/* Central de acessibilidade */}
-          <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 shadow-sm"
-            role="group" aria-label="Controles de visualização">
-            <span className="hidden xl:block pl-2.5 pr-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Visual</span>
-            <div className="flex items-center rounded-xl bg-white border border-slate-200 overflow-hidden">
-              <button onClick={decreaseFont} aria-label="Diminuir zoom" title="Diminuir zoom"
-                className="h-8 min-w-9 px-2 flex items-center justify-center gap-0.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all">
-                <span className="text-xs font-black">A</span><Minus className="w-3 h-3" />
-              </button>
-              <span className="w-px h-4 bg-slate-200" aria-hidden="true" />
-              <button onClick={increaseFont} aria-label="Aumentar zoom" title="Aumentar zoom"
-                className="h-8 min-w-9 px-2 flex items-center justify-center gap-0.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all">
-                <span className="text-xs font-black">A</span><Plus className="w-3 h-3" />
+            {/* Central de acessibilidade */}
+            <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 shadow-sm"
+              role="group" aria-label="Controles de visualização">
+              <span className="hidden xl:block pl-2.5 pr-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Visual</span>
+              <div className="flex items-center rounded-xl bg-white border border-slate-200 overflow-hidden">
+                <button onClick={decreaseFont} aria-label="Diminuir zoom" title="Diminuir zoom"
+                  className="h-8 min-w-9 px-2 flex items-center justify-center gap-0.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all">
+                  <span className="text-xs font-black">A</span><Minus className="w-3 h-3" />
+                </button>
+                <span className="w-px h-4 bg-slate-200" aria-hidden="true" />
+                <button onClick={increaseFont} aria-label="Aumentar zoom" title="Aumentar zoom"
+                  className="h-8 min-w-9 px-2 flex items-center justify-center gap-0.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 transition-all">
+                  <span className="text-xs font-black">A</span><Plus className="w-3 h-3" />
+                </button>
+              </div>
+              <button onClick={toggleDarkMode}
+                aria-label={darkMode ? "Ativar modo claro" : "Ativar modo escuro"} aria-pressed={darkMode}
+                title={darkMode ? "Usar modo claro" : "Usar modo escuro"}
+                className={`ml-1 h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs font-black active:scale-95 transition-all ${darkMode ? "bg-blue-700 text-white shadow-md shadow-blue-900/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-700"}`}>
+                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                <span className="hidden 2xl:inline">{darkMode ? "Claro" : "Escuro"}</span>
               </button>
             </div>
-            <button onClick={toggleDarkMode}
-              aria-label={darkMode ? "Ativar modo claro" : "Ativar modo escuro"} aria-pressed={darkMode}
-              title={darkMode ? "Usar modo claro" : "Usar modo escuro"}
-              className={`ml-1 h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs font-black active:scale-95 transition-all ${darkMode ? "bg-blue-700 text-white shadow-md shadow-blue-900/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-700"}`}>
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              <span className="hidden 2xl:inline">{darkMode ? "Claro" : "Escuro"}</span>
-            </button>
-          </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 ml-auto">
-            {searchOpen ? (
-              <form className="flex items-center gap-2" onSubmit={submitSearch}>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
-                    placeholder="Buscar cursos..."
-                    className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-32 sm:w-52 font-medium" />
-                </div>
-                <button type="button" aria-label="Fechar busca" onClick={() => setSearchOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
+            {/* Actions */}
+            <div className="flex items-center gap-2 ml-auto">
+              {searchOpen ? (
+                <form role="search" className="mobile-header-search flex items-center gap-2" onSubmit={submitSearch} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); closeSearch(); } }}>
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
+                      placeholder="Buscar cursos..." aria-label="Buscar cursos no site" type="search" enterKeyHint="search"
+                      className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-full sm:w-52 font-medium" />
+                  </div>
+                  <button type="button" aria-label="Fechar busca" onClick={closeSearch} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-slate-600">
+                    <X className="w-5 h-5" />
+                  </button>
+                </form>
+              ) : (
+                <button ref={searchButtonRef} onClick={() => { setMobileOpen(false); setSearchOpen(true); }} aria-label="Buscar cursos"
+                  className="w-11 h-11 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-colors">
+                  <Search className="w-4 h-4" />
                 </button>
-              </form>
-            ) : (
-              <button onClick={() => setSearchOpen(true)} aria-label="Buscar cursos"
-                className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-colors">
-                <Search className="w-4 h-4" />
+              )}
+              <button onClick={() => navigate(profile ? "profile" : "register")}
+                aria-label={profile ? `Abrir perfil de ${profile.nome}` : "Entrar ou cadastrar"}
+                title={profile ? `Perfil de ${profile.nome}` : "Entrar / Cadastrar"}
+                className={searchOpen ? "hidden" : profile
+                  ? "hidden sm:flex rounded-full p-0.5 ring-2 ring-orange-400 ring-offset-2 ring-offset-white hover:ring-orange-500 transition-all"
+                  : "hidden sm:flex items-center gap-1.5 text-xs sm:text-sm font-black px-3 sm:px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
+                }
+                style={profile ? {} : { background: `linear-gradient(135deg, ${C.orangeDark} 0%, ${C.orangeActionEnd} 100%)` }}>
+                {profile ? <ProfileAvatar name={profile.nome} photo={profile.fotoPerfil} /> : "Entrar / Cadastrar"}
               </button>
-            )}
-            <button onClick={() => navigate(profile ? "profile" : "register")}
-              aria-label={profile ? `Abrir perfil de ${profile.nome}` : "Entrar ou cadastrar"}
-              title={profile ? `Perfil de ${profile.nome}` : "Entrar / Cadastrar"}
-              className={searchOpen ? "hidden" : profile
-                ? "hidden sm:flex rounded-full p-0.5 ring-2 ring-orange-400 ring-offset-2 ring-offset-white hover:ring-orange-500 transition-all"
-                : "hidden sm:flex items-center gap-1.5 text-xs sm:text-sm font-black px-3 sm:px-5 py-2 rounded-xl text-white shadow hover:opacity-90 hover:-translate-y-0.5 transition-all"
-              }
-              style={profile ? {} : { background: `linear-gradient(135deg, ${C.orangeDark} 0%, ${C.orangeActionEnd} 100%)` }}>
-              {profile ? <ProfileAvatar name={profile.nome} photo={profile.fotoPerfil} /> : "Entrar / Cadastrar"}
-            </button>
-            <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen}
-              className="xl:hidden w-9 h-9 shrink-0 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500">
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+              <Dialog.Trigger asChild>
+                <button onClick={() => setSearchOpen(false)} aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={mobileOpen}
+                  className="xl:hidden w-11 h-11 shrink-0 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500">
+                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+              </Dialog.Trigger>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Mobile menu */}
-        {mobileOpen && (
-          <div className="xl:hidden border-t border-slate-100 py-3 flex flex-col gap-1">
+      {/* Mobile menu */}
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/50" />
+        <Dialog.Content className="mobile-menu fixed inset-y-0 right-0 z-50 flex w-[min(90vw,380px)] flex-col border-l border-slate-200 bg-white shadow-2xl" aria-describedby="mobile-menu-description">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 p-4">
+            <div>
+              <Dialog.Title className="text-lg font-black text-slate-900">Menu</Dialog.Title>
+              <Dialog.Description id="mobile-menu-description" className="text-xs text-slate-500">Navegação e acessibilidade</Dialog.Description>
+            </div>
+            <Dialog.Close asChild><button type="button" aria-label="Fechar menu" className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><X className="h-5 w-5" /></button></Dialog.Close>
+          </div>
+          <nav aria-label="Navegação principal" className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+            <div className="flex flex-col gap-1">
             {NAV.map(n => (
-              <button key={n.id} onClick={() => { navigate(n.id as Page); setMobileOpen(false); }}
+              <button key={n.id} aria-current={page === n.id ? "page" : undefined} onClick={() => { navigate(n.id as Page); setMobileOpen(false); }}
                 className={`text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                   page === n.id ? "" : "text-slate-600 hover:bg-slate-50"
                 }`}
@@ -667,10 +695,11 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
               <button onClick={increaseFont} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-sm font-black text-slate-600" aria-label="Aumentar tamanho da fonte"><Plus className="w-4 h-4" /> A+</button>
               <button onClick={toggleDarkMode} className="w-12 flex items-center justify-center py-2.5 rounded-xl border border-slate-200 text-slate-600" aria-label={darkMode ? "Ativar modo claro" : "Ativar modo escuro"}>{darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button>
             </div>
-          </div>
-        )}
-      </div>
-    </header>
+            </div>
+          </nav>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -1263,16 +1292,16 @@ function CoursesPage({ onViewCourse, favoriteCourseIds, onToggleFavorite, catalo
               { label: "Categoria", value: catFilter, setter: setCatFilter, opts: cats },
               { label: "Modalidade", value: modalFilter, setter: setModalFilter, opts: mods },
             ].map(f => (
-              <div key={f.label} className="relative">
+              <div key={f.label} className="relative w-full sm:w-auto">
                 <select aria-label={f.label} value={f.value} onChange={e => f.setter(e.target.value)}
-                  className="appearance-none h-9 pl-3 pr-8 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 outline-none cursor-pointer bg-white hover:border-blue-300 focus:border-blue-400 transition-colors">
+                  className="appearance-none w-full h-11 pl-3 pr-8 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 outline-none cursor-pointer bg-white hover:border-blue-300 focus:border-blue-400 transition-colors">
                   {f.opts.map(o => <option key={o} value={o}>{o === "Todas" ? `${f.label}: ${o}` : o}</option>)}
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
             ))}
             <button onClick={() => { setCatFilter("Todas"); setModalFilter("Todas"); setSearch(""); }}
-              className="h-9 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:border-red-300 hover:text-red-500 transition-colors flex items-center gap-1">
+              className="h-11 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:border-red-300 hover:text-red-500 transition-colors flex items-center gap-1">
               <X className="w-3.5 h-3.5" /> Limpar filtros
             </button>
             <div className="ml-auto flex items-center gap-2 text-sm text-slate-500 font-semibold">
@@ -1481,10 +1510,10 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, enrollment, 
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex overflow-x-auto border-b border-slate-100">
+          <div className="grid grid-cols-2 sm:flex sm:overflow-x-auto border-b border-slate-100" aria-label="Informações do curso">
             {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={`shrink-0 px-5 py-4 text-sm font-bold border-b-2 transition-colors ${
+              <button key={t.id} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}
+                className={`min-w-0 sm:shrink-0 px-3 sm:px-5 py-3 sm:py-4 text-sm font-bold border-b-2 transition-colors ${
                   tab === t.id
                     ? "border-orange-500 text-orange-600 bg-orange-50"
                     : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
@@ -1494,7 +1523,7 @@ function CourseDetailPage({ course, navigate, onRegister, enrolled, enrollment, 
             ))}
           </div>
 
-          <div id="curso-informacoes" className="p-6 lg:p-8">
+          <div id="curso-informacoes" className="p-4 sm:p-6 lg:p-8">
             {tab === "sobre" && (
               <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
@@ -2107,7 +2136,7 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2 mb-6">
             <button type="button" onClick={() => setActiveTab("dados")} className={`px-4 py-2 rounded-xl text-sm font-black transition-colors ${activeTab === "dados" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
               Dados do perfil
             </button>
@@ -2141,7 +2170,7 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
                   {field.label}
                   <input disabled={profileSaving} required={!['whatsapp', 'complemento', 'situacaoEmprego'].includes(field.key)}
                     maxLength={field.key === "email" ? 180 : field.key === "cep" ? 9 : ['telefone', 'whatsapp'].includes(field.key) ? 30 : 160}
-                    type={field.type ?? "text"} value={form[field.key]}
+                    type={field.type ?? "text"} inputMode={field.key === "cep" || field.key === "numero" ? "numeric" : ["telefone", "whatsapp"].includes(field.key) ? "tel" : undefined} value={form[field.key]}
                     onChange={event => updateField(field.key, event.target.value)}
                     className="w-full px-3 py-2.5 rounded-lg border border-slate-200 font-medium outline-none focus:border-blue-500" />
                 </label>
@@ -2391,6 +2420,7 @@ export default function App() {
           <RegisterPage dark={darkMode} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
         ) : (
           <>
+            <a href="#main-content" className="skip-link">Pular para o conteúdo</a>
             <Header
               page={page}
               navigate={navigate}
@@ -2401,7 +2431,7 @@ export default function App() {
               profile={profile}
               onSearch={handleSearchCourses}
             />
-            <main>
+            <main id="main-content" tabIndex={-1}>
               {(isProfileSessionOnly() || isFavoritesSessionOnly()) && <p role="status" className="mx-auto max-w-7xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">Seu navegador não permitiu salvar os dados. As alterações ficam disponíveis apenas enquanto esta página estiver aberta.</p>}
               {page === "home" && <HomePage navigate={navigate} onViewCourse={handleViewCourse} onEnrollCourse={handleEnrollFromStory} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} profile={profile} onSelectCategory={handleSelectCategory} />}
               {page === "cursos" && <CoursesPage catalogRequest={catalogRequest} onViewCourse={handleViewCourse} favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} />}

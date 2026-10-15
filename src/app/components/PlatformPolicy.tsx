@@ -50,9 +50,9 @@ export function PlatformPolicyLink({ kind, children, className }: { kind: Policy
       <DialogTrigger asChild>
         <button type="button" className={className}>{children}</button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl bg-white text-slate-900">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl bg-white text-slate-900">
         <DialogHeader>
-          <DialogTitle className="pr-6 text-xl">{policy.title}</DialogTitle>
+          <DialogTitle className="pr-10 text-xl">{policy.title}</DialogTitle>
           <DialogDescription>{policy.description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm leading-relaxed text-slate-700">{policy.content}</div>
