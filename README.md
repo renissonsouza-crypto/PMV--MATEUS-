@@ -61,7 +61,7 @@ O catálogo apresenta os cursos definidos no projeto. A pesquisa, as categorias,
 
 Os contatos direcionam ao portal da Prefeitura de Vitória. Configure somente canais de atendimento verificados em `VITE_CONTACT_PHONE` e `VITE_CONTACT_EMAIL`, se disponíveis, antes de iniciar o Vite ou gerar o build. Variáveis `VITE_` ficam públicas no frontend e não devem conter segredos.
 
-O cadastro exige endereço de Vitória-ES, dados e consentimentos válidos, além de responsável legal para menores de 18 anos. O cadastro e os depoimentos são enviados à API; depoimentos podem ser exibidos publicamente. O perfil, a foto, os favoritos e as inscrições em cursos são mantidos no navegador utilizado, sem um sistema de login entre dispositivos. Editar o perfil atualiza esses dados locais. Sair limpa o perfil e os favoritos locais, sem apagar automaticamente registros enviados à API.
+O cadastro exige endereço de Vitória-ES, dados e consentimentos válidos, além de responsável legal para menores de 18 anos. O cadastro e os depoimentos são enviados à API; depoimentos podem ser exibidos publicamente. O perfil, a foto e os favoritos ficam no navegador utilizado. Novas inscrições são registradas no servidor e confirmadas por e-mail; o link pessoal também permite abrir o perfil do destinatário no navegador em que for usado. Editar o perfil atualiza esses dados locais. Sair limpa o perfil e os favoritos locais, sem apagar automaticamente registros enviados à API.
 
 O limite é de três inscrições realizadas no mês, incluindo inscrições canceladas. O prazo de cancelamento é de três dias após cada inscrição. Dados antigos são normalizados ao carregar; se o navegador negar gravações, a interface informa que as alterações duram somente enquanto a página estiver aberta.
 
@@ -77,9 +77,9 @@ Com perfil cadastrado, a Tortuguita salva as conversas recentes, o assunto atual
 
 Para registrar uma conclusão, diga “já concluí Excel”, por exemplo; “ainda não concluí Excel” corrige o registro. Inscrição não significa conclusão, e essa memória não comprova certificação. O painel “Sua memória com a Tortuguita” mostra os interesses e conclusões e permite apagar a memória desse perfil sem remover suas inscrições. “Reiniciar conversa” limpa as mensagens e o assunto atual, preservando interesses, preferências e conclusões. São mantidas até 81 mensagens recentes; os interesses e conclusões continuam salvos além dessa janela.
 
-Sem perfil, o chat dura apenas enquanto a página estiver aberta. Se o navegador bloquear a gravação, o chat continua funcionando e avisa que a memória está disponível somente nesta página. O projeto não tem autenticação nem sincronização entre dispositivos: limpar os dados do site ou encerrar uma sessão privada pode remover a memória. Sair oculta a memória ao remover o perfil local, mas não apaga seu histórico salvo; use “Apagar minha memória” antes de sair se desejar removê-lo. O assistente não precisa receber documentos, senhas ou informações bancárias.
+Sem perfil, o chat dura apenas enquanto a página estiver aberta. Se o navegador bloquear a gravação, o chat continua funcionando e avisa que a memória está disponível somente nesta página. A memória do chat não é sincronizada entre dispositivos: limpar os dados do site ou encerrar uma sessão privada pode removê-la, mesmo quando uma inscrição continua registrada no servidor. Sair oculta a memória ao remover o perfil local, mas não apaga seu histórico salvo; use “Apagar minha memória” antes de sair se desejar removê-lo. O assistente não precisa receber documentos, senhas ou informações bancárias.
 
-O catálogo está em `src/app/data/courses.ts`, o conhecimento editorial em `src/app/data/tortuguitaKnowledge.ts` e a interpretação em `src/app/services/tortuguita.ts`. Consulte [a manutenção da Tortuguita](docs/tortuguita-knowledge.md) antes de acrescentar respostas e valide mudanças com `npm test` e `npm run test:e2e`.
+O catálogo compartilhado está em `shared/courses.mjs` (reexportado em `src/app/data/courses.ts`), o conhecimento editorial em `src/app/data/tortuguitaKnowledge.ts` e a interpretação em `src/app/services/tortuguita.ts`. Consulte [a manutenção da Tortuguita](docs/tortuguita-knowledge.md) antes de acrescentar respostas e valide mudanças com `npm test` e `npm run test:e2e`.
 
 ## Testes e build
 
@@ -122,3 +122,23 @@ Nunca salve a URL real do banco no Git. Use `.env.example` apenas como referênc
 - `POST /api/testimonials`: cria um depoimento validado.
 - `POST /api/registrations`: cria cadastro e exige responsável legal para menores de 18 anos.
   
+
+## Confirmação de inscrição por e-mail
+
+Novas inscrições em cursos ficam pendentes até o aluno clicar em **Confirmar minha inscrição** no e-mail. O cadastro geral continua criando o perfil; ele não inscreve automaticamente em nenhum curso. O e-mail contém nome do curso, modalidade, carga horária, duração, período, nível, local, instituição, grade curricular e informações adicionais do catálogo compartilhado em `shared/courses.mjs`. Informações que o catálogo não fornece são identificadas como não informadas.
+
+Para enviar e-mails reais:
+
+1. Crie uma conta no Resend e verifique um domínio remetente (registros DNS indicados pelo provedor).
+2. Configure **somente no servidor** `RESEND_API_KEY`, `MAIL_FROM` (nome e e-mail verificado) e `APP_BASE_URL` (origem HTTPS pública do site). Nunca use prefixo `VITE_` para a chave.
+3. Na Vercel, configure essas variáveis junto de `DATABASE_URL` e publique uma nova implantação. Para desenvolvimento local, use o arquivo ignorado `.env`; o inicializador carrega seus valores sem substituir variáveis já injetadas pelo ambiente.
+4. Libere acesso HTTPS a `api.resend.com` no servidor. Ajuste o serviço de e-mail para não alterar os links com rastreamento de cliques.
+5. Faça uma inscrição de teste com um e-mail seu e confira a entrega e o clique no ambiente publicado. Aceitação pelo provedor não garante entrega: confira também eventos de bounce/spam no Resend.
+
+Sem a configuração, a plataforma mostra um erro de envio e mantém a inscrição sem confirmar; nunca simula um e-mail enviado. Se o provedor falhar, o perfil permanece acessível e é possível tentar o envio novamente, sem repetir o cadastro pessoal. Há limite de cinco solicitações por perfil por hora e intervalo de um minuto para reenvios aceitos do mesmo curso.
+
+Os links contêm um token aleatório de 256 bits, válido por 24 horas. Apenas hashes dos tokens são armazenados. O token fica no fragmento da URL, fora dos logs HTTP, e é removido do histórico quando a aplicação o recebe. Abrir o endereço via GET não altera inscrições: a aplicação confirma por POST. Cliques repetidos no mesmo link são idempotentes. A confirmação permite recuperar o perfil do destinatário em outro navegador; trate o link como pessoal. Sistemas de segurança de e-mail que executem JavaScript podem interagir com esse fluxo, por isso o provedor não deve transformar ou pré-processar o link como ação do usuário.
+
+O servidor aplica o limite de três confirmações no mês, incluindo inscrições canceladas, e o prazo de três dias para cancelamento. Para cancelar uma nova inscrição, o navegador precisa do acesso criado ao abrir o e-mail de confirmação. Inscrições antigas que existiam somente no navegador não são migradas automaticamente para o histórico do servidor. Alterações locais antigas de e-mail não atualizam o endereço do cadastro no banco; use o e-mail original ao solicitar a confirmação.
+
+As novas tabelas `course_enrollment_requests` e `profile_sessions` são criadas pela inicialização SQLite e pela migração PostgreSQL existente. `npm test` inclui testes SQLite e executa o SQL de produção em PostgreSQL/WASM (PGlite), sem credenciais externas. `npm run test:e2e` e `npm run test:mobile` usam uma caixa de e-mail HTTP isolada e verificam o fluxo real de confirmação. Nenhum teste envia e-mail para destinatários reais. `MAIL_TEST_URL` só funciona com `NODE_ENV=test` e destino HTTP de loopback.

@@ -53,7 +53,8 @@ test("missing Vite stops before API startup with the dependency recovery command
   const directory = await mkdtemp(join(tmpdir(), "qualificavix-no-vite-"));
   try {
     await mkdir(join(directory, "scripts"));
-    await mkdir(join(directory, "server"));
+    await mkdir(join(directory, "server", "config"), { recursive: true });
+    await copyFile(join(root, "server", "config", "environment.mjs"), join(directory, "server", "config", "environment.mjs"));
     for (const file of ["dev.mjs", "dev-config.mjs"]) await copyFile(join(root, "scripts", file), join(directory, "scripts", file));
     await writeFile(join(directory, "server", "server.mjs"), "import {writeFileSync} from 'node:fs'; writeFileSync('api-started', 'yes'); process.exit(99);\n");
     const child = spawn(process.execPath, [join(directory, "scripts", "dev.mjs")], {

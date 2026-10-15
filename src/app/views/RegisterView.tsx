@@ -1,3 +1,4 @@
+import { EnrollmentEmailRequest } from "../components/EnrollmentEmail";
 import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
@@ -185,6 +186,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
     title?.scrollIntoView({ block: "start", behavior: "instant" });
   }, [step]);
   const [submitted, setSubmitted] = useState(false);
+  const [createdProfile, setCreatedProfile] = useState<UserProfile | null>(null);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [sessionOnly, setSessionOnly] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
@@ -303,8 +305,9 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
         ...(data.possuiDeficiencia === "sim" ? {} : { tiposDeficiencia: "", necessitaAdaptacao: "", tiposAdaptacao: "" }),
         ...(data.beneficioProgramaSocial === "sim" ? {} : { quaisBeneficios: [] }),
       };
-      const profile = await createRegistrationProfile(registration, courseId);
+      const profile = await createRegistrationProfile(registration);
       setSessionOnly(isProfileSessionOnly());
+      setCreatedProfile(profile);
       onProfileCreated(profile);
       setSubmitted(true);
     } catch (error) {
@@ -322,11 +325,12 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
               <CheckCircle2 className="w-12 h-12 text-amber-300" />
             </div>
             <h2 ref={successTitleRef} tabIndex={-1} className="text-3xl font-black text-slate-900 dark:text-white mb-3">
-              Cadastro realizado!
+              {courseId ? "Falta confirmar sua inscrição" : "Cadastro realizado!"}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-              Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente.
+              {courseId ? "Seu perfil foi criado, mas a inscrição no curso ainda está pendente. Clique em Confirmar minha inscrição no e-mail para finalizar." : "Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente."}
             </p>
+            {courseId && createdProfile && <div className="mb-6 text-left"><EnrollmentEmailRequest courseId={courseId} profile={createdProfile} automatic onProfileUpdated={next => { setCreatedProfile(next); onProfileCreated(next); }} /></div>}
             {sessionOnly && <p role="status" className="mb-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Seu navegador não permitiu salvar o perfil neste dispositivo. Ele ficará disponível apenas enquanto esta página estiver aberta.</p>}
             <div className="flex flex-col items-stretch gap-3">
               <button type="button" onClick={onOpenProfile}
@@ -915,8 +919,9 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
                     <div className="p-4 rounded-2xl text-center"
                       style={{ background: `${BLUE}08`, border: `1px solid ${BLUE}20` }}>
                       <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        Seu perfil, inscrições e favoritos ficam salvos neste navegador.
-                        Os dados do cadastro são enviados à instalação do QualificaVix que você está acessando.
+                        Seu perfil e favoritos ficam salvos neste navegador. Novas inscrições em cursos
+                        precisam da confirmação enviada ao seu e-mail e são registradas no servidor.
+                        Esse e-mail de confirmação é enviado mesmo que você não escolha receber notícias e oportunidades.
                         Consulte a <PlatformPolicyLink kind="privacy" className="underline font-bold">Política de Privacidade</PlatformPolicyLink> para
                         conhecer o armazenamento e os canais de atendimento.
                       </p>

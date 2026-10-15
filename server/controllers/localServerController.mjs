@@ -1,3 +1,5 @@
+import { enrollmentController } from "./enrollmentController.mjs";
+import { sqliteEnrollmentRepository } from "../models/SqliteEnrollmentRepository.mjs";
 import { createServer } from "node:http";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -47,6 +49,9 @@ db.exec(`
   );
 `);
 
+const enrollmentRepository = sqliteEnrollmentRepository(db);
+const handleEnrollment = enrollmentController(enrollmentRepository);
+
 const json = (res, status, payload, headers = {}) => {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -92,12 +97,24 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://localhost");
     const methods = {
+      "/api/enrollments": ["POST"],
       "/api/health": ["GET"],
       "/api/testimonials": ["GET", "POST"],
       "/api/registrations": ["POST"],
     }[url.pathname];
     if (methods && !methods.includes(req.method))
       return json(res, 405, { error: "Método não permitido" }, { Allow: methods.join(", ") });
+    if (url.pathname === "/api/enrollments") {
+      const requestError = validateJsonMutation(req);
+      if (requestError) return json(res, requestError.status, { error: requestError.error });
+      req.body = await body(req);
+      const adapter = {
+        setHeader: (key, value) => res.setHeader(key, value),
+        status(status) { this.statusCode = status; return this; },
+        json(payload) { return json(res, this.statusCode || 200, payload); },
+      };
+      return await handleEnrollment(req, adapter);
+    }
     if (req.method === "GET" && url.pathname === "/api/health") {
       const result = db.prepare("SELECT 1 AS connected").get();
       return json(res, 200, { status: "ok", database: result.connected === 1 ? "connected" : "error" });

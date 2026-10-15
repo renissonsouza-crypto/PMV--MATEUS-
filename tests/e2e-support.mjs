@@ -45,7 +45,7 @@ async function stopChild(child) {
 }
 
 // All writes use the real application API against disposable SQLite data.
-// ViaCEP is the only service fixture: tests do not depend on external services.
+// ViaCEP and the mail provider use local fixtures; tests never send real emails.
 export async function startTestEnvironment() {
   const directory = mkdtempSync(join(tmpdir(), "qualificavix-e2e-"));
   const dbPath = join(directory, "test.sqlite");
@@ -57,20 +57,36 @@ export async function startTestEnvironment() {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(cep === "29050945" ? cepAddress : { ...cepAddress, localidade: "Vila Velha", cep: "29100-000" }));
   });
+  const emails = [];
+  let mailFailures = 0;
+  const mailServer = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const message = JSON.parse(Buffer.concat(chunks).toString());
+    if (mailFailures > 0) { mailFailures--; res.writeHead(503, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "Simulated mail outage" })); return; }
+    emails.push(message);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ id: `mail-${emails.length}` }));
+  });
   const cleanup = async () => {
     if (vite) await vite.close();
     await stopChild(api);
     if (cepServer.listening) await new Promise(resolveClose => cepServer.close(resolveClose));
+    if (mailServer.listening) await new Promise(resolveClose => mailServer.close(resolveClose));
     rmSync(directory, { recursive: true, force: true });
   };
   try {
     const cepPort = await listen(cepServer);
+    const mailPort = await listen(mailServer);
+    const frontendReservation = createServer();
+    const frontendPort = await listen(frontendReservation);
+    await new Promise(resolveClose => frontendReservation.close(resolveClose));
     const reservation = createServer();
     const apiPort = await listen(reservation);
     await new Promise(resolveClose => reservation.close(resolveClose));
     api = spawn(process.execPath, [join(root, "server/server.mjs")], {
       cwd: root,
-      env: { ...process.env, API_PORT: String(apiPort), DB_PATH: dbPath, VIA_CEP_BASE_URL: `http://127.0.0.1:${cepPort}/ws` },
+      env: { ...process.env, NODE_ENV: "test", RESEND_API_KEY: "local-mail-fixture", MAIL_FROM: "Qualifica Vix <test@example.test>", APP_BASE_URL: process.env.TEST_URL || `http://127.0.0.1:${frontendPort}`, MAIL_TEST_URL: `http://127.0.0.1:${mailPort}/emails`, API_PORT: String(apiPort), DB_PATH: dbPath, VIA_CEP_BASE_URL: `http://127.0.0.1:${cepPort}/ws` },
       stdio: ["ignore", "pipe", "pipe"],
     });
     api.stdout.on("data", data => { output += data.toString(); });
@@ -89,9 +105,6 @@ export async function startTestEnvironment() {
     if (!ready) throw new Error(`A API isolada não iniciou. Use Node.js 24 LTS.\n${output}`);
     let baseURL = process.env.TEST_URL;
     if (!baseURL) {
-      const frontendReservation = createServer();
-      const frontendPort = await listen(frontendReservation);
-      await new Promise(resolveClose => frontendReservation.close(resolveClose));
       vite = await createViteServer({
         root, configFile: join(root, "vite.config.ts"), logLevel: "warn", cacheDir: join(directory, "vite-cache"),
         server: { host: "127.0.0.1", port: frontendPort, strictPort: true, proxy: { "/api": { target: apiURL } } },
@@ -100,7 +113,22 @@ export async function startTestEnvironment() {
       baseURL = `http://127.0.0.1:${vite.httpServer.address().port}`;
     }
     return {
-      baseURL, apiURL, cleanup,
+      baseURL, apiURL, cleanup, emails,
+      failNextEmail() { mailFailures++; },
+      seedRegistration(profile) {
+        const database = new DatabaseSync(dbPath);
+        try {
+          database.prepare("DELETE FROM course_enrollment_requests WHERE registration_id = ?").run(profile.id);
+          database.prepare("DELETE FROM profile_sessions WHERE registration_id = ?").run(profile.id);
+          const payload = { ...profile, dataNascimento: "1990-01-01", cpf: String(profile.id).padStart(11, "0"), autorizaDados: true, aceitaTermos: true };
+          database.prepare("INSERT OR IGNORE INTO registrations(id, name, cpf, email, phone, birth_date, city, state, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(profile.id, profile.nome, payload.cpf, profile.email, profile.telefone, payload.dataNascimento, "Vitória", "ES", JSON.stringify(payload));
+        } finally { database.close(); }
+      },
+      confirmedEnrollments(id) {
+        const database = new DatabaseSync(dbPath, { readOnly: true });
+        try { return database.prepare("SELECT * FROM course_enrollment_requests WHERE registration_id = ? AND confirmed_at IS NOT NULL AND cancelled_at IS NULL").all(id); }
+        finally { database.close(); }
+      },
       registration(id) {
         const database = new DatabaseSync(dbPath, { readOnly: true });
         try { return database.prepare("SELECT id, name, email, payload FROM registrations WHERE id = ?").get(id); }

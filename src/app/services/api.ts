@@ -1,19 +1,29 @@
 // Service layer: comunicação HTTP entre as views e os controllers da API.
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  let response: Response;
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const timeout = setTimeout(abort, 15000);
+  options?.signal?.addEventListener("abort", abort, { once: true });
+  if (options?.signal?.aborted) abort();
   try {
-    response = await fetch(`/api${path}`, {
-      ...options,
-      signal: options?.signal ?? AbortSignal.timeout(15000),
-      headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
-    });
-  } catch {
-    throw new Error("Não foi possível acessar o servidor. Verifique a conexão e se o projeto está em execução.");
+    let response: Response;
+    try {
+      response = await fetch(`/api${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+      });
+    } catch {
+      throw new Error("Não foi possível acessar o servidor. Verifique a conexão e se o projeto está em execução.");
+    }
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Falha na comunicação com o servidor");
+    if (payload === null) throw new Error("O servidor retornou uma resposta inválida. Verifique se a API está em execução.");
+    return payload as T;
+  } finally {
+    clearTimeout(timeout);
+    options?.signal?.removeEventListener("abort", abort);
   }
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Falha na comunicação com o servidor");
-  if (payload === null) throw new Error("O servidor retornou uma resposta inválida. Verifique se a API está em execução.");
-  return payload as T;
 }
 
 export type StoredTestimonial = { id: number; name: string; role: string; course: string; quote: string; rating: number };
@@ -45,7 +55,9 @@ export type EnrolledCourse = {
   courseId: number;
   enrolledAt: string;
   unsubscribeDeadline: string;
+  requestId?: string;
 };
+export type PendingEnrollment = { requestId: string; statusToken: string; courseId: number; email: string; expiresAt: string };
 
 export type UserProfile = {
   id: number;
@@ -61,6 +73,8 @@ export type UserProfile = {
   escolaridade: string;
   situacaoEmprego?: string;
   fotoPerfil?: string;
+  profileToken?: string;
+  pendingEnrollments?: PendingEnrollment[];
   enrolledCourseIds: number[];
   enrollments?: EnrolledCourse[];
   enrollmentHistory?: Pick<EnrolledCourse, "courseId" | "enrolledAt">[];
@@ -132,6 +146,7 @@ function normalizeEnrollments(profile: Partial<UserProfile> | null | undefined):
       courseId: entry.courseId,
       enrolledAt,
       unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt)!,
+      ...(typeof entry.requestId === "string" ? { requestId: entry.requestId } : {}),
     });
   }
 
@@ -199,6 +214,8 @@ export function getUserProfile(): UserProfile | null {
       escolaridade: profileText(parsed.escolaridade),
       situacaoEmprego: profileText(parsed.situacaoEmprego),
       fotoPerfil: typeof parsed.fotoPerfil === "string" ? parsed.fotoPerfil : undefined,
+      profileToken: typeof parsed.profileToken === "string" && /^[a-f0-9]{64}$/.test(parsed.profileToken) ? parsed.profileToken : undefined,
+      pendingEnrollments: Array.isArray(parsed.pendingEnrollments) ? parsed.pendingEnrollments.filter((item: PendingEnrollment) => item && isCourseId(item.courseId) && typeof item.requestId === "string" && typeof item.statusToken === "string" && /^[a-f0-9]{64}$/.test(item.statusToken) && typeof item.email === "string" && typeof item.expiresAt === "string") : [],
       enrolledCourseIds: enrollments.map(entry => entry.courseId),
       enrollments,
       enrollmentHistory: normalizeEnrollmentHistory(parsed, enrollments),
@@ -245,6 +262,8 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
     escolaridade: profileText(data.escolaridade),
     situacaoEmprego: profileText(data.situacaoEmprego),
     fotoPerfil: sameProfile?.fotoPerfil,
+    profileToken: typeof data.profileToken === "string" && /^[a-f0-9]{64}$/.test(data.profileToken) ? data.profileToken : sameProfile?.profileToken,
+    pendingEnrollments: sameProfile?.pendingEnrollments ?? [],
     enrolledCourseIds,
     enrollments: nextEnrollments,
     enrollmentHistory: normalizeEnrollmentHistory(sameProfile, nextEnrollments),
@@ -255,7 +274,7 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
 // A successful HTTP response alone is not enough: the profile must be usable.
 export async function createRegistrationProfile(data: Record<string, unknown>, courseId?: number): Promise<UserProfile> {
   const result = await createRegistration(data);
-  const saved = saveUserProfile(data, result.id, courseId);
+  const saved = saveUserProfile(data, result.id);
   const available = getUserProfile();
   if (!available || available.id !== saved.id || available.email !== saved.email) {
     throw new Error("O servidor recebeu seu cadastro, mas não foi possível disponibilizar seu perfil. Tente acessar Meu perfil ou entre em contato com o atendimento.");
@@ -345,4 +364,62 @@ export function logoutUserProfile() {
     favoritesSessionOnly = false;
   } catch { /* Favoritos também são limpos para esta sessão. */ }
   return null;
+}
+
+
+type EnrollmentResult = { status: string; registrationId: number; courseId: number; requestId: string; enrolledAt: string | null };
+function applyConfirmedEnrollment(result: EnrollmentResult) {
+  const profile = getUserProfile();
+  if (!profile || profile.id !== result.registrationId || !isCourseId(result.courseId) || typeof result.requestId !== "string" || !result.enrolledAt || Number.isNaN(Date.parse(result.enrolledAt))) throw new Error("Resposta de confirmação inválida.");
+  const enrolledAt = new Date(result.enrolledAt).toISOString();
+  const enrollment = { courseId: result.courseId, enrolledAt, unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt)!, requestId: result.requestId };
+  const enrollments = [...normalizeEnrollments(profile).filter(item => item.courseId !== result.courseId), enrollment];
+  const next = {
+    ...profile, enrollments, enrolledCourseIds: enrollments.map(item => item.courseId),
+    pendingEnrollments: (profile.pendingEnrollments ?? []).filter(item => item.courseId !== result.courseId),
+    enrollmentHistory: normalizeEnrollmentHistory(profile, enrollments),
+  };
+  return persistProfile(next);
+}
+
+export async function requestCourseConfirmation(courseId: number) {
+  const profile = getUserProfile();
+  if (!profile) throw new Error("Faça seu cadastro antes de solicitar a inscrição.");
+  const result = await request<PendingEnrollment & { status: string }>("/enrollments", {
+    method: "POST", body: JSON.stringify({ action: "request", registrationId: profile.id, email: profile.email, courseId }),
+  });
+  if (result.status !== "pending" || result.courseId !== courseId || typeof result.requestId !== "string" || !/^[a-f0-9]{64}$/.test(result.statusToken) || typeof result.email !== "string" || typeof result.expiresAt !== "string") throw new Error("Resposta de envio inválida. Não foi possível confirmar o envio do e-mail.");
+  const current = getUserProfile();
+  if (!current || current.id !== profile.id) throw new Error("O perfil mudou durante a solicitação. Acesse o perfil usado no cadastro.");
+  const pendingEnrollments = [...(current.pendingEnrollments ?? []).filter(item => item.courseId !== courseId), result];
+  return persistProfile({ ...current, pendingEnrollments });
+}
+
+export async function confirmCourseEmail(token: string, signal?: AbortSignal) {
+  const result = await request<EnrollmentResult & { courseTitle: string; profile: UserProfile }>("/enrollments", { method: "POST", signal, body: JSON.stringify({ action: "confirm", token }) });
+  if (result.status !== "confirmed" || !result.profile || result.profile.id !== result.registrationId || typeof result.profile.profileToken !== "string" || !/^[a-f0-9]{64}$/.test(result.profile.profileToken)) throw new Error("Resposta de confirmação inválida.");
+  const current = getUserProfile();
+  saveUserProfile({ ...result.profile, ...(current?.id === result.registrationId ? current : {}), profileToken: result.profile.profileToken } as unknown as Record<string, unknown>, result.registrationId);
+  return { profile: applyConfirmedEnrollment(result), courseTitle: result.courseTitle };
+}
+
+export async function syncPendingEnrollments() {
+  const initial = getUserProfile();
+  if (!initial) return null;
+  for (const pending of initial.pendingEnrollments ?? []) {
+    const result = await request<EnrollmentResult>("/enrollments", { method: "POST", body: JSON.stringify({ action: "status", requestId: pending.requestId, statusToken: pending.statusToken }) });
+    if (getUserProfile()?.id !== initial.id) return getUserProfile();
+    if (result.status === "confirmed") applyConfirmedEnrollment(result);
+  }
+  return getUserProfile();
+}
+
+export async function cancelConfirmedEnrollment(courseId: number) {
+  const profile = getUserProfile();
+  const enrollment = profile?.enrollments?.find(item => item.courseId === courseId);
+  if (enrollment?.requestId) {
+    const result = await request<EnrollmentResult>("/enrollments", { method: "POST", headers: { "x-profile-token": profile?.profileToken ?? "" }, body: JSON.stringify({ action: "cancel", requestId: enrollment.requestId }) });
+    if (result.status !== "cancelled") throw new Error("Não foi possível confirmar o cancelamento.");
+  }
+  return removeUserEnrollmentFromCourse(courseId);
 }

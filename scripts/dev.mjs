@@ -1,3 +1,4 @@
+import "../server/config/environment.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";

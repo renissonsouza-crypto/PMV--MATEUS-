@@ -138,7 +138,7 @@ test('registration completion returns an available profile only after the server
   const profile = await api.createRegistrationProfile(basicProfile, 3);
   assert.equal(calls, 1);
   assert.equal(profile.id, 12);
-  assert.deepEqual(profile.enrolledCourseIds, [3]);
+  assert.deepEqual(profile.enrolledCourseIds, [], 'A course cannot be activated before email confirmation');
   assert.deepEqual(api.getUserProfile(), profile);
   assert.equal(JSON.parse(values.get(profileKey)).id, 12);
 });

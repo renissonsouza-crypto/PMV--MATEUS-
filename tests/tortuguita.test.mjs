@@ -264,3 +264,13 @@ test("Tortuguita offers bounded relevant query suggestions", () => {
   assert(suggestions.some(item => /Excel/i.test(item)));
   for (const suggestion of suggestions) assert.equal(typeof suggestion, "string");
 });
+
+
+test("Tortuguita explains the email click required to finalize course enrollment", () => {
+  for (const question of ["Não recebi o e-mail de confirmação", "Como reenviar o e-mail de confirmação?", "Recebo um código de confirmação?"]) {
+    const result = ask(question);
+    assert.match(result.text, /pendente/);
+    assert.match(result.text, /24 horas/);
+    assert.match(result.text, /Confirmar minha inscrição/);
+  }
+});
