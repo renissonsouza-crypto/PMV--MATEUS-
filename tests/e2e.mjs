@@ -1,7 +1,7 @@
 import { chromium } from "playwright-core";
 
 const baseURL = process.env.TEST_URL || "http://127.0.0.1:5173";
-const executablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const executablePath = process.env.BROWSER_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const results = [];
 let consoleErrors = [];
 let failedResources = [];
@@ -110,11 +110,16 @@ test("depoimentos: abertura e validação do formulário", async () => {
 test("assistente: abrir, enviar e receber resposta", async () => {
   const launcher = page.getByRole("button", { name: /Abrir assistente virtual/i });
   await launcher.click();
-  const input = page.getByPlaceholder(/Digite sua mensagem/i);
-  await input.fill("Quero cursos de tecnologia");
+  const input = page.getByPlaceholder(/Digite sua dúvida ou curso/i);
+  await input.fill("inscr");
+  await page.getByRole("button", { name: "Como faço minha inscrição?" }).click();
   await input.press("Enter");
-  await page.waitForTimeout(1300);
-  ok(await page.getByText(/tecnologia|opções/i).count() > 0, "Assistente não respondeu");
+  await page.waitForTimeout(600);
+  ok(await page.getByText(/continuar se inscrevendo/i).count() > 0, "Assistente não respondeu sobre inscrição");
+  await input.fill("gastr");
+  await page.getByRole("button", { name: "Gastronomia Brasileira" }).click();
+  await page.waitForTimeout(600);
+  ok(await page.getByText(/Gastronomia Brasileira: 80 horas/i).count() > 0, "Sugestão de curso não foi respondida com os dados do catálogo");
 });
 
 test("responsividade e menu móvel", async () => {
