@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
-import { createRegistration, saveUserProfile, type UserProfile } from "../services/api";
+import { createRegistration, isProfileSessionOnly, saveUserProfile, type UserProfile } from "../services/api";
+import { getBirthDateAge, isValidBrazilianPhone, lookupVitoriaCep, type VitoriaAddress } from "../services/registrationValidation";
+import { PlatformPolicyLink } from "../components/PlatformPolicy";
 import {
   ArrowLeft, ArrowRight, User, MapPin, HeartHandshake,
   ShieldCheck, CheckCircle2, Eye, EyeOff, Info, AlertCircle,
@@ -44,13 +46,13 @@ interface RegisterData {
   telefoneResponsavel: string;
   // Passo 3 — Acessibilidade & Renda
   possuiDeficiencia: string;
-  tiposDeficiencia: string[];
+  tiposDeficiencia: string;
   necessitaAdaptacao: string;
   tiposAdaptacao: string;
   rendaFamiliar: string;
   numeroDependentes: string;
   beneficioProgramaSocial: string;
-  quaisBeneficios: string;
+  quaisBeneficios: string[];
   // Passo 4 — LGPD & Consentimentos
   autorizaImagem: boolean;
   autorizaDados: boolean;
@@ -59,9 +61,9 @@ interface RegisterData {
 }
 
 // ─── Componentes auxiliares ───────────────────────────────────────────────────
-function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+function Label({ children, required, htmlFor }: { children: React.ReactNode; required?: boolean; htmlFor?: string }) {
   return (
-    <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+    <label htmlFor={htmlFor ? `registration-${htmlFor}` : undefined} className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
       {children}
       {required && <span className="text-red-500 ml-1">*</span>}
     </label>
@@ -83,6 +85,9 @@ function Input({
     <div className="relative">
       <input
         {...reg}
+        id={`registration-${reg.name}`}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `registration-${reg.name}-error` : undefined}
         type={isPassword ? (showPwd ? "text" : "password") : type}
         placeholder={placeholder}
         className={`w-full px-4 py-3 rounded-xl border-2 text-sm font-medium outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 ${
@@ -98,7 +103,7 @@ function Input({
         </button>
       )}
       {error && (
-        <p className="flex items-center gap-1 text-xs text-red-500 font-semibold mt-1">
+        <p id={`registration-${reg.name}-error`} className="flex items-center gap-1 text-xs text-red-500 font-semibold mt-1">
           <AlertCircle className="w-3 h-3" /> {error}
         </p>
       )}
@@ -111,6 +116,9 @@ function Select({ reg, children, error }: { reg: any; children: React.ReactNode;
     <div className="relative">
       <select
         {...reg}
+        id={`registration-${reg.name}`}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `registration-${reg.name}-error` : undefined}
         className={`w-full px-4 py-3 rounded-xl border-2 text-sm font-medium outline-none transition-all appearance-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer ${
           error
             ? "border-red-400 focus:border-red-500"
@@ -121,7 +129,7 @@ function Select({ reg, children, error }: { reg: any; children: React.ReactNode;
       </select>
       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       {error && (
-        <p className="flex items-center gap-1 text-xs text-red-500 font-semibold mt-1">
+        <p id={`registration-${reg.name}-error`} className="flex items-center gap-1 text-xs text-red-500 font-semibold mt-1">
           <AlertCircle className="w-3 h-3" /> {error}
         </p>
       )}
@@ -165,10 +173,13 @@ const STEPS = [
 export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onBack: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
-  const [menorDeIdade, setMenorDeIdade] = useState(false);
-  const [possuiDeficiencia, setPossuiDeficiencia] = useState("nao");
-  const [beneficio, setBeneficio] = useState("nao");
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [sessionOnly, setSessionOnly] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
+  const cepLookupId = useRef(0);
+  const cepCache = useRef(new Map<string, VitoriaAddress>());
+  const filledCep = useRef("");
+  const advancing = useRef(false);
 
   const {
     register,
@@ -178,21 +189,14 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
     trigger,
     getValues,
     setValue,
-    setError,
-    clearErrors,
-  } = useForm<RegisterData>({ mode: "onBlur" });
-
-  // Verifica se é menor ao mudar data de nascimento
-  function checkMinor(date: string) {
-    if (!date) return;
-    const birth = new Date(date);
-    const today = new Date();
-    const age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    const dayDiff = today.getDate() - birth.getDate();
-    const realAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-    setMenorDeIdade(realAge < 18);
-  }
+  } = useForm<RegisterData>({ mode: "onBlur", defaultValues: {
+    possuiDeficiencia: "nao", beneficioProgramaSocial: "nao", quaisBeneficios: [],
+  } });
+  const age = getBirthDateAge(watch("dataNascimento"));
+  const menorDeIdade = age !== null && age < 18;
+  const possuiDeficiencia = watch("possuiDeficiencia");
+  const beneficio = watch("beneficioProgramaSocial");
+  const requiredText = (message: string) => (value: string) => Boolean(value?.trim()) || message;
 
   async function validateVitoriaCep(value: string) {
     const cepDigits = value.replace(/\D/g, "");
@@ -200,49 +204,68 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
       return "CEP inválido";
     }
 
+    const lookupId = ++cepLookupId.current;
+    const initialBairro = getValues("bairro");
+    const initialRua = getValues("rua");
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
-      const data = await response.json();
-
-      if (data.erro || !data.localidade || !data.uf) {
-        return "CEP não encontrado. Verifique o valor informado.";
+      const cached = cepCache.current.get(cepDigits);
+      const address = cached ?? await lookupVitoriaCep(value);
+      if (!cached) cepCache.current.set(cepDigits, address);
+      // Uma resposta antiga não pode substituir um CEP novo nem uma edição manual.
+      if (lookupId !== cepLookupId.current || String(getValues("cep") ?? "").replace(/\D/g, "") !== cepDigits) return true;
+      if (filledCep.current !== cepDigits) {
+        if (getValues("bairro") === initialBairro) setValue("bairro", address.bairro, { shouldValidate: true });
+        if (getValues("rua") === initialRua) setValue("rua", address.rua, { shouldValidate: true });
+        filledCep.current = cepDigits;
       }
-
-      const localidade = String(data.localidade).trim().toLowerCase();
-      const uf = String(data.uf).trim().toUpperCase();
-      const isVitoria = uf === "ES" && (localidade === "vitoria" || localidade === "vitória");
-
-      if (!isVitoria) {
-        return "A plataforma aceita apenas CEPs da cidade de Vitória-ES. Seu cadastro será bloqueado se o endereço não pertencer à cidade.";
-      }
-
-      setValue("bairro", String(data.bairro ?? "").trim(), { shouldValidate: true });
-      setValue("rua", String(data.logradouro ?? "").trim(), { shouldValidate: true });
-      clearErrors("cep");
       return true;
     } catch (error) {
-      return "Não foi possível validar o CEP no momento. Tente novamente.";
+      if (lookupId !== cepLookupId.current || String(getValues("cep") ?? "").replace(/\D/g, "") !== cepDigits) return true;
+      return error instanceof Error ? error.message : "Não foi possível validar o CEP no momento. Tente novamente.";
     }
   }
 
   // Navega para o próximo passo com validação
   async function nextStep() {
+    if (advancing.current) return;
+    advancing.current = true;
+    setIsAdvancing(true);
     const fields: Record<number, (keyof RegisterData)[]> = {
-      1: ["nome", "cpf", "dataNascimento", "sexo", "telefone", "email", "emailConfirm", "escolaridade"],
+      1: ["nome", "cpf", "dataNascimento", "sexo", "telefone", "email", "emailConfirm", "escolaridade", "situacaoEmprego"],
       2: menorDeIdade
-        ? ["cep", "bairro", "rua", "numero", "nomeResponsavel", "cpfResponsavel", "grauParentesco", "telefoneResponsavel"]
-        : ["cep", "bairro", "rua", "numero"],
+        ? ["bairro", "rua", "numero", "nomeResponsavel", "cpfResponsavel", "grauParentesco", "telefoneResponsavel"]
+        : ["bairro", "rua", "numero"],
       3: [],
     };
-    const valid = await trigger(fields[step] ?? []);
-    if (valid) setStep(s => Math.min(s + 1, 4));
+    try {
+      // Primeiro aguarda o preenchimento por CEP, depois valida os campos de endereço.
+      const cepAtValidation = getValues("cep");
+      if (step === 2 && (!await trigger("cep") || getValues("cep") !== cepAtValidation)) return;
+      const valid = step === 3 || await trigger(fields[step] ?? [], { shouldFocus: true });
+      if (valid) setStep(s => Math.min(s + 1, 4));
+    } finally {
+      advancing.current = false;
+      setIsAdvancing(false);
+    }
   }
 
   async function onSubmit(data: RegisterData) {
     setSubmissionError("");
+    if (data.whatsapp?.trim() && !isValidBrazilianPhone(data.whatsapp)) {
+      setSubmissionError("Informe um WhatsApp com DDD, com 10 ou 11 dígitos.");
+      return;
+    }
     try {
-      const result = await createRegistration(data as unknown as Record<string, unknown>);
-      const profile = saveUserProfile(data as unknown as Record<string, unknown>, result.id, courseId);
+      const registration = {
+        ...data,
+        menorDeIdade,
+        ...(menorDeIdade ? {} : { nomeResponsavel: "", cpfResponsavel: "", grauParentesco: "", telefoneResponsavel: "" }),
+        ...(data.possuiDeficiencia === "sim" ? {} : { tiposDeficiencia: "", necessitaAdaptacao: "", tiposAdaptacao: "" }),
+        ...(data.beneficioProgramaSocial === "sim" ? {} : { quaisBeneficios: [] }),
+      };
+      const result = await createRegistration(registration);
+      const profile = saveUserProfile(registration, result.id, courseId);
+      setSessionOnly(isProfileSessionOnly());
       onProfileCreated(profile);
       setSubmitted(true);
     } catch (error) {
@@ -265,6 +288,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
             <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
               Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente.
             </p>
+            {sessionOnly && <p role="status" className="mb-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Seu navegador não permitiu salvar o perfil neste dispositivo. Ele ficará disponível apenas enquanto esta página estiver aberta.</p>}
             <button onClick={onBack}
               className="font-black text-white px-8 py-3.5 rounded-2xl shadow-lg hover:scale-105 transition-all inline-flex items-center gap-2"
               style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}>
@@ -344,7 +368,10 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               {submissionError}
             </div>
           )}
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form noValidate onSubmit={event => {
+            if (step < 4) { event.preventDefault(); void nextStep(); }
+            else void handleSubmit(onSubmit)(event);
+          }}>
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
               <div className="p-6 sm:p-8">
 
@@ -356,13 +383,13 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FieldWrap className="sm:col-span-2">
-                        <Label required>Nome completo</Label>
-                        <Input reg={register("nome", { required: "Nome obrigatório" })}
+                        <Label required htmlFor="nome">Nome completo</Label>
+                        <Input reg={register("nome", { required: "Nome obrigatório", validate: requiredText("Nome obrigatório") })}
                           placeholder="Seu nome completo" error={errors.nome?.message} />
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>CPF</Label>
+                        <Label required htmlFor="cpf">CPF</Label>
                         <Input reg={register("cpf", {
                           required: "CPF obrigatório",
                           pattern: { value: /^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/, message: "CPF inválido" }
@@ -371,10 +398,10 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Data de nascimento</Label>
+                        <Label required htmlFor="dataNascimento">Data de nascimento</Label>
                         <Input reg={register("dataNascimento", {
                           required: "Data obrigatória",
-                          onChange: (e: any) => checkMinor(e.target.value),
+                          validate: value => getBirthDateAge(value) !== null || "Data de nascimento inválida",
                         })}
                           type="date" error={errors.dataNascimento?.message} />
                         {menorDeIdade && (
@@ -385,7 +412,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Sexo</Label>
+                        <Label required htmlFor="sexo">Sexo</Label>
                         <Select reg={register("sexo", { required: "Campo obrigatório" })} error={errors.sexo?.message}>
                           <option value="">Selecione...</option>
                           <option>Masculino</option>
@@ -396,13 +423,16 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Telefone / WhatsApp</Label>
-                        <Input reg={register("telefone", { required: "Telefone obrigatório" })}
+                        <Label required htmlFor="telefone">Telefone / WhatsApp</Label>
+                        <Input reg={register("telefone", {
+                          required: "Telefone obrigatório",
+                          validate: value => isValidBrazilianPhone(value) || "Informe um telefone com DDD, com 10 ou 11 dígitos.",
+                        })}
                           placeholder="(27) 99999-0000" type="tel" error={errors.telefone?.message} />
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>E-mail para contato</Label>
+                        <Label required htmlFor="email">E-mail para contato</Label>
                         <Input reg={register("email", {
                           required: "E-mail obrigatório",
                           pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "E-mail inválido" }
@@ -411,7 +441,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Confirmar e-mail</Label>
+                        <Label required htmlFor="emailConfirm">Confirmar e-mail</Label>
                         <Input reg={register("emailConfirm", {
                           required: "Confirmação obrigatória",
                           validate: v => v === getValues("email") || "Os e-mails não coincidem",
@@ -420,7 +450,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Escolaridade</Label>
+                        <Label required htmlFor="escolaridade">Escolaridade</Label>
                         <Select reg={register("escolaridade", { required: "Campo obrigatório" })} error={errors.escolaridade?.message}>
                           <option value="">Selecione...</option>
                           <option>Ensino fundamental incompleto</option>
@@ -435,7 +465,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Situação profissional atual</Label>
+                        <Label required htmlFor="situacaoEmprego">Situação profissional atual</Label>
                         <Select reg={register("situacaoEmprego", { required: "Campo obrigatório" })} error={errors.situacaoEmprego?.message}>
                           <option value="">Selecione...</option>
                           <option>Empregado com carteira assinada</option>
@@ -459,7 +489,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FieldWrap>
-                        <Label required>CEP</Label>
+                        <Label required htmlFor="cep">CEP</Label>
                         <Input reg={register("cep", {
                           required: "CEP obrigatório",
                           pattern: { value: /^\d{5}-?\d{3}$/, message: "CEP inválido" },
@@ -469,25 +499,25 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Bairro</Label>
-                        <Input reg={register("bairro", { required: "Bairro obrigatório" })}
+                        <Label required htmlFor="bairro">Bairro</Label>
+                        <Input reg={register("bairro", { required: "Bairro obrigatório", validate: requiredText("Bairro obrigatório") })}
                           placeholder="Praia do Canto" error={errors.bairro?.message} />
                       </FieldWrap>
 
                       <FieldWrap className="sm:col-span-2">
-                        <Label required>Logradouro / Rua</Label>
-                        <Input reg={register("rua", { required: "Rua obrigatória" })}
+                        <Label required htmlFor="rua">Logradouro / Rua</Label>
+                        <Input reg={register("rua", { required: "Rua obrigatória", validate: requiredText("Rua obrigatória") })}
                           placeholder="Av. Marechal Mascarenhas de Moraes" error={errors.rua?.message} />
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required>Número</Label>
-                        <Input reg={register("numero", { required: "Número obrigatório" })}
+                        <Label required htmlFor="numero">Número</Label>
+                        <Input reg={register("numero", { required: "Número obrigatório", validate: requiredText("Número obrigatório") })}
                           placeholder="1927" error={errors.numero?.message} />
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label>Complemento</Label>
+                        <Label htmlFor="complemento">Complemento</Label>
                         <Input reg={register("complemento")} placeholder="Apto 201, Bloco B..." />
                       </FieldWrap>
                     </div>
@@ -518,16 +548,17 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                         <FieldWrap className="sm:col-span-2">
-                          <Label required={menorDeIdade}>Nome completo do responsável</Label>
+                          <Label required={menorDeIdade} htmlFor="nomeResponsavel">Nome completo do responsável</Label>
                           <Input reg={register("nomeResponsavel", {
-                            required: menorDeIdade ? "Obrigatório para menor de idade" : false
+                            required: menorDeIdade ? "Obrigatório para menor de idade" : false,
+                            validate: value => !menorDeIdade || requiredText("Obrigatório para menor de idade")(value),
                           })}
                             placeholder="Nome do pai, mãe ou responsável legal"
                             error={errors.nomeResponsavel?.message} />
                         </FieldWrap>
 
                         <FieldWrap>
-                          <Label required={menorDeIdade}>CPF do responsável</Label>
+                          <Label required={menorDeIdade} htmlFor="cpfResponsavel">CPF do responsável</Label>
                           <Input reg={register("cpfResponsavel", {
                             required: menorDeIdade ? "Obrigatório para menor de idade" : false,
                             pattern: menorDeIdade
@@ -538,7 +569,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                         </FieldWrap>
 
                         <FieldWrap>
-                          <Label required={menorDeIdade}>Grau de parentesco</Label>
+                          <Label required={menorDeIdade} htmlFor="grauParentesco">Grau de parentesco</Label>
                           <Select reg={register("grauParentesco", {
                             required: menorDeIdade ? "Obrigatório" : false
                           })} error={errors.grauParentesco?.message}>
@@ -553,9 +584,10 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                         </FieldWrap>
 
                         <FieldWrap>
-                          <Label required={menorDeIdade}>Telefone do responsável</Label>
+                          <Label required={menorDeIdade} htmlFor="telefoneResponsavel">Telefone do responsável</Label>
                           <Input reg={register("telefoneResponsavel", {
-                            required: menorDeIdade ? "Obrigatório para menor de idade" : false
+                            required: menorDeIdade ? "Obrigatório para menor de idade" : false,
+                            validate: value => (!menorDeIdade && !value?.trim()) || isValidBrazilianPhone(value) || "Informe um telefone com DDD, com 10 ou 11 dígitos.",
                           })}
                             placeholder="(27) 99999-0000" type="tel"
                             error={errors.telefoneResponsavel?.message} />
@@ -593,8 +625,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                                 : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-blue-300"
                             }`}>
                               <input type="radio" {...register("possuiDeficiencia")}
-                                value={v} className="sr-only"
-                                onChange={() => setPossuiDeficiencia(v)} />
+                                value={v} className="sr-only" />
                               <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                                 possuiDeficiencia === v ? "border-blue-500" : "border-slate-300"
                               }`}>
@@ -609,7 +640,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                       {possuiDeficiencia === "sim" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800">
                           <FieldWrap>
-                            <Label>Tipo de deficiência</Label>
+                            <Label htmlFor="tiposDeficiencia">Tipo de deficiência</Label>
                             <Select reg={register("tiposDeficiencia")}>
                               <option value="">Selecione o tipo...</option>
                               <option>Deficiência física</option>
@@ -624,7 +655,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                           </FieldWrap>
 
                           <FieldWrap>
-                            <Label>Necessita de adaptações especiais?</Label>
+                            <Label htmlFor="necessitaAdaptacao">Necessita de adaptações especiais?</Label>
                             <Select reg={register("necessitaAdaptacao")}>
                               <option value="">Selecione...</option>
                               <option>Não necessito de adaptações</option>
@@ -638,9 +669,10 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                           </FieldWrap>
 
                           <FieldWrap className="sm:col-span-2">
-                            <Label>Descreva suas necessidades (opcional)</Label>
+                            <Label htmlFor="tiposAdaptacao">Descreva suas necessidades (opcional)</Label>
                             <textarea
                               {...register("tiposAdaptacao")}
+                              id="registration-tiposAdaptacao"
                               rows={3}
                               placeholder="Descreva como podemos melhor te atender..."
                               className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 text-sm font-medium outline-none resize-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 transition-all"
@@ -659,7 +691,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FieldWrap>
-                          <Label>Faixa de renda familiar mensal</Label>
+                          <Label htmlFor="rendaFamiliar">Faixa de renda familiar mensal</Label>
                           <Select reg={register("rendaFamiliar")}>
                             <option value="">Selecione a faixa...</option>
                             <option>Até R$ 500 (sem renda)</option>
@@ -673,7 +705,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                         </FieldWrap>
 
                         <FieldWrap>
-                          <Label>Número de pessoas que dependem desta renda</Label>
+                          <Label htmlFor="numeroDependentes">Número de pessoas que dependem desta renda</Label>
                           <Select reg={register("numeroDependentes")}>
                             <option value="">Selecione...</option>
                             <option>Apenas eu</option>
@@ -694,8 +726,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                                   : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-300"
                               }`}>
                                 <input type="radio" {...register("beneficioProgramaSocial")}
-                                  value={v} className="sr-only"
-                                  onChange={() => setBeneficio(v)} />
+                                  value={v} className="sr-only" />
                                 <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                                   beneficio === v ? "border-amber-500" : "border-slate-300"
                                 }`}>
@@ -812,13 +843,13 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                           className="mt-0.5 w-5 h-5 shrink-0 accent-blue-600 cursor-pointer" />
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-snug">
                           Declaro que li e concordo com os{" "}
-                          <a href="#" className="underline hover:text-blue-600 transition-colors" style={{ color: BLUE }}>
+                          <PlatformPolicyLink kind="terms" className="underline text-blue-700 hover:text-blue-600 transition-colors">
                             Termos de Uso
-                          </a>{" "}
+                          </PlatformPolicyLink>{" "}
                           e a{" "}
-                          <a href="#" className="underline hover:text-blue-600 transition-colors" style={{ color: BLUE }}>
+                          <PlatformPolicyLink kind="privacy" className="underline text-blue-700 hover:text-blue-600 transition-colors">
                             Política de Privacidade
-                          </a>{" "}
+                          </PlatformPolicyLink>{" "}
                           do QualificaVix <span className="text-red-500">*</span>
                         </span>
                       </label>
@@ -844,10 +875,10 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                     <div className="p-4 rounded-2xl text-center"
                       style={{ background: `${BLUE}08`, border: `1px solid ${BLUE}20` }}>
                       <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        🔒 Seus dados estão protegidos e armazenados em servidores seguros
-                        da Prefeitura Municipal de Vitória, em conformidade com a LGPD.
-                        Para exercer seus direitos (acesso, correção, portabilidade, exclusão),
-                        entre em contato: <strong>lgpd@vitoria.es.gov.br</strong>
+                        Seu perfil, inscrições e favoritos ficam salvos neste navegador.
+                        Os dados do cadastro são enviados à instalação do QualificaVix que você está acessando.
+                        Consulte a <PlatformPolicyLink kind="privacy" className="underline font-bold">Política de Privacidade</PlatformPolicyLink> para
+                        conhecer o armazenamento e os canais de atendimento.
                       </p>
                     </div>
                   </div>
@@ -858,6 +889,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               <div className="flex items-center justify-between gap-4 px-6 sm:px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                 <button
                   type="button"
+                  disabled={isAdvancing || isSubmitting}
                   onClick={step === 1 ? onBack : () => setStep(s => s - 1)}
                   className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300 px-5 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-white dark:hover:bg-slate-800 transition-all"
                 >
@@ -878,6 +910,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                   <button
                     type="button"
                     onClick={nextStep}
+                    disabled={isAdvancing || isSubmitting}
                     className="flex items-center gap-2 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                     style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}
                   >

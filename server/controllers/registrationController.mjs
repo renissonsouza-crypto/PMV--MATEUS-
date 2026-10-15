@@ -2,7 +2,10 @@ import { createPostgresRegistration } from "../models/PostgresRegistrationModel.
 import { validateRegistration, validateVitoriaCep } from "../models/validation.mjs";
 import { validateJsonMutation } from "./requestSecurity.mjs";
 export async function registrationController(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Método não permitido" });
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Método não permitido" });
+  }
   const requestError = validateJsonMutation(req);
   if (requestError) return res.status(requestError.status).json({ error: requestError.error });
   const validation = validateRegistration(req.body);

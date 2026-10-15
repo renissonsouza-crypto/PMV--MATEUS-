@@ -4,12 +4,15 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { validateRegistration, validateTestimonial, validateVitoriaCep } from "../models/validation.mjs";
-import { validateJsonMutation } from "./requestSecurity.mjs";
+import { MAX_JSON_BODY_BYTES, validateJsonMutation } from "./requestSecurity.mjs";
+import { getApiPort } from "../../scripts/dev-config.mjs";
 
+const port = getApiPort(process.env, { allowEphemeral: true });
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const dataDir = resolve(root, "data");
-mkdirSync(dataDir, { recursive: true });
-const db = new DatabaseSync(process.env.DB_PATH ? resolve(process.env.DB_PATH) : resolve(dataDir, "qualificavix.sqlite"));
+const dbPath = process.env.DB_PATH ? resolve(process.env.DB_PATH) : resolve(dataDir, "qualificavix.sqlite");
+mkdirSync(dirname(dbPath), { recursive: true });
+const db = new DatabaseSync(dbPath);
 db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
@@ -44,25 +47,25 @@ db.exec(`
   );
 `);
 
-const json = (res, status, payload) => {
+const json = (res, status, payload, headers = {}) => {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
+    ...headers,
   });
   res.end(JSON.stringify(payload));
 };
 
-const MAX_BODY_BYTES = 1_000_000;
 const body = req => new Promise((resolveBody, reject) => {
   const chunks = [];
   let size = 0;
   let tooLarge = false;
   req.on("data", chunk => {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) {
+    if (size > MAX_JSON_BODY_BYTES) {
       tooLarge = true;
       chunks.length = 0;
       return;
@@ -82,11 +85,19 @@ const body = req => new Promise((resolveBody, reject) => {
     }
   });
   req.on("error", reject);
+  req.on("aborted", () => reject(Object.assign(new Error("Requisição interrompida"), { statusCode: 400 })));
 });
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://localhost");
+    const methods = {
+      "/api/health": ["GET"],
+      "/api/testimonials": ["GET", "POST"],
+      "/api/registrations": ["POST"],
+    }[url.pathname];
+    if (methods && !methods.includes(req.method))
+      return json(res, 405, { error: "Método não permitido" }, { Allow: methods.join(", ") });
     if (req.method === "GET" && url.pathname === "/api/health") {
       const result = db.prepare("SELECT 1 AS connected").get();
       return json(res, 200, { status: "ok", database: result.connected === 1 ? "connected" : "error" });
@@ -96,9 +107,12 @@ const server = createServer(async (req, res) => {
       return json(res, 200, rows);
     }
     if (req.method === "POST" && url.pathname === "/api/testimonials") {
-      const requestError = validateJsonMutation(req, { checkOrigin: false });
+      const requestError = validateJsonMutation(req);
       if (requestError) return json(res, requestError.status, { error: requestError.error });
-      const validation = validateTestimonial(await body(req));
+      req.body = await body(req);
+      const bodyError = validateJsonMutation(req);
+      if (bodyError) return json(res, bodyError.status, { error: bodyError.error });
+      const validation = validateTestimonial(req.body);
       if (validation.error) return json(res, 400, { error: validation.error });
       const { name, role, course, quote, rating } = validation.data;
       const result = db.prepare("INSERT INTO testimonials(name, role, course, quote, rating) VALUES (?, ?, ?, ?, ?)")
@@ -106,19 +120,26 @@ const server = createServer(async (req, res) => {
       return json(res, 201, { id: Number(result.lastInsertRowid), name, role, course, quote, rating });
     }
     if (req.method === "POST" && url.pathname === "/api/registrations") {
-      const requestError = validateJsonMutation(req, { checkOrigin: false });
+      const requestError = validateJsonMutation(req);
       if (requestError) return json(res, requestError.status, { error: requestError.error });
-      const validation = validateRegistration(await body(req));
+      req.body = await body(req);
+      const bodyError = validateJsonMutation(req);
+      if (bodyError) return json(res, bodyError.status, { error: bodyError.error });
+      const validation = validateRegistration(req.body);
       if (validation.error) return json(res, 400, { error: validation.error });
       const cepValidation = await validateVitoriaCep(validation.data.cep);
       if (cepValidation.unavailable) return json(res, 503, { error: "Não foi possível validar o CEP agora. Tente novamente." });
       if (!cepValidation.valid) return json(res, 400, { error: "O cadastro aceita somente CEPs de Vitória-ES" });
       const data = validation.data;
       try {
+        const duplicate = db.prepare(`SELECT id FROM registrations
+          WHERE replace(replace(replace(cpf, '.', ''), '-', ''), ' ', '') = ?
+            OR lower(trim(email)) = ? LIMIT 1`).get(data.cpf, data.email);
+        if (duplicate) return json(res, 409, { error: "CPF ou e-mail já cadastrado" });
         const result = db.prepare(`INSERT INTO registrations
           (name, cpf, email, phone, birth_date, city, state, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
           .run(data.nome, data.cpf, data.email, data.telefone,
-            data.dataNascimento, "", "", JSON.stringify(data));
+            data.dataNascimento, "Vitória", "ES", JSON.stringify(data));
         return json(res, 201, { id: Number(result.lastInsertRowid), message: "Cadastro realizado" });
       } catch (error) {
         if (String(error.message).includes("UNIQUE")) return json(res, 409, { error: "CPF ou e-mail já cadastrado" });
@@ -133,8 +154,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-const port = Number(process.env.API_PORT || 3001);
-server.listen(port, "127.0.0.1", () => console.log(`QualificaVix API: http://127.0.0.1:${port}`));
+server.listen(port, "127.0.0.1", () => console.log(`QualificaVix API: http://127.0.0.1:${server.address().port}`));
 
 const shutdown = () => server.close(() => { db.close(); process.exit(0); });
 process.on("SIGINT", shutdown);

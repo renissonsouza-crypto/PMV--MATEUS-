@@ -11,6 +11,7 @@ export async function testimonialController(req, res) {
       if (validation.error) return res.status(400).json({ error: validation.error });
       return res.status(201).json(await createPostgresTestimonial(validation.data));
     }
+    res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Método não permitido" });
   } catch (error) {
     return res.status(500).json({ error: "Erro ao acessar depoimentos", detail: process.env.NODE_ENV === "development" ? error.message : undefined });

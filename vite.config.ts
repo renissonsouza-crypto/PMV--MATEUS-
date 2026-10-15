@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { getApiPort } from './scripts/dev-config.mjs'
 
 
 function figmaAssetResolver() {
@@ -17,6 +18,7 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  cacheDir: process.env.VITE_CACHE_DIR || 'node_modules/.vite',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
@@ -32,7 +34,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:3001',
+      '/api': {
+        target: `http://127.0.0.1:${getApiPort()}`,
+        changeOrigin: false,
+      },
     },
   },
 

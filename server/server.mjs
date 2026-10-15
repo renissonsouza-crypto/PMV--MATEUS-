@@ -1,2 +1,5 @@
 // Ponto de entrada local. O controller coordena as rotas e os models SQLite.
-import "./controllers/localServerController.mjs";
+import { requireSupportedNode } from "../scripts/dev-config.mjs";
+
+requireSupportedNode();
+await import("./controllers/localServerController.mjs");

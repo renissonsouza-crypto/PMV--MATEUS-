@@ -1,22 +1,45 @@
 // Service layer: comunicação HTTP entre as views e os controllers da API.
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Falha na comunicação com o servidor");
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...options,
+      signal: options?.signal ?? AbortSignal.timeout(15000),
+      headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
+    });
+  } catch {
+    throw new Error("Não foi possível acessar o servidor. Verifique a conexão e se o projeto está em execução.");
+  }
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Falha na comunicação com o servidor");
+  if (payload === null) throw new Error("O servidor retornou uma resposta inválida. Verifique se a API está em execução.");
   return payload as T;
 }
 
 export type StoredTestimonial = { id: number; name: string; role: string; course: string; quote: string; rating: number };
-export const getTestimonials = () => request<StoredTestimonial[]>("/testimonials");
-export const createTestimonial = (data: Omit<StoredTestimonial, "id">) =>
-  request<StoredTestimonial>("/testimonials", { method: "POST", body: JSON.stringify(data) });
-export const createRegistration = (data: Record<string, unknown>) =>
-  request<{ id: number; message: string }>("/registrations", { method: "POST", body: JSON.stringify(data) });
+function isTestimonial(value: unknown): value is StoredTestimonial {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as StoredTestimonial;
+  return isCourseId(entry.id) && [entry.name, entry.role, entry.course, entry.quote].every(text => typeof text === "string")
+    && Number.isInteger(entry.rating) && entry.rating >= 1 && entry.rating <= 5;
+}
+export const getTestimonials = async () => {
+  const data = await request<unknown>("/testimonials");
+  if (!Array.isArray(data) || !data.every(isTestimonial)) throw new Error("Resposta de depoimentos inválida");
+  return data;
+};
+export const createTestimonial = async (data: Omit<StoredTestimonial, "id">) => {
+  const result = await request<unknown>("/testimonials", { method: "POST", body: JSON.stringify(data) });
+  if (!isTestimonial(result)) throw new Error("Resposta de depoimento inválida");
+  return result;
+};
+export const createRegistration = async (data: Record<string, unknown>) => {
+  const result = await request<{ id: number; message: string }>("/registrations", { method: "POST", body: JSON.stringify(data) });
+  if (!isCourseId(result.id)) throw new Error("Resposta de cadastro inválida");
+  return result;
+};
 
-import { getUnsubscribeDeadline, isEnrollmentAllowed, removeCourseEnrollment } from './enrollmentPolicy.js';
+import { canUnsubscribeFromCourse, getUnsubscribeDeadline, isEnrollmentAllowed, removeCourseEnrollment } from './enrollmentPolicy.js';
 
 export type EnrolledCourse = {
   courseId: number;
@@ -40,27 +63,56 @@ export type UserProfile = {
   fotoPerfil?: string;
   enrolledCourseIds: number[];
   enrollments?: EnrolledCourse[];
+  enrollmentHistory?: Pick<EnrolledCourse, "courseId" | "enrolledAt">[];
 };
 
 const PROFILE_KEY = "qualificavix-profile";
 const FAVORITES_KEY = "qualificavix-favorite-courses";
+let cachedProfile: UserProfile | null = null;
+let profileSessionOnly = false;
+let useSessionProfile = false;
+let cachedFavorites: number[] = [];
+let favoritesSessionOnly = false;
+
+export const isProfileSessionOnly = () => profileSessionOnly;
+export const isFavoritesSessionOnly = () => favoritesSessionOnly;
+
+const isCourseId = (id: unknown): id is number => typeof id === "number" && Number.isSafeInteger(id) && id > 0;
+const profileText = (value: unknown) => typeof value === "string" ? value.trim() : "";
+
+function persistProfile(profile: UserProfile): UserProfile {
+  cachedProfile = profile;
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    useSessionProfile = false;
+    profileSessionOnly = false;
+  } catch {
+    // A API pode ter concluído o cadastro mesmo quando o navegador nega armazenamento.
+    useSessionProfile = true;
+    profileSessionOnly = true;
+  }
+  return profile;
+}
 
 export function getFavoriteCourseIds(): number[] {
+  if (favoritesSessionOnly) return [...cachedFavorites];
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]");
-    if (!Array.isArray(saved)) return [];
-    return [...new Set(saved.filter((id): id is number => Number.isSafeInteger(id) && id > 0))];
+    cachedFavorites = Array.isArray(saved) ? [...new Set(saved.filter(isCourseId))] : [];
+    return [...cachedFavorites];
   } catch {
-    return [];
+    return [...cachedFavorites];
   }
 }
 
 export function saveFavoriteCourseIds(courseIds: number[]) {
-  const validIds = [...new Set(courseIds.filter(id => Number.isSafeInteger(id) && id > 0))];
+  const validIds = [...new Set(courseIds.filter(isCourseId))];
+  cachedFavorites = validIds;
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(validIds));
+    favoritesSessionOnly = false;
   } catch {
-    // Favorites remain usable for the current session if browser storage is unavailable.
+    favoritesSessionOnly = true;
   }
   return validIds;
 }
@@ -70,17 +122,20 @@ function normalizeEnrollments(profile: Partial<UserProfile> | null | undefined):
   const map = new Map<number, EnrolledCourse>();
 
   for (const entry of existing) {
-    if (!entry || !Number.isFinite(entry.courseId)) continue;
-    const enrolledAt = entry.enrolledAt || new Date().toISOString();
+    if (!entry || !isCourseId(entry.courseId) || typeof entry.enrolledAt !== "string") continue;
+    const date = new Date(entry.enrolledAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const enrolledAt = date.toISOString();
     map.set(entry.courseId, {
       courseId: entry.courseId,
       enrolledAt,
-      unsubscribeDeadline: entry.unsubscribeDeadline || getUnsubscribeDeadline(enrolledAt) || new Date().toISOString(),
+      unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt)!,
     });
   }
 
-  for (const courseId of profile?.enrolledCourseIds ?? []) {
-    if (!Number.isFinite(courseId)) continue;
+  const legacyIds = Array.isArray(profile?.enrolledCourseIds) ? profile.enrolledCourseIds : [];
+  for (const courseId of legacyIds) {
+    if (!isCourseId(courseId)) continue;
     if (map.has(courseId)) continue;
     const enrolledAt = new Date().toISOString();
     map.set(courseId, {
@@ -93,36 +148,82 @@ function normalizeEnrollments(profile: Partial<UserProfile> | null | undefined):
   return [...map.values()].sort((a, b) => b.courseId - a.courseId);
 }
 
+function normalizeEnrollmentHistory(profile: Partial<UserProfile> | null, enrollments: EnrolledCourse[]) {
+  const history: Pick<EnrolledCourse, "courseId" | "enrolledAt">[] = [];
+  for (const entry of Array.isArray(profile?.enrollmentHistory) ? profile.enrollmentHistory : []) {
+    if (!entry || !isCourseId(entry.courseId) || typeof entry.enrolledAt !== "string") continue;
+    const date = new Date(entry.enrolledAt);
+    if (!Number.isNaN(date.getTime())) history.push({ courseId: entry.courseId, enrolledAt: date.toISOString() });
+  }
+  for (const enrollment of enrollments) {
+    if (!history.some(entry => entry.courseId === enrollment.courseId && entry.enrolledAt === enrollment.enrolledAt)) {
+      history.push({ courseId: enrollment.courseId, enrolledAt: enrollment.enrolledAt });
+    }
+  }
+  return history;
+}
+
 export function getUserProfile(): UserProfile | null {
+  if (useSessionProfile) return cachedProfile;
+  let saved: string | null;
   try {
-    const saved = localStorage.getItem(PROFILE_KEY);
-    if (!saved) return null;
-
-    const parsed = JSON.parse(saved) as UserProfile;
+    saved = localStorage.getItem(PROFILE_KEY);
+  } catch {
+    return cachedProfile;
+  }
+  if (!saved) {
+    cachedProfile = null;
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(saved);
+    if (!parsed || Array.isArray(parsed) || !isCourseId(parsed.id) ||
+        typeof parsed.nome !== "string" || !parsed.nome.trim() || typeof parsed.email !== "string") {
+      cachedProfile = null;
+      return null;
+    }
+    const enrollments = normalizeEnrollments(parsed);
     const normalized: UserProfile = {
-      ...parsed,
-      enrolledCourseIds: [...new Set(parsed.enrolledCourseIds ?? [])],
-      enrollments: normalizeEnrollments(parsed),
+      id: parsed.id,
+      nome: parsed.nome.trim(),
+      email: profileText(parsed.email),
+      telefone: profileText(parsed.telefone),
+      whatsapp: profileText(parsed.whatsapp),
+      cep: profileText(parsed.cep),
+      bairro: profileText(parsed.bairro),
+      rua: profileText(parsed.rua),
+      numero: profileText(parsed.numero),
+      complemento: profileText(parsed.complemento),
+      escolaridade: profileText(parsed.escolaridade),
+      situacaoEmprego: profileText(parsed.situacaoEmprego),
+      fotoPerfil: typeof parsed.fotoPerfil === "string" ? parsed.fotoPerfil : undefined,
+      enrolledCourseIds: enrollments.map(entry => entry.courseId),
+      enrollments,
+      enrollmentHistory: normalizeEnrollmentHistory(parsed, enrollments),
     };
-
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized));
+    cachedProfile = normalized;
+    if (JSON.stringify(normalized) !== saved) persistProfile(normalized);
     return normalized;
   } catch {
+    cachedProfile = null;
     return null;
   }
 }
 
 export function saveUserProfile(data: Record<string, unknown>, id: number, courseId?: number) {
+  if (!isCourseId(id) || !profileText(data.nome) || !profileText(data.email)) throw new Error("Dados do perfil inválidos");
   const previous = getUserProfile();
-  const existingEnrollments = normalizeEnrollments(previous);
+  const sameProfile = previous?.id === id ? previous : null;
+  const existingEnrollments = normalizeEnrollments(sameProfile);
+  const enrolledAt = new Date().toISOString();
 
-  const nextEnrollments = courseId
+  const nextEnrollments = isCourseId(courseId)
     ? [
         ...existingEnrollments.filter(entry => entry.courseId !== courseId),
         {
           courseId,
-          enrolledAt: new Date().toISOString(),
-          unsubscribeDeadline: getUnsubscribeDeadline(new Date().toISOString()) || new Date().toISOString(),
+          enrolledAt,
+          unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt)!,
         },
       ]
     : existingEnrollments;
@@ -130,31 +231,33 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
   const enrolledCourseIds = [...new Set(nextEnrollments.map(entry => entry.courseId))];
   const profile: UserProfile = {
     id,
-    nome: String(data.nome ?? ""),
-    email: String(data.email ?? ""),
-    telefone: String(data.telefone ?? ""),
-    whatsapp: String(data.whatsapp ?? ""),
-    cep: String(data.cep ?? ""),
-    bairro: String(data.bairro ?? ""),
-    rua: String(data.rua ?? ""),
-    numero: String(data.numero ?? ""),
-    complemento: String(data.complemento ?? ""),
-    escolaridade: String(data.escolaridade ?? ""),
-    situacaoEmprego: String(data.situacaoEmprego ?? ""),
-    fotoPerfil: previous?.fotoPerfil,
+    nome: profileText(data.nome),
+    email: profileText(data.email).toLowerCase(),
+    telefone: profileText(data.telefone),
+    whatsapp: profileText(data.whatsapp),
+    cep: profileText(data.cep),
+    bairro: profileText(data.bairro),
+    rua: profileText(data.rua),
+    numero: profileText(data.numero),
+    complemento: profileText(data.complemento),
+    escolaridade: profileText(data.escolaridade),
+    situacaoEmprego: profileText(data.situacaoEmprego),
+    fotoPerfil: sameProfile?.fotoPerfil,
     enrolledCourseIds,
     enrollments: nextEnrollments,
+    enrollmentHistory: normalizeEnrollmentHistory(sameProfile, nextEnrollments),
   };
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  return profile;
+  return persistProfile(profile);
 }
 
 export function enrollUserInCourse(courseId: number) {
   const profile = getUserProfile();
   if (!profile) return null;
+  if (!isCourseId(courseId)) return profile;
 
   const existingEnrollments = normalizeEnrollments(profile);
-  const monthlyCheck = isEnrollmentAllowed(existingEnrollments, courseId, new Date());
+  const history = normalizeEnrollmentHistory(profile, existingEnrollments);
+  const monthlyCheck = isEnrollmentAllowed(existingEnrollments, courseId, new Date(), history);
 
   if (monthlyCheck.reason === 'duplicate') {
     return profile;
@@ -179,9 +282,9 @@ export function enrollUserInCourse(courseId: number) {
         unsubscribeDeadline: getUnsubscribeDeadline(enrolledAt) || enrolledAt,
       },
     ],
+    enrollmentHistory: [...history, { courseId, enrolledAt }],
   };
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
-  return nextProfile;
+  return persistProfile(nextProfile);
 }
 
 export function removeUserEnrollmentFromCourse(courseId: number) {
@@ -189,6 +292,10 @@ export function removeUserEnrollmentFromCourse(courseId: number) {
   if (!profile) return null;
 
   const existingEnrollments = normalizeEnrollments(profile);
+  const enrollment = existingEnrollments.find(entry => entry.courseId === courseId);
+  if (!enrollment || !canUnsubscribeFromCourse(enrollment)) {
+    return { ...profile, unsubscribeBlocked: true as const };
+  }
   const updatedEnrollments = removeCourseEnrollment(existingEnrollments, courseId);
   const nextProfile = {
     ...profile,
@@ -196,25 +303,33 @@ export function removeUserEnrollmentFromCourse(courseId: number) {
     enrollments: updatedEnrollments,
   };
 
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
-  return nextProfile;
+  return persistProfile(nextProfile);
 }
 
 export function updateUserProfile(updates: Partial<UserProfile>) {
   const profile = getUserProfile();
   if (!profile) return null;
   const enrollments = normalizeEnrollments(profile);
-  const updated: UserProfile = { ...profile, ...updates, id: profile.id, enrolledCourseIds: profile.enrolledCourseIds, enrollments };
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
-  return updated;
+  const updated: UserProfile = {
+    ...profile, ...updates, id: profile.id, enrolledCourseIds: profile.enrolledCourseIds, enrollments,
+    enrollmentHistory: normalizeEnrollmentHistory(profile, enrollments),
+  };
+  return persistProfile(updated);
 }
 
 export function logoutUserProfile() {
+  cachedProfile = null;
+  cachedFavorites = [];
+  profileSessionOnly = false;
+  useSessionProfile = true;
+  favoritesSessionOnly = true;
   try {
     localStorage.removeItem(PROFILE_KEY);
+    useSessionProfile = false;
+  } catch { /* Não restaurar o perfil antigo se a remoção for negada. */ }
+  try {
     localStorage.removeItem(FAVORITES_KEY);
-  } catch {
-    // Logout should still work even if browser storage is unavailable.
-  }
+    favoritesSessionOnly = false;
+  } catch { /* Favoritos também são limpos para esta sessão. */ }
   return null;
 }
