@@ -18,12 +18,12 @@ A base cobre exploração e escolha de cursos, filtros, modalidades, status, gra
 | Limite mensal e prazo exato para cancelamento | `src/app/services/enrollmentPolicy.js` |
 | Perfil, histórico, favoritos, saída e armazenamento local | `src/app/services/api.ts` |
 | Termos, privacidade e exclusão dos dados enviados | `src/app/components/PlatformPolicy.tsx` |
-| Catálogo e dados de cada formação | `src/app/data/courses.ts` |
+| Catálogo e dados de cada formação | `shared/courses.mjs`, `src/app/data/courses.ts` |
 | Fichas, busca, inscrições, depoimentos e controles visuais | `src/app/views/AppView.tsx` |
 | Preferências de leitura | `src/app/controllers/useAppController.ts` |
 | Canais oficiais e configurações públicas de contato | `src/app/models/platformContact.ts` |
 
-O cadastro pessoal e os depoimentos são enviados ao serviço; inscrições em cursos, perfil, foto e favoritos ficam no navegador. Editar o perfil não atualiza o cadastro remoto e Sair não exclui registros enviados à API. Não há login por senha, sincronização entre dispositivos, recuperação por e-mail ou emissão de certificados. A preferência de notificações não comprova envio de mensagens: o projeto não implementa um serviço automático de e-mail ou WhatsApp.
+O cadastro pessoal e os depoimentos são enviados ao serviço. Novas inscrições ficam pendentes até confirmar o link pessoal enviado por Resend, válido por 24 horas; confirmações e cancelamentos são registrados no servidor. O link permite abrir o perfil do destinatário em outro navegador, mas não transfere fotos, favoritos ou memória do chat. Editar o perfil ainda não atualiza o cadastro remoto e Sair não exclui inscrições confirmadas. Não há login por senha nem emissão de certificados. A mensagem de confirmação é operacional e independe da preferência opcional por novidades; não há campanhas automáticas de notícias ou WhatsApp.
 
 O limite é de três inscrições realizadas por mês do calendário UTC, incluindo canceladas. O cancelamento é permitido por três dias corridos (72 horas) após a inscrição, até o instante final do prazo. A comparação mensal não usa uma janela móvel de 30 dias. Uma nova inscrição após cancelamento também conta para o limite.
 

@@ -1,3 +1,4 @@
+import { postgresEnrollmentSchema } from "../models/enrollmentSchema.mjs";
 import { neon } from "@neondatabase/serverless";
 
 // Configuração de infraestrutura; os models consomem esta conexão.
@@ -41,6 +42,7 @@ export function ensurePostgresSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE(registration_id, course_id)
       )`;
+      for (const statement of postgresEnrollmentSchema) await sql.query(statement);
     })().catch(error => { schemaPromise = undefined; throw error; });
   }
   return schemaPromise;

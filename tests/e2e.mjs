@@ -16,7 +16,11 @@ const isOptionalResource = url => {
 };
 
 async function navigate(page, label) {
-  await page.locator("header").getByRole("button", { name: label, exact: true }).first().click();
+  const mobile = page.getByRole("button", { name: "Abrir menu", exact: true });
+  if (await mobile.isVisible()) {
+    await mobile.click();
+    await page.getByRole("dialog", { name: "Menu", exact: true }).getByRole("button", { name: label, exact: true }).first().click();
+  } else await page.locator("header").getByRole("button", { name: label, exact: true }).first().click();
 }
 async function catalog(page) {
   await navigate(page, "Cursos");
@@ -37,6 +41,7 @@ async function openCourse(page, title) {
   await page.getByRole("heading", { name: title, exact: true }).waitFor();
 }
 async function seedProfile(page, profile) {
+  environment.seedRegistration(profile);
   await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: PROFILE_KEY, value: profile });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
@@ -46,6 +51,25 @@ async function openProfile(page) {
   await page.getByRole("button", { name: /Abrir perfil de/i }).first().click();
   await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
 }
+async function confirmLatestEmail(page, email) {
+  await page.waitForFunction(() => document.body.innerText.includes("Confirmação enviada por e-mail"));
+  const message = environment.emails.filter(item => !email || item.to.includes(email)).at(-1);
+  assert(message, "The mail provider must accept a confirmation email");
+  assert.equal((message.html.match(/<a /g) || []).length, 1, "Email must have a single confirmation button");
+  assert.match(message.html, /Grade curricular/);
+  const token = message.html.match(/#confirm-enrollment=([a-f0-9]{64})/)?.[1];
+  assert(token);
+  await page.goto(`${environment.baseURL}/#confirm-enrollment=${token}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Inscrição confirmada!", exact: true }).waitFor();
+  assert.equal(new URL(page.url()).hash, "", "Token must be removed from browser history");
+}
+async function requestAndConfirm(page, title) {
+  await page.getByRole("button", { name: "Enviar e-mail de confirmação", exact: true }).click();
+  await confirmLatestEmail(page);
+  await page.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
+  await openCourse(page, title);
+}
+
 async function fillPersonalData(page, overrides = {}) {
   const values = { nome: "Pessoa Teste Navegador", cpf: "529.982.247-25", dataNascimento: "1990-01-01", telefone: "27999999999", email: "registration-browser@example.test", emailConfirm: "registration-browser@example.test", ...overrides };
   for (const [name, value] of Object.entries(values)) await page.locator(`[name="${name}"]`).fill(value);
@@ -280,7 +304,9 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
     page.getByRole("button", { name: "Concluir cadastro", exact: true }).click(),
   ]);
   assert.equal(response.status(), 201, await response.text());
-  await page.getByRole("heading", { name: "Cadastro realizado!", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Falta confirmar sua inscrição", exact: true }).waitFor();
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [], "Course signup must remain pending before the email click");
+  await confirmLatestEmail(page, "registration-browser@example.test");
   const profile = await storedProfile(page);
   assert.equal(profile.nome, "Pessoa Teste Navegador");
   assert.deepEqual(profile.enrolledCourseIds, [1]);
@@ -392,7 +418,7 @@ test("inscrição: confirmação, edição do perfil e desistência dentro do pr
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await page.locator("main").getByRole("button", { name: "Voltar", exact: true }).click();
   await page.getByRole("heading", { name: "Confirmar inscrição", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Confirmar inscrição", exact: true }).click();
+  await requestAndConfirm(page, courseTitles[1]);
   await page.getByRole("button", { name: "Desinscrever-se", exact: true }).waitFor();
   assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [2]);
   page.once("dialog", dialog => dialog.accept());
@@ -406,7 +432,7 @@ test("inscrição: três cursos por mês bloqueiam o quarto", async page => {
   for (const id of [1, 2, 3]) {
     await openCourse(page, courseTitles[id - 1]);
     await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
-    await page.getByRole("button", { name: "Confirmar inscrição", exact: true }).click();
+    await requestAndConfirm(page, courseTitles[id - 1]);
     await page.getByRole("button", { name: "Desinscrever-se", exact: true }).waitFor();
   }
   await openCourse(page, courseTitles[3]);
@@ -430,6 +456,45 @@ test("inscrição: três cursos por mês bloqueiam o quarto", async page => {
   await Promise.all([page.getByRole("button", { name: "Inscrever-se", exact: true }).click(), afterCancellation]);
   assert.deepEqual((await storedProfile(page)).enrolledCourseIds.toSorted((a, b) => a - b), [1, 2]);
 });
+
+test("inscrição: falha no e-mail permite reenvio e confirmação em outro navegador", async page => {
+  await seedProfile(page, profileFixture());
+  await openCourse(page, courseTitles[0]);
+  await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
+  environment.failNextEmail();
+  await page.getByRole("button", { name: "Enviar e-mail de confirmação", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: /Não foi possível enviar o e-mail/i }).waitFor();
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, []);
+  assert.equal(environment.confirmedEnrollments(1000).length, 0);
+  await page.getByRole("button", { name: "Enviar e-mail de confirmação", exact: true }).click();
+  await page.getByRole("status").getByText("Confirmação enviada por e-mail", { exact: true }).waitFor();
+  const message = environment.emails.filter(item => item.to.includes("browser@example.test")).at(-1);
+  const token = message.html.match(/#confirm-enrollment=([a-f0-9]{64})/)[1];
+  const context = await page.context().browser().newContext({ viewport: { width: 390, height: 700 } });
+  try {
+    await environment.prepareContext(context);
+    const other = await context.newPage();
+    // Loading the site alone cannot finalize the pending enrollment.
+    await other.goto(environment.baseURL, { waitUntil: "domcontentloaded" });
+    assert.equal(environment.confirmedEnrollments(1000).length, 0);
+    await other.goto(`${environment.baseURL}/#confirm-enrollment=${token}`, { waitUntil: "domcontentloaded" });
+    await other.getByRole("heading", { name: "Inscrição confirmada!", exact: true }).waitFor();
+    // A second email opened in the same tab must confirm its own course.
+    const second = await other.request.post(`${environment.apiURL}/api/enrollments`, { data: { action: "request", registrationId: 1000, email: "browser@example.test", courseId: 2 } });
+    assert.equal(second.status(), 202);
+    const secondToken = environment.emails.at(-1).html.match(/#confirm-enrollment=([a-f0-9]{64})/)[1];
+    await other.goto(`${environment.baseURL}/#confirm-enrollment=${secondToken}`, { waitUntil: "domcontentloaded" });
+    await other.getByRole("status").filter({ hasText: /Sua inscrição em Excel do Básico ao Avançado foi finalizada/ }).waitFor();
+    await other.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
+    await other.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
+    assert.equal(await other.getByLabel("E-mail", { exact: true }).inputValue(), "browser@example.test");
+    assert.equal(environment.confirmedEnrollments(1000).length, 2);
+    await page.bringToFront();
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).enrolledCourseIds.includes(1), PROFILE_KEY);
+    assert.equal((await storedProfile(page)).pendingEnrollments.length, 0);
+  } finally { await context.close(); }
+}, { enrollmentFailures: true });
 
 test("inscrição: desistência encerrada permanece inscrita", async page => {
   const profile = profileFixture();
@@ -867,7 +932,7 @@ let browser;
 try {
   browser = await chromium.launch({ executablePath: findBrowserExecutable(), headless: true });
   console.log(`TEST_URL\t${environment.baseURL}`);
-  console.log("TEST_ISOLATION\tAPI real, SQLite temporário e ViaCEP determinístico; dados locais preservados");
+  console.log("TEST_ISOLATION\tAPI real, SQLite temporário, ViaCEP e e-mail locais; dados locais preservados");
   for (const item of tests) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, baseURL: environment.baseURL, reducedMotion: "reduce" });
     const errors = [];
@@ -887,12 +952,14 @@ try {
       page.on("console", message => {
         if (message.type() !== "error") return;
         const url = message.location().url;
+        if (item.options.enrollmentFailures && url.includes("/api/enrollments") && /Failed to load resource/.test(message.text())) return;
         if (item.options.registrationFailures && url.includes("/api/registrations") && /Failed to load resource/.test(message.text())) return;
         if (isOptionalResource(url) && /Failed to load resource/.test(message.text())) optionalResources.add(`${message.text()} ${url}`);
         else errors.push(message.text());
       });
       page.on("response", response => {
         if (response.status() < 400) return;
+        if (item.options.enrollmentFailures && new URL(response.url()).pathname === "/api/enrollments" && response.status() === 503) return;
         if (item.options.registrationFailures && new URL(response.url()).pathname === "/api/registrations" && [409, 500, 503].includes(response.status())) return;
         if (isOptionalResource(response.url())) optionalResources.add(`${response.status()} ${response.url()}`);
         else errors.push(`HTTP ${response.status()} ${response.url()}`);

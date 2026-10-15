@@ -11,6 +11,7 @@ let healthValue = 1;
 const sql = async (parts, ...params) => {
   const query = parts.join("?");
   if (failDatabase) throw new Error("postgresql://private-user:private-password@private-host/database");
+  if (/CREATE INDEX/.test(query)) return [];
   if (/CREATE TABLE/.test(query)) {
     schemaCalls++;
     if (failNextSchema) { failNextSchema = false; throw new Error("transient schema connection failure"); }
@@ -37,6 +38,7 @@ const sql = async (parts, ...params) => {
   if (/SELECT id, name, role, course, quote, rating FROM testimonials/.test(query)) return [...rows.testimonials].reverse();
   throw new Error(`SQL não esperado no teste: ${query}`);
 };
+sql.query = query => sql([query]);
 globalThis.__qualificaVixTestSql = sql;
 const hooks = registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -64,7 +66,7 @@ try {
   assert.ok(initial.every(result => result.status === "rejected"));
   assert.equal(schemaCalls, 1, "Falhas concorrentes devem compartilhar a tentativa de schema");
   await Promise.all([ensurePostgresSchema(), ensurePostgresSchema()]);
-  assert.equal(schemaCalls, 4, "Schema deve tentar novamente depois de falha transitória");
+  assert.equal(schemaCalls, 6, "Schema deve tentar novamente depois de falha transitória");
   const [{ default: registration }, { default: testimonials }, { default: health }] = await Promise.all([
     import("../api/registrations.mjs"), import("../api/testimonials.mjs"), import("../api/health.mjs"),
   ]);
@@ -159,7 +161,7 @@ try {
   delete process.env.DATABASE_URL;
   delete process.env.POSTGRES_URL;
   assert.equal((await call(health, "GET")).code, 503, "Conexão não configurada deve retornar resposta segura");
-  assert.equal(schemaCalls, 4, "Schema concluído deve ser reutilizado durante a instância");
+  assert.equal(schemaCalls, 6, "Schema concluído deve ser reutilizado durante a instância");
   console.log("✓ serverless: contratos HTTP, models PostgreSQL isolados, retry de schema e falhas seguras sem acesso ao banco real");
 } finally {
   hooks.deregister();

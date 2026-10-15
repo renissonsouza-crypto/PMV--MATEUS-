@@ -1,3 +1,4 @@
+import { EnrollmentEmailRequest, EnrollmentEmailConfirmation } from "../components/EnrollmentEmail";
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { RegisterPage } from "./RegisterView";
@@ -6,7 +7,7 @@ import { TortuguitaChat } from "../components/TortuguitaChat";
 import { HomeHeroBackground } from "../components/HomeHeroBackground";
 import { COURSES } from "../data/courses";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
-import { createTestimonial, enrollUserInCourse, getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, removeUserEnrollmentFromCourse, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
+import { createTestimonial, cancelConfirmedEnrollment, syncPendingEnrollments, getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
 import { canUnsubscribeFromCourse, countEnrollmentsInCurrentMonth, formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
 import { useAppController } from "../controllers/useAppController";
 import { isValidBrazilianPhone, lookupVitoriaCep } from "../services/registrationValidation";
@@ -1961,7 +1962,7 @@ function resizeProfilePhoto(file: File): Promise<string> {
   });
 }
 
-function CourseEnrollmentPage({ course, profile, onBack, onConfirm, onEditProfile }: { course: Course; profile: UserProfile; onBack: () => void; onConfirm: () => void; onEditProfile: () => void }) {
+function CourseEnrollmentPage({ course, profile, onBack, onProfileUpdated, onEditProfile }: { course: Course; profile: UserProfile; onBack: () => void; onProfileUpdated: (profile: UserProfile) => void; onEditProfile: () => void }) {
   const address = [profile.rua, profile.numero, profile.complemento, profile.bairro, profile.cep].filter(Boolean).join(", ");
   const savedDetails = [
     { label: "Nome", value: profile.nome },
@@ -1980,7 +1981,7 @@ function CourseEnrollmentPage({ course, profile, onBack, onConfirm, onEditProfil
         <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8">
           <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orangeDark }}>Inscrição simplificada</p>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Confirmar inscrição</h1>
-          <p className="text-sm text-slate-500 mb-6">Vamos usar os dados do seu perfil salvo. Não é necessário preencher outro cadastro.</p>
+          <p className="text-sm text-slate-500 mb-6">Confira seus dados e solicite o e-mail. A inscrição só será finalizada quando você clicar no botão de confirmação recebido.</p>
           <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 mb-6">
             <p className="text-xs font-bold text-blue-700 mb-1">Curso selecionado</p>
             <p className="font-black text-slate-900">{course.title}</p>
@@ -1998,9 +1999,7 @@ function CourseEnrollmentPage({ course, profile, onBack, onConfirm, onEditProfil
               </div>
             ))}
           </dl>
-          <button onClick={onConfirm} className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3.5 font-black text-slate-950 shadow-md hover:brightness-105 transition-all" style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}>
-            Confirmar inscrição <ArrowRight className="w-5 h-5" />
-          </button>
+          <EnrollmentEmailRequest courseId={course.id} profile={profile} onProfileUpdated={onProfileUpdated} />
         </section>
       </div>
     </div>
@@ -2136,6 +2135,14 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
             </div>
           </div>
 
+          {!!profile.pendingEnrollments?.length && <section className="mb-6 space-y-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <h2 className="text-base font-bold text-slate-900">Inscrições aguardando confirmação por e-mail</h2>
+            {profile.pendingEnrollments.map(pending => <div key={pending.requestId} className="space-y-2">
+              <p className="font-semibold text-slate-800">{courses.find(course => course.id === pending.courseId)?.title ?? "Curso"}</p>
+              <EnrollmentEmailRequest courseId={pending.courseId} profile={profile} onProfileUpdated={onProfileUpdated} />
+            </div>)}
+          </section>}
+
           <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2 mb-6">
             <button type="button" onClick={() => setActiveTab("dados")} className={`px-4 py-2 rounded-xl text-sm font-black transition-colors ${activeTab === "dados" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
               Dados do perfil
@@ -2255,6 +2262,32 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [returnToEnrollmentConfirmation, setReturnToEnrollmentConfirmation] = useState(false);
   const [registrationCourseId, setRegistrationCourseId] = useState<number | undefined>();
+  const [confirmationToken, setConfirmationToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("confirm-enrollment"));
+  useEffect(() => {
+    const receiveLink = () => {
+      const token = new URLSearchParams(window.location.hash.slice(1)).get("confirm-enrollment");
+      if (token) setConfirmationToken(token);
+    };
+    window.addEventListener("hashchange", receiveLink);
+    return () => window.removeEventListener("hashchange", receiveLink);
+  }, []);
+  useEffect(() => {
+    if (!profile?.pendingEnrollments?.length) return;
+    let disposed = false;
+    let syncing = false;
+    const sync = async () => {
+      if (syncing || document.hidden) return;
+      syncing = true;
+      try { const next = await syncPendingEnrollments(); if (!disposed && next) setProfile(next); }
+      catch { /* Keep pending requests visible; a later focus or refresh can retry. */ }
+      finally { syncing = false; }
+    };
+    void sync();
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", sync);
+    const interval = window.setInterval(sync, 30000);
+    return () => { disposed = true; clearInterval(interval); window.removeEventListener("focus", sync); document.removeEventListener("visibilitychange", sync); };
+  }, [profile?.id, profile?.pendingEnrollments?.map(item => item.requestId).join(",")]);
   const [catalogRequest, setCatalogRequest] = useState<CatalogRequest | null>(null);
   const navigate = (destination: Page) => {
     if (destination === "register" || (destination === "profile" && !profile)) setRegistrationCourseId(undefined);
@@ -2314,42 +2347,13 @@ export default function App() {
     setRegistrationCourseId(profile ? undefined : course.id);
     navigatePage(profile ? "enrollment-confirmation" : "register");
   };
-  const handleConfirmCourseEnrollment = () => {
-    if (!selectedCourse || selectedCourse.status === "coming-soon") return;
-    if (!profile) {
-      setRegistrationCourseId(selectedCourse.id);
-      navigatePage("register");
-      return;
-    }
-
-    if (profile && profile.enrolledCourseIds.includes(selectedCourse.id)) {
-      alert("Você já está inscrito neste curso e não pode se inscrever novamente.");
-      navigate("course-detail");
-      return;
-    }
-
-    if (profile && getMonthlyEnrollmentCount(profile) >= 3) {
-      alert("Você pode cadastrar até 3 cursos por mês. Para fazer novas inscrições, aguarde o próximo mês.");
-      navigate("course-detail");
-      return;
-    }
-
-    const updatedProfile = enrollUserInCourse(selectedCourse.id);
-    if (updatedProfile && (updatedProfile as UserProfile & { enrollmentLimitReached?: boolean }).enrollmentLimitReached) {
-      alert("Você pode cadastrar até 3 cursos por mês. Para fazer novas inscrições, aguarde o próximo mês.");
-      navigate("course-detail");
-      return;
-    }
-
-    if (updatedProfile) setProfile(updatedProfile);
-    navigate("course-detail");
-  };
-
-  const handleUnsubscribeCourse = (courseId: number) => {
+  const handleUnsubscribeCourse = async (courseId: number) => {
     const confirmed = window.confirm("Tem certeza que deseja desinscrever-se deste curso? Esta ação removerá o curso da aba de cursos cadastrados.");
     if (!confirmed) return;
 
-    const updatedProfile = removeUserEnrollmentFromCourse(courseId);
+    let updatedProfile;
+    try { updatedProfile = await cancelConfirmedEnrollment(courseId); }
+    catch (error) { alert(error instanceof Error ? error.message : "Não foi possível cancelar a inscrição."); return; }
     if (updatedProfile && "unsubscribeBlocked" in updatedProfile && updatedProfile.unsubscribeBlocked) {
       alert("O prazo para cancelar esta inscrição já terminou.");
       return;
@@ -2416,7 +2420,9 @@ export default function App() {
         html.qualificavix-dark [class*="shadow"] { --tw-shadow-color: rgba(0,0,0,.45); }
       `}</style>
       <div className="min-h-screen bg-white" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
-        {registrationMode ? (
+        {confirmationToken ? (
+          <EnrollmentEmailConfirmation key={confirmationToken} token={confirmationToken} onProfileUpdated={setProfile} onOpenProfile={() => { setConfirmationToken(null); navigate("profile"); }} onHome={() => { setConfirmationToken(null); navigate("home"); }} />
+        ) : registrationMode ? (
           <RegisterPage dark={darkMode} onOpenProfile={() => navigate("profile")} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
         ) : (
           <>
@@ -2438,7 +2444,7 @@ export default function App() {
               {page === "favorites" && <FavoritesPage favoriteCourseIds={favoriteCourseIds} onToggleFavorite={handleToggleFavorite} onViewCourse={handleViewCourse} navigate={navigate} />}
               {page === "enrollment-confirmation" && selectedCourse && profile && (
                 <CourseEnrollmentPage course={selectedCourse} profile={profile} onBack={() => navigate("course-detail")}
-                  onConfirm={handleConfirmCourseEnrollment} onEditProfile={handleEditProfileForEnrollment} />
+                  onProfileUpdated={setProfile} onEditProfile={handleEditProfileForEnrollment} />
               )}
               {page === "course-detail" && selectedCourse && (
                 <CourseDetailPage course={selectedCourse} navigate={navigate} onRegister={handleRegisterFromCourse}
