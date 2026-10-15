@@ -319,6 +319,8 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   assert.equal(persisted.email, "registration-browser@example.test");
   const payload = JSON.parse(persisted.payload);
   assert.equal(payload.dataNascimento, '1990-08-25');
+  assert.equal(payload.policyReceipt.version, '2026-10-15.1');
+  assert(payload.policyReceipt.policies.privacy.paragraphs.length > 0);
   assert.equal(payload.numero, '');
   assert.equal(payload.autorizaDados, true);
   assert.equal(payload.possuiDeficiencia, "sim");

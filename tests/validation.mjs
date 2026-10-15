@@ -75,3 +75,14 @@ for (const numero of ['', undefined, 'Sem número']) {
   assert.equal(result.error, undefined, 'Address number is optional on the server');
   assert.equal(result.data.numero, numero ?? '');
 }
+
+
+const { POLICY_VERSION, PLATFORM_POLICIES } = await import('../shared/policies.mjs');
+const receiptResult = validateRegistration({ ...adult, policyVersion: POLICY_VERSION, policyReceipt: { version: 'forged', acceptedAt: '2000-01-01', policies: {} } });
+assert.equal(receiptResult.error, undefined);
+assert.equal(receiptResult.data.policyReceipt.version, POLICY_VERSION);
+assert.deepEqual(receiptResult.data.policyReceipt.policies, PLATFORM_POLICIES);
+assert(Number.isFinite(Date.parse(receiptResult.data.policyReceipt.acceptedAt)));
+assert.match(validateRegistration({ ...adult, policyVersion: 'outdated' }).error, /termos foram atualizados/);
+
+assert.equal(validateRegistration({ ...adult, policyReceipt: { version: POLICY_VERSION } }).data.policyReceipt, undefined, "Legacy clients cannot fabricate a versioned consent receipt");

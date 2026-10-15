@@ -165,3 +165,16 @@ A sessão Google usa cookie HttpOnly e seu hash fica em `profile_sessions`, com 
 Os testes usam JWTs assinados com chaves locais e um provedor isolado/injetado; não usam uma conta Google real. A validação final do OAuth publicado exige as credenciais e a URI de redirecionamento configuradas no Google Cloud.
 
 No formulário, nascimento usa digitação `DD/MM/AAAA`, máscara automática e teclado numérico no celular; a API continua recebendo `AAAA-MM-DD` e rejeita datas inexistentes ou futuras. O número do endereço é opcional tanto no formulário quanto na validação dos dois bancos; vazio é armazenado como string vazia.
+
+
+## Termos de proteção de dados no e-mail
+
+Ao concluir o cadastro iniciado por um curso, a interface solicita automaticamente o e-mail para o endereço salvo no servidor. A confirmação tem um único botão, informações do catálogo (inclusive grade e local, quando disponível) e os textos completos de Termos de uso, Política de privacidade e Informações sobre dados pessoais. O cadastro geral sem curso não inventa uma inscrição; o aluno precisa escolher um curso para receber esse e-mail.
+
+Os textos exibidos no site e usados no e-mail vêm de `shared/policies.mjs`. O formulário identifica a versão exibida e o servidor valida essa versão e os consentimentos, ignora cópias enviadas pelo cliente e grava uma cópia dos textos com versão e horário no payload do cadastro. Formulários de uma versão diferente precisam ser recarregados. Ao modificar os textos, altere também `POLICY_VERSION`; não reescreva comprovantes já armazenados. Essa informação é um registro técnico do aceite recebido, não uma certificação jurídica de conformidade.
+
+O envio usa a cópia armazenada no cadastro, mesmo após futuras atualizações dos termos. Cadastros antigos, ou clientes antigos sem identificação da versão, recebem os textos atuais **identificados como consulta**, sem afirmar que esses textos foram os aceitos originalmente. O e-mail informa se os consentimentos obrigatórios constam no registro, mas não inclui CPF, endereço residencial, dados de renda ou acessibilidade. Marketing continua opcional.
+
+O servidor acessa Resend por HTTPS com validação TLS padrão, timeout e rejeição de redirecionamentos; produção exige URL pública HTTPS para o link. Tokens aleatórios de 256 bits, hashes no banco, expiração de 24 horas e uso único protegem a confirmação. Não há garantia de segurança absoluta nem criptografia ponta a ponta do e-mail: Resend e os serviços de correio envolvidos processam a mensagem, e a proteção até a caixa postal depende deles. Configure domínio remetente verificado, SPF/DKIM/DMARC, controle de acesso aos segredos e monitore entregas sem registrar tokens ou conteúdo sensível.
+
+Para ativar o envio real ainda são necessários `RESEND_API_KEY`, `MAIL_FROM` e `APP_BASE_URL` no servidor. Sem configuração, a interface mostra o erro, preserva o perfil e não finaliza a inscrição. Aceitação pelo provedor não garante chegada na caixa de entrada; valide a entrega com uma conta própria depois da implantação. Os testes automatizados não enviam mensagens reais.

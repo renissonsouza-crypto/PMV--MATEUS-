@@ -1,3 +1,4 @@
+import { policyReceipt, POLICY_VERSION } from "../../shared/policies.mjs";
 // Regras de domínio compartilhadas pelos bancos local e de produção.
 export const clean = (value, max = 500) => String(value ?? "").trim().slice(0, max);
 
@@ -35,6 +36,7 @@ export function ageFromBirthDate(value) {
 
 export function validateRegistration(input) {
   const data = typeof input === "object" && input && !Array.isArray(input) ? input : {};
+  if (data.policyVersion !== undefined && data.policyVersion !== POLICY_VERSION) return { error: "Os termos foram atualizados. Recarregue a página, leia os termos e confirme novamente." };
   const limits = {
     nome: 120, cpf: 14, email: 180, telefone: 30, dataNascimento: 10, bairro: 120,
     cep: 9, rua: 160, numero: 160, complemento: 160, nomeResponsavel: 160,
@@ -79,6 +81,9 @@ export function validateRegistration(input) {
   for (const key of consents) if (data[key] !== undefined) sanitized[key] = data[key];
   if (data.quaisBeneficios !== undefined) sanitized.quaisBeneficios = data.quaisBeneficios.map(value => value.trim());
   sanitized.menorDeIdade = age < 18;
+  // Only claim a versioned receipt when the form identifies the displayed version.
+  // Legacy clients remain compatible, without inventing evidence of the text they saw.
+  if (data.policyVersion === POLICY_VERSION) sanitized.policyReceipt = policyReceipt();
   return { data: sanitized, age };
 }
 

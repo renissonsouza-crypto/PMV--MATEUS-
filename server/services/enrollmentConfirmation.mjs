@@ -21,6 +21,12 @@ export function enrollmentService(repository, { send = sendCourseEmail, configur
       configuration();
       const person = await repository.registration(input.registrationId);
       if (!person || person.email.trim().toLowerCase() !== input.email.trim().toLowerCase()) throw fail('Não foi possível localizar o perfil com este e-mail. Use o e-mail informado no cadastro.', 404);
+      const registration = typeof person.payload === 'string' ? JSON.parse(person.payload) : person.payload;
+      const consent = {
+        receipt: registration?.policyReceipt ?? null,
+        dataAuthorized: registration?.autorizaDados === true,
+        termsAccepted: registration?.aceitaTermos === true,
+      };
       const token = newToken();
       const statusToken = newToken();
       const row = {
@@ -30,7 +36,7 @@ export function enrollmentService(repository, { send = sendCourseEmail, configur
       };
       await repository.createRequest(row);
       try {
-        await send({ to: person.email, name: person.name, course, token, requestId: row.id });
+        await send({ to: person.email, name: person.name, course, token, consent, requestId: row.id });
         await repository.delivery(row.id, 'sent');
       } catch (error) {
         await repository.delivery(row.id, 'failed').catch(() => {});

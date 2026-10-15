@@ -1,3 +1,4 @@
+import { POLICY_VERSION } from "../../../shared/policies.mjs";
 import { GoogleLoginButton } from "../components/GoogleLogin";
 import { EnrollmentEmailRequest } from "../components/EnrollmentEmail";
 import { useEffect, useRef, useState } from "react";
@@ -306,6 +307,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
     try {
       const registration = {
         ...data,
+        policyVersion: POLICY_VERSION,
         menorDeIdade,
         ...(menorDeIdade ? {} : { nomeResponsavel: "", cpfResponsavel: "", grauParentesco: "", telefoneResponsavel: "" }),
         ...(data.possuiDeficiencia === "sim" ? {} : { tiposDeficiencia: "", necessitaAdaptacao: "", tiposAdaptacao: "" }),
