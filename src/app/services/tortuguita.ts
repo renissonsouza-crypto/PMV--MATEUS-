@@ -19,6 +19,7 @@ export type AssistantAction = { label: string; page?: Page; courseId?: number };
 export type AssistantReply = {
   text: string; intent: string; confidence: "high" | "medium" | "low";
   actions: AssistantAction[]; suggestions: string[]; context: AssistantContext;
+  navigation?: AssistantAction;
 };
 export type AssistantOptions = {
   courses: Course[]; contacts: ContactChannel[]; context?: AssistantContext; now?: Date;
@@ -346,7 +347,7 @@ function answerSingleTortuguita(message: string, options: AssistantOptions): Ass
   return reply("Ainda não identifiquei sua dúvida com segurança. Posso ajudar com cursos do catálogo, cadastro, inscrição, perfil, favoritos, limite mensal, cancelamento e contato. Escreva o nome do curso ou escolha uma pergunta abaixo. Para uma informação não publicada, consulte o atendimento oficial.", "fallback", context, [{ label: "Explorar cursos", page: "cursos" }, { label: "Canais de atendimento", page: "contato" }], QUICK_QUESTIONS.slice(0, 5), "low");
 }
 
-export function answerTortuguita(message: string, options: AssistantOptions): AssistantReply {
+function answerConversation(message: string, options: AssistantOptions): AssistantReply {
   const text = normalizeTortuguitaText(message);
   // Keep comparison names, OR filters and compound facets together. Different
   // topics can be answered in one turn, with context carried to pronouns.
@@ -369,6 +370,53 @@ export function answerTortuguita(message: string, options: AssistantOptions): As
   const result = answerSingleTortuguita(message, options);
   if (result.intent === "registration_documents" && hasAny(text, ["cpf"]) && hasAny(text, ["ja usei", "ja cadastrado", "ja existe", "duplicado", "outro cadastro"])) {
     return { ...result, text: result.text + "\n\nSe esse CPF já foi usado em um cadastro, não repita o registro para contornar validações. Confira o perfil existente neste navegador; se precisar corrigir ou recuperar um registro, procure o atendimento oficial." };
+  }
+  return result;
+}
+
+export function answerTortuguita(message: string, options: AssistantOptions): AssistantReply {
+  const result = answerConversation(message, options);
+  const text = normalizeTortuguitaText(message);
+  // Navigation is a separate decision: suggested actions in an explanation are
+  // not permission to choose a destination. Unclear or negative requests stay in chat.
+  if (String(message).length > 1000 || /\b(?:nao|nunca|sem|talvez|se|ou)\b/.test(text) ||
+    /\b(?:e tambem|alem disso)\b|\be (?:quero|preciso|gostaria|abra|mostre)\b/.test(text) ||
+    result.intent.includes("+") || ["privacy", "out-of-scope", "course-comparison"].includes(result.intent)) return result;
+
+  const mentioned = /\bsobre (?:a plataforma|o projeto)\b/.test(text) ? [] : findCourseMentions(text, options.courses);
+  const wantsRegistration = /\b(?:quero|desejo|gostaria de|preciso|vou) (?:(?:fazer|realizar) (?:(?:a|o|minha|meu) )*|me )?(?:cadastro|cadastrar|inscricao|inscrever)\b/.test(text) ||
+    /\b(?:abra|abrir|ir para|acesse|acessar|leve me|me leve|me redirecione para) (?:a |o |area de |tela de |pagina de )*(?:cadastro|cadastrar)\b/.test(text);
+  if (wantsRegistration && (!mentioned.length || /\b(?:na plataforma|no site)\b/.test(text))) {
+    const destination: AssistantAction = options.profile
+      ? { label: "Meu perfil", page: "profile" }
+      : { label: "Cadastro", page: "register" };
+    const registration = knowledgeReply([PLATFORM_KNOWLEDGE.find(item => item.id === "registration")!], options, cleanContext(options.context, options.courses));
+    return { ...registration, text: options.profile ? "Você já tem um perfil neste navegador. Abra Meu perfil para consultar seus dados e inscrições." : registration.text, navigation: destination };
+  }
+
+  const wantsCourseInfo = /\b(?:informacoes|informacao|detalhes|ficha|sobre|conteudo)\b/.test(text);
+  if (mentioned.length === 1 && (result.intent === "course-detail" || (wantsCourseInfo && result.intent === "course-search"))) {
+    const details = dynamicCourse(text, mentioned[0], cleanContext(options.context, options.courses));
+    return { ...details, navigation: courseActions(mentioned)[0] };
+  }
+  // Explicit requests to open other areas use only internal, supported pages.
+  const wantsToOpen = /\b(?:quero|desejo|gostaria de|preciso) (?:ver|abrir|acessar|consultar|ir para|falar com)\b|\b(?:abra|acesse|mostre|me leve|leve me)\b/.test(text);
+  if (wantsToOpen && !mentioned.length) {
+    const destinations: [RegExp, Page][] = [
+      [/\b(?:favoritos|cursos favoritados|cursos salvos)\b/, "favorites"],
+      [/\b(?:meu perfil|minhas inscricoes|meus cursos inscritos)\b/, options.profile ? "profile" : "register"],
+      [/\b(?:contato|atendimento|suporte)\b/, "contato"],
+      [/\b(?:catalogo|cursos(?! inscritos| favoritos| favoritados| salvos))\b/, "cursos"],
+      [/\bcategorias\b/, "categorias"],
+      [/\b(?:inicio|pagina inicial)\b/, "home"],
+      [/\b(?:sobre a plataforma|sobre o projeto)\b/, "sobre"],
+    ];
+    const matches = destinations.filter(([pattern]) => pattern.test(text));
+    if (matches.length === 1) {
+      const page = matches[0][1];
+      const action = { label: PAGE_LABELS[page] ?? "Abrir página", page };
+      return { ...reply(`Vou abrir ${action.label} para você.`, "navigation", result.context, [action]), navigation: action };
+    }
   }
   return result;
 }

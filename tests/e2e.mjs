@@ -69,6 +69,13 @@ async function askAssistant(page, message) {
   const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
   await input.fill(message);
   await input.press("Enter");
+  // A request can open a page and close the chat. Reopen it to inspect the
+  // retained response; dedicated navigation cases below check the closed state.
+  await page.waitForFunction(previous => {
+    const log = document.querySelector('[role="log"][aria-label="Conversa com a Tortuguita"]');
+    return !log || log.querySelectorAll("p").length >= previous + 2;
+  }, previousCount);
+  if (!await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible()) await openAssistant(page);
   const response = log.locator("p").nth(previousCount + 1);
   await response.waitFor();
   return response.innerText();
@@ -400,6 +407,53 @@ test("depoimentos: formulário obrigatório e publicação pela API real", async
   assert((await response.json()).some(item => item.name === "Pessoa Depoimento Teste"));
 });
 
+test("assistente: pedidos abrem cadastro e ficha de Excel sem cliques adicionais", async page => {
+  let writes = 0;
+  page.on("request", request => { if (request.method() === "POST") writes++; });
+  await openAssistant(page);
+  const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
+  await input.fill("Quero fazer minha inscrição na plataforma");
+  await input.press("Enter");
+  await page.getByRole("dialog", { name: "Tortuguita", exact: true }).waitFor({ state: "hidden" });
+  await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).waitFor();
+  await openAssistant(page);
+  assert.match(await page.getByRole("log").innerText(), /Quero fazer minha inscrição na plataforma/);
+  await input.fill("Quero informações sobre o curso de Excel");
+  await page.getByRole("button", { name: "Enviar mensagem", exact: true }).click();
+  await page.getByRole("dialog", { name: "Tortuguita", exact: true }).waitFor({ state: "hidden" });
+  await page.locator("main").getByRole("heading", { name: courseTitles[1], exact: true }).waitFor();
+  assert.equal(writes, 0, "Navigation must not create registrations or enrollments");
+  await openAssistant(page);
+  assert.match(await askAssistant(page, "E quanto tempo dura?"), /2 meses/);
+  assert(await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible(), "Follow-up on the current course stays open");
+  await input.fill("Quero informações sobre Excel");
+  await input.press("Enter");
+  await page.getByRole("log").locator("p").last().filter({ hasText: /Excel do Básico ao Avançado/ }).waitFor();
+  assert(await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible(), "Requesting the already open course keeps the chat open");
+});
+
+test("assistente: pedidos abrem favoritos, atendimento e perfil existente", async page => {
+  await seedProfile(page, profileFixture());
+  for (const [message, heading] of [["Quero ver meus favoritos", /Cursos favoritados/i], ["Quero falar com o atendimento", /Entre em contato/i], ["Quero me cadastrar", /^Meu perfil$/i]]) {
+    await openAssistant(page);
+    await page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true }).fill(message);
+    await page.getByRole("button", { name: "Enviar mensagem", exact: true }).click();
+    await page.getByRole("dialog", { name: "Tortuguita", exact: true }).waitFor({ state: "hidden" });
+    await page.locator("main").getByRole("heading", { name: heading }).waitFor();
+  }
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, []);
+});
+
+test("assistente: negações e cursos ambíguos aguardam escolha no chat", async page => {
+  await openAssistant(page);
+  for (const message of ["Não quero me cadastrar", "Compare Excel e Marketing Digital", "Quero informações sobre Excel ou Marketing Digital"]) {
+    await askAssistant(page, message);
+    assert(await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible());
+  }
+  await page.getByRole("button", { name: "Fechar assistente virtual", exact: true }).click();
+  await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
+});
+
 test("assistente: resposta às mensagens de categoria e limite mensal", async page => {
   await openAssistant(page);
   const courses = await askAssistant(page, "Quero cursos de tecnologia");
@@ -483,6 +537,9 @@ test("assistente: ação para perfil e histórico local sem expor dados pessoais
 test("assistente: reinicia contexto, limita texto e trata HTML como texto", async page => {
   await openAssistant(page);
   await askAssistant(page, "Me fale sobre Excel");
+  await page.getByRole("button", { name: "Fechar assistente virtual", exact: true }).click();
+  await navigate(page, "Início");
+  await openAssistant(page);
   await page.getByRole("button", { name: "Reiniciar conversa", exact: true }).click();
   const log = page.getByRole("log", { name: "Conversa com a Tortuguita" });
   assert.equal(await log.locator("p").count(), 1);
@@ -508,6 +565,9 @@ test("assistente no celular: teclado, sugestões, foco e largura", async page =>
   assert.equal(await page.getByRole("log").locator("p").count(), 1);
   await input.fill("exc");
   await page.getByLabel("Perguntas sugeridas", { exact: true }).getByRole("button", { name: /Excel/i }).first().click();
+  await page.getByRole("dialog", { name: "Tortuguita", exact: true }).waitFor({ state: "hidden" });
+  await page.locator("main").getByRole("heading", { name: courseTitles[1], exact: true }).waitFor();
+  await openAssistant(page);
   await page.getByRole("log").getByText(/Excel do Básico ao Avançado/).last().waitFor();
   const dialog = page.getByRole("dialog", { name: "Tortuguita", exact: true });
   const bounds = await dialog.boundingBox();
