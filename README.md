@@ -87,11 +87,14 @@ O catálogo está em `src/app/data/courses.ts`, o conhecimento editorial em `src
 npm test
 npm run build
 npm run test:e2e
+npm run test:mobile
 ```
 
 No PowerShell, substitua `npm` por `npm.cmd`. `npm test` inclui testes de regras, armazenamento, cliente HTTP, validações, segurança, inicialização em portas alternativas, SQLite e rotas serverless.
 
 Os testes usam bancos SQLite temporários e um serviço ViaCEP local controlado; preservam o banco de desenvolvimento. O teste serverless exercita controllers, models e SQL com transporte Neon isolado, sem credenciais de produção.
+
+O teste `npm run test:mobile` verifica seis configurações de telefone/tablet no Chromium, com emulação de toque, orientação horizontal e viewport reduzido. Ele exercita menu, busca, filtros, seções do curso, cadastro, fonte ampliada, tema escuro e chat. A emulação não substitui a validação em Safari nem em aparelhos Android/iOS reais.
 
 O teste de navegador inicia sua própria API/Vite e usa Chrome, Chromium ou Edge instalado. Ele verifica navegação, filtros, favoritos, cadastro e depoimentos persistidos, perfil, inscrições, cancelamentos, assistente, acessibilidade do formulário e responsividade. Para outro executável, configure `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` ou `CHROME_PATH`. `TEST_URL` permite apontar para um frontend já iniciado, mantendo um backend temporário para as gravações do teste.
 

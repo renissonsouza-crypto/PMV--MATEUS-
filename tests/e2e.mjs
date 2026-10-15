@@ -702,7 +702,7 @@ test("assistente no celular: teclado, sugestões, foco e largura", async page =>
 test("responsividade: menu e catálogo no celular", async page => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
-  await page.locator("header").getByRole("button", { name: "Cursos", exact: true }).click();
+  await page.getByRole("dialog", { name: "Menu", exact: true }).getByRole("button", { name: "Cursos", exact: true }).click();
   await page.getByRole("heading", { name: /Encontre o curso ideal/i }).waitFor();
   await expectCourses(page, courseTitles);
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Layout ultrapassa largura da tela");

@@ -22,7 +22,8 @@
     "test:validation": "node tests/validation.mjs",
     "test:postgres": "node tests/postgres.mjs",
     "test:serverless": "node tests/serverless.mjs",
-    "test:e2e": "node tests/e2e.mjs"
+    "test:e2e": "node tests/e2e.mjs",
+    "test:mobile": "node tests/mobile.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

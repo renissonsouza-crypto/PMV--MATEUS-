@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowUpRight, RotateCcw, Send, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
 import { ASSISTANT_CAPABILITIES, QUICK_QUESTIONS } from "../data/tortuguitaKnowledge";
@@ -52,6 +52,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const [persistent, setPersistent] = useState(restored.persistent);
   const [memoryNotice, setMemoryNotice] = useState("");
   const [open, setOpen] = useState(false);
+  const [viewport, setViewport] = useState({ height: 0, inset: 0 });
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(restored.memory.messages.length ? restored.memory.messages : [WELCOME]);
   const [followUps, setFollowUps] = useState<string[]>([]);
@@ -87,6 +88,22 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       commitMemory(profile ? rememberCourse(next, activeCourseId, "views") : next);
     }
   }, [activeCourseId, courses, profile?.id]);
+
+  useEffect(() => {
+    if (!open || !window.visualViewport) return;
+    const visual = window.visualViewport;
+    const updateViewport = () => setViewport({
+      height: visual.height,
+      inset: Math.max(0, window.innerHeight - visual.height - visual.offsetTop),
+    });
+    updateViewport();
+    visual.addEventListener("resize", updateViewport);
+    visual.addEventListener("scroll", updateViewport);
+    return () => {
+      visual.removeEventListener("resize", updateViewport);
+      visual.removeEventListener("scroll", updateViewport);
+    };
+  }, [open]);
 
   const resetConversation = () => {
     commitMemory({ ...memoryRef.current, context: { preferences: memoryRef.current.context.preferences }, messages: [] });
@@ -200,7 +217,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           aria-label="Abrir assistente virtual"
           title="Converse com a Tortuguita Vix"
           aria-description="Chatbot da Tortuguita Vix para ajudar com cursos e cadastro"
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full border-2 border-white bg-blue-700 py-1.5 pl-3.5 pr-1.5 text-white shadow-xl transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
+          className="tortuguita-launcher fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full border-2 border-white bg-blue-700 py-1.5 pl-3.5 pr-1.5 text-white shadow-xl transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
         >
           <span aria-hidden="true" className="text-left"><span className="block text-sm font-bold">Tortuguita Vix</span><span className="block text-xs text-blue-100">Seu chatbot de cursos</span></span>
           <span aria-hidden="true"><TurtleMascot size={48} /></span>
@@ -210,14 +227,18 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-slate-950/25" />
         <Dialog.Content
-          className="fixed bottom-4 right-4 z-[70] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:bottom-24 sm:max-h-[calc(100dvh-7rem)]"
-          style={{ height: "min(580px, calc(100dvh - 2rem))" }}
+          data-compact={viewport.height > 0 && viewport.height < 480 ? "true" : undefined}
+          className="tortuguita-panel fixed bottom-4 right-4 z-[70] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:bottom-24 sm:max-h-[calc(100dvh-7rem)]"
+          style={{
+            height: "min(580px, calc(var(--chat-viewport-height, 100dvh) - 2rem))",
+            ...(viewport.height > 0 ? { "--chat-viewport-height": `${viewport.height}px`, "--chat-keyboard-inset": `${viewport.inset}px` } : {}),
+          } as CSSProperties}
           onOpenAutoFocus={event => { event.preventDefault(); inputRef.current?.focus(); }}
           onCloseAutoFocus={event => { event.preventDefault(); launcherRef.current?.focus(); }}
           aria-describedby="tortuguita-description"
         >
-          <div className="flex shrink-0 items-center gap-3 bg-gradient-to-r from-blue-900 to-blue-700 px-4 py-3 text-white">
-            <span aria-hidden="true" className="shrink-0 rounded-2xl bg-white/15 p-1"><TurtleMascot size={38} /></span>
+          <div className="chat-header flex shrink-0 items-center gap-3 bg-gradient-to-r from-blue-900 to-blue-700 px-4 py-3 text-white">
+            <span aria-hidden="true" className="chat-avatar shrink-0 rounded-2xl bg-white/15 p-1"><TurtleMascot size={38} /></span>
             <div className="min-w-0 flex-1">
               <Dialog.Title className="text-base font-extrabold text-white">Tortuguita</Dialog.Title>
               <Dialog.Description id="tortuguita-description" className="mt-0.5 text-xs text-blue-100">Sua assistente sobre o Qualifica Vix</Dialog.Description>
@@ -302,10 +323,10 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                 <Send className="h-4 w-4" aria-hidden="true" />
               </button>
             </form>
-            <div id="tortuguita-input-help" className="mt-2 flex justify-between gap-2 text-[10px] text-slate-500">
+            <div id="tortuguita-input-help" className="chat-input-help mt-2 flex justify-between gap-2 text-[10px] text-slate-500">
               <span>Enter envia · Shift + Enter quebra a linha</span><span aria-live="off">{draft.length}/{MAX_INPUT_LENGTH}</span>
             </div>
-            <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-500"><ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />Não envie CPF, senhas ou documentos. {profile ? "Sua memória fica neste navegador, separada por perfil. Você pode apagá-la acima." : "Sem perfil, a conversa fica apenas nesta página."}</p>
+            <p className="chat-privacy mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-500"><ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />Não envie CPF, senhas ou documentos. {profile ? "Sua memória fica neste navegador, separada por perfil. Você pode apagá-la acima." : "Sem perfil, a conversa fica apenas nesta página."}</p>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
 import { createRegistration, isProfileSessionOnly, saveUserProfile, type UserProfile } from "../services/api";
@@ -90,6 +90,9 @@ function Input({
         aria-describedby={error ? `registration-${reg.name}-error` : undefined}
         type={isPassword ? (showPwd ? "text" : "password") : type}
         placeholder={placeholder}
+        inputMode={/^(cpf|cpfResponsavel|cep|numero|numeroDependentes)$/.test(reg.name) ? "numeric" : /telefone|whatsapp/i.test(reg.name) ? "tel" : undefined}
+        autoComplete={({ nome: "name", email: "email", telefone: "tel", cep: "postal-code", rua: "address-line1", complemento: "address-line2", dataNascimento: "bday" } as Record<string, string>)[reg.name]}
+        enterKeyHint="next"
         className={`w-full px-4 py-3 rounded-xl border-2 text-sm font-medium outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 ${
           error
             ? "border-red-400 focus:border-red-500"
@@ -154,7 +157,7 @@ function SectionTitle({ icon: Icon, title, subtitle }: { icon: any; title: strin
         <Icon className="w-5 h-5 text-amber-300" />
       </div>
       <div>
-        <h3 className="font-black text-slate-900 dark:text-white text-base leading-tight">{title}</h3>
+        <h3 tabIndex={-1} className="font-black text-slate-900 dark:text-white text-base leading-tight">{title}</h3>
         {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
     </div>
@@ -172,6 +175,15 @@ const STEPS = [
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onBack: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
   const [step, setStep] = useState(1);
+  const formRef = useRef<HTMLFormElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    const title = formRef.current?.querySelector<HTMLElement>("h3");
+    title?.focus({ preventScroll: true });
+    title?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [step]);
   const [submitted, setSubmitted] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [sessionOnly, setSessionOnly] = useState(false);
@@ -305,7 +317,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
 
         {/* ─── Header da página ─── */}
-        <div className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-sm">
+        <div className="registration-header sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-sm">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center gap-4 py-4">
             <button onClick={onBack}
               className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -313,9 +325,9 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               <ArrowLeft className="w-5 h-5" />
             </button>
             <img src={qualificaVixLogo} alt="Qualifica Vix" className="w-20 h-12 object-contain" />
-            <div className="ml-auto text-right hidden sm:block">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Cadastro de usuário</p>
-              <p className="text-[11px] text-slate-400 font-medium">Passo {step} de {STEPS.length}</p>
+            <div className="ml-auto min-w-0 text-right">
+              <p className="hidden sm:block text-xs font-black uppercase tracking-widest text-slate-500">Cadastro de usuário</p>
+              <p aria-live="polite" className="text-[11px] text-slate-400 font-medium">Passo {step} de {STEPS.length}</p>
             </div>
           </div>
         </div>
@@ -368,12 +380,12 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               {submissionError}
             </div>
           )}
-          <form noValidate onSubmit={event => {
+          <form ref={formRef} noValidate onSubmit={event => {
             if (step < 4) { event.preventDefault(); void nextStep(); }
             else void handleSubmit(onSubmit)(event);
           }}>
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="p-6 sm:p-8">
+              <div className="p-4 sm:p-8">
 
                 {/* ══════════════ PASSO 1: DADOS PESSOAIS ══════════════ */}
                 {step === 1 && (
@@ -886,18 +898,18 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
               </div>
 
               {/* ─── Rodapé do formulário (botões de navegação) ─── */}
-              <div className="flex items-center justify-between gap-4 px-6 sm:px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+              <div className="registration-actions grid grid-cols-1 min-[400px]:grid-cols-2 sm:flex sm:items-center sm:justify-between gap-3 px-4 sm:px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                 <button
                   type="button"
                   disabled={isAdvancing || isSubmitting}
                   onClick={step === 1 ? onBack : () => setStep(s => s - 1)}
-                  className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300 px-5 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-white dark:hover:bg-slate-800 transition-all"
+                  className="flex items-center justify-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300 px-5 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-white dark:hover:bg-slate-800 transition-all"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   {step === 1 ? "Voltar ao site" : "Anterior"}
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
                   {STEPS.map(s => (
                     <div key={s.id} className={`rounded-full transition-all ${
                       s.id === step ? "w-6 h-2" : "w-2 h-2"
@@ -911,7 +923,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                     type="button"
                     onClick={nextStep}
                     disabled={isAdvancing || isSubmitting}
-                    className="flex items-center gap-2 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                    className="flex items-center justify-center gap-2 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                     style={{ background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_MID} 100%)` }}
                   >
                     Próximo <ArrowRight className="w-4 h-4" />
@@ -920,7 +932,7 @@ export function RegisterPage({ onBack, dark, courseId, onProfileCreated }: { onB
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 text-slate-950 font-black text-sm px-7 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-2 text-slate-950 font-black text-sm px-7 py-2.5 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                     style={{ background: `linear-gradient(135deg, ${RED} 0%, ${RED_LIGHT} 100%)` }}
                   >
                     {isSubmitting ? (
