@@ -50,7 +50,7 @@ export function validateRegistration(input) {
       (data.quaisBeneficios !== undefined && (!Array.isArray(data.quaisBeneficios) ||
         data.quaisBeneficios.some(value => typeof value !== "string" || value.trim().length > 160))))
     return { error: "Dados do cadastro inválidos" };
-  const required = ["nome", "cpf", "email", "telefone", "dataNascimento", "bairro", "cep", "rua", "numero"];
+  const required = ["nome", "cpf", "email", "telefone", "dataNascimento", "bairro", "cep", "rua"];
   if (required.some(key => !clean(data[key]))) return { error: "Campos obrigatórios ausentes" };
   if (Object.entries(limits).some(([key, max]) => String(data[key] ?? "").trim().length > max))
     return { error: "Dados do cadastro excedem o tamanho permitido" };

@@ -46,3 +46,12 @@ test('cancellation permits only the three-day window and valid past enrollment d
   assert.equal(canUnsubscribeFromCourse(undefined), false);
   assert.equal(canUnsubscribeFromCourse({ enrolledAt: 'invalid' }), false);
 });
+
+test('birth date accepts numeric typing and pasted ISO dates while preserving API format', async () => {
+  const { formatBirthDateInput, birthDateToISO } = await import('../src/app/services/registrationValidation.ts');
+  assert.equal(formatBirthDateInput('25081990'), '25/08/1990');
+  assert.equal(formatBirthDateInput('1990-08-25'), '25/08/1990');
+  assert.equal(birthDateToISO('25/08/1990'), '1990-08-25');
+  assert.equal(birthDateToISO('25/08/'), '');
+  assert.equal(getBirthDateAge(birthDateToISO('31/02/2000')), null);
+});

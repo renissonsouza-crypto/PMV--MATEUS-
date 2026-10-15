@@ -48,7 +48,8 @@ test('PostgreSQL production schema and request/confirm/status/cancel operate on 
   const confirmed = await service.confirm({ token: mails[0].token });
   assert.equal(confirmed.status, 'confirmed');
   assert.equal(confirmed.profile.email, input.email);
-  assert.equal((await service.confirm({ token: mails[0].token })).enrolledAt, confirmed.enrolledAt);
+  await assert.rejects(service.confirm({ token: mails[0].token }), error => error.statusCode === 409);
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM profile_sessions')).rows[0].n, 1);
   assert.equal((await service.status(pending)).status, 'confirmed');
   await assert.rejects(repository.cancel(confirmed.requestId, digest('b'.repeat(64)), new Date().toISOString()), error => error.statusCode === 403);
   assert.equal((await service.cancel({ requestId: confirmed.requestId }, confirmed.profile.profileToken)).status, 'cancelled');
@@ -73,4 +74,28 @@ test('PostgreSQL expired and failed-delivery links cannot finalize an enrollment
   await assert.rejects(service.confirm({ token: mails[0].token }), error => error.statusCode === 410);
   assert.equal((await service.status(pending)).status, 'expired');
   await assert.rejects(service.status({ ...pending, statusToken: 'f'.repeat(64) }), error => error.statusCode === 404);
+});
+
+
+test('PostgreSQL concurrent reuse of the same token creates exactly one profile session', async () => {
+  const { service, mails, input } = await fixture();
+  await service.request(input);
+  const results = await Promise.allSettled(Array.from({ length: 8 }, () => service.confirm({ token: mails[0].token })));
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert(results.filter(result => result.status === 'rejected').every(result => result.reason.statusCode === 409));
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM profile_sessions')).rows[0].n, 1);
+});
+
+test('PostgreSQL Google identity binding, authenticated profile and revocation use production SQL', async () => {
+  await fixture();
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const { finishGoogleLogin, publicProfile } = await import('../server/services/googleAuth.mjs');
+  const repository = postgresAuthRepository();
+  const token = await finishGoogleLogin(repository, { email: 'postgres@example.test', subject: 'verified-google-subject' });
+  assert.equal(Number((await repository.bySubject('verified-google-subject')).id), 1);
+  const person = await repository.authenticated(digest(token));
+  assert.equal(publicProfile(person, await repository.enrollments(1)).email, 'postgres@example.test');
+  await assert.rejects(finishGoogleLogin(repository, { email: 'postgres@example.test', subject: 'different-subject' }), error => error.statusCode === 403);
+  await repository.revoke([digest(token)]);
+  assert.equal(await repository.authenticated(digest(token)), undefined);
 });

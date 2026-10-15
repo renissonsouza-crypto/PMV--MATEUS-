@@ -1,9 +1,10 @@
+import { GoogleLoginButton } from "../components/GoogleLogin";
 import { EnrollmentEmailRequest } from "../components/EnrollmentEmail";
 import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
 import { createRegistrationProfile, isProfileSessionOnly, type UserProfile } from "../services/api";
-import { getBirthDateAge, isValidBrazilianPhone, lookupVitoriaCep, type VitoriaAddress } from "../services/registrationValidation";
+import { getBirthDateAge, formatBirthDateInput, birthDateToISO, isValidBrazilianPhone, lookupVitoriaCep, type VitoriaAddress } from "../services/registrationValidation";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
 import {
   ArrowLeft, ArrowRight, User, MapPin, HeartHandshake,
@@ -86,12 +87,17 @@ function Input({
     <div className="relative">
       <input
         {...reg}
+        onChange={event => {
+          if (reg.name === "dataNascimento") event.target.value = formatBirthDateInput(event.target.value);
+          void reg.onChange(event);
+        }}
+        maxLength={reg.name === "dataNascimento" ? 10 : undefined}
         id={`registration-${reg.name}`}
         aria-invalid={Boolean(error)}
-        aria-describedby={error ? `registration-${reg.name}-error` : undefined}
+        aria-describedby={[error ? `registration-${reg.name}-error` : "", reg.name === "dataNascimento" ? "registration-dataNascimento-hint" : ""].filter(Boolean).join(" ") || undefined}
         type={isPassword ? (showPwd ? "text" : "password") : type}
         placeholder={placeholder}
-        inputMode={/^(cpf|cpfResponsavel|cep|numero|numeroDependentes)$/.test(reg.name) ? "numeric" : /telefone|whatsapp/i.test(reg.name) ? "tel" : undefined}
+        inputMode={/^(cpf|cpfResponsavel|cep|numero|numeroDependentes|dataNascimento)$/.test(reg.name) ? "numeric" : /telefone|whatsapp/i.test(reg.name) ? "tel" : undefined}
         autoComplete={({ nome: "name", email: "email", telefone: "tel", cep: "postal-code", rua: "address-line1", complemento: "address-line2", dataNascimento: "bday" } as Record<string, string>)[reg.name]}
         enterKeyHint="next"
         className={`w-full px-4 py-3 rounded-xl border-2 text-sm font-medium outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 ${
@@ -412,6 +418,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
           </div>
 
           {/* ─── Formulário ─── */}
+          {step === 1 && <GoogleLoginButton />}
           <form ref={formRef} aria-busy={isSubmitting} noValidate onSubmit={event => {
             if (step < 4) { event.preventDefault(); void nextStep(); }
             else void handleSubmit(onSubmit, onInvalid)(event);
@@ -444,10 +451,12 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
                       <FieldWrap>
                         <Label required htmlFor="dataNascimento">Data de nascimento</Label>
                         <Input reg={register("dataNascimento", {
-                          required: "Data obrigatória",
+                          required: "Informe a data completa: dia, mês e ano",
+                          setValueAs: birthDateToISO,
                           validate: value => getBirthDateAge(value) !== null || "Data de nascimento inválida",
                         })}
-                          type="date" error={errors.dataNascimento?.message} />
+                          placeholder="DD/MM/AAAA" error={errors.dataNascimento?.message} />
+                        <p id="registration-dataNascimento-hint" className="text-xs text-slate-500">Digite dia, mês e ano. Exemplo: 25/08/1990.</p>
                         {menorDeIdade && (
                           <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" /> Menor de idade — dados do responsável obrigatórios no passo 2
@@ -555,9 +564,9 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
                       </FieldWrap>
 
                       <FieldWrap>
-                        <Label required htmlFor="numero">Número</Label>
-                        <Input reg={register("numero", { required: "Número obrigatório", validate: requiredText("Número obrigatório") })}
-                          placeholder="1927" error={errors.numero?.message} />
+                        <Label htmlFor="numero">Número (opcional)</Label>
+                        <Input reg={register("numero")}
+                          placeholder="Ex.: 1927 ou sem número" error={errors.numero?.message} />
                       </FieldWrap>
 
                       <FieldWrap>

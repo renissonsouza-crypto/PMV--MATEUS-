@@ -1,3 +1,5 @@
+import { authController } from "./authController.mjs";
+import { sqliteAuthRepository } from "../models/AuthRepository.mjs";
 import { enrollmentController } from "./enrollmentController.mjs";
 import { sqliteEnrollmentRepository } from "../models/SqliteEnrollmentRepository.mjs";
 import { createServer } from "node:http";
@@ -51,6 +53,7 @@ db.exec(`
 
 const enrollmentRepository = sqliteEnrollmentRepository(db);
 const handleEnrollment = enrollmentController(enrollmentRepository);
+const handleAuth = authController(sqliteAuthRepository(db));
 
 const json = (res, status, payload, headers = {}) => {
   res.writeHead(status, {
@@ -96,6 +99,16 @@ const body = req => new Promise((resolveBody, reject) => {
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://localhost");
+    if (url.pathname === "/api/auth") {
+      if (req.method === 'POST') req.body = await body(req);
+      const adapter = {
+        setHeader: (key, value) => res.setHeader(key, value),
+        status(status) { this.statusCode = status; return this; },
+        json(payload) { return json(res, this.statusCode || 200, payload); },
+        end() { res.statusCode = this.statusCode || 200; res.end(); },
+      };
+      return await handleAuth(req, adapter);
+    }
     const methods = {
       "/api/enrollments": ["POST"],
       "/api/health": ["GET"],

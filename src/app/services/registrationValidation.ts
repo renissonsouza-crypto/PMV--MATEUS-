@@ -41,3 +41,15 @@ export async function lookupVitoriaCep(value: string, fetcher: typeof fetch = fe
     rua: typeof data.logradouro === "string" ? data.logradouro.trim() : "",
   };
 }
+
+
+export function formatBirthDateInput(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.split('-').reverse().join('/');
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)].filter(Boolean).join('/');
+}
+
+export function birthDateToISO(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return /^\d{2}\/\d{2}\/\d{4}$/.test(value) ? value.split('/').reverse().join('-') : '';
+}

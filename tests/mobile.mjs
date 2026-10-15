@@ -81,7 +81,7 @@ try {
       assert.equal(await phone.getAttribute('inputmode'), 'tel');
       assert(await phone.evaluate(el => parseFloat(getComputedStyle(el).fontSize) >= 16), 'Mobile inputs must avoid iOS focus zoom');
       if (name === 'iPhone 13') {
-        for (const [field, value] of Object.entries({ nome: 'Pessoa Mobile', cpf: '529.982.247-25', dataNascimento: '1990-01-01', telefone: '27999999999', email: 'mobile@example.test', emailConfirm: 'mobile@example.test' })) {
+        for (const [field, value] of Object.entries({ nome: 'Pessoa Mobile', cpf: '529.982.247-25', dataNascimento: '01011990', telefone: '27999999999', email: 'mobile@example.test', emailConfirm: 'mobile@example.test' })) {
           await page.locator(`[name="${field}"]`).fill(value);
         }
         await page.locator('[name="sexo"]').selectOption('Prefiro não informar');
@@ -96,7 +96,7 @@ try {
         await page.locator('[name="cep"]').fill('29050-945');
         await page.locator('[name="cep"]').blur();
         await page.waitForFunction(() => document.querySelector('[name="bairro"]').value === 'Bento Ferreira');
-        await page.locator('[name="numero"]').fill('10');
+        assert.equal(await page.locator('[name="numero"]').inputValue(), '');
         await next.click();
         await next.click();
         const finish = page.getByRole('button', { name: 'Concluir cadastro', exact: true });

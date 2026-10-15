@@ -31,7 +31,7 @@ export function postgresEnrollmentRepository() {
       const results = await sql.transaction([
         sql`SELECT id FROM registrations WHERE id = ${initial.registration_id} FOR UPDATE`,
         sql`UPDATE course_enrollment_requests SET confirmed_at = ${now}
-          WHERE id = ${initial.id} AND token_hash = ${hash} AND confirmed_at IS NULL AND cancelled_at IS NULL AND expires_at > ${now} AND delivery <> 'failed'
+          WHERE id = ${initial.id} AND token_hash = ${hash} AND confirmed_at IS NULL AND cancelled_at IS NULL AND expires_at > ${now} AND delivery = 'sent'
           AND NOT EXISTS (SELECT 1 FROM course_enrollment_requests other WHERE other.registration_id = ${initial.registration_id} AND other.course_id = ${initial.course_id} AND other.confirmed_at IS NOT NULL AND other.cancelled_at IS NULL)
           AND (SELECT count(*) FROM course_enrollment_requests WHERE registration_id = ${initial.registration_id} AND confirmed_at >= ${start(now)}) < 3
           RETURNING *`,
@@ -39,10 +39,11 @@ export function postgresEnrollmentRepository() {
         sql`SELECT * FROM course_enrollment_requests WHERE registration_id = ${initial.registration_id} AND course_id = ${initial.course_id} AND confirmed_at IS NOT NULL AND cancelled_at IS NULL ORDER BY confirmed_at LIMIT 1`,
       ]);
       const row = results[2][0];
-      if (!row || new Date(row.expires_at).toISOString() <= now || row.delivery === 'failed') throw fail('Este link venceu ou foi invalidado. Solicite outro e-mail na plataforma.', 410);
+      if (!row || new Date(row.expires_at).toISOString() <= now || row.delivery !== 'sent') throw fail('Este link venceu ou foi invalidado. Solicite outro e-mail na plataforma.', 410);
       if (row.cancelled_at) throw fail('Esta inscrição já foi cancelada.', 409);
-      if (row.confirmed_at) return row;
-      if (results[3][0]) return results[3][0];
+      if (results[1].length) return results[1][0];
+      if (row.confirmed_at) throw fail('Este link já foi utilizado. A inscrição permanece confirmada; consulte o perfil no navegador utilizado na confirmação.', 409);
+      if (results[3][0]) throw fail('Você já confirmou sua inscrição neste curso. Este link não pode gerar outro acesso ao perfil.', 409);
       throw fail('Você já atingiu o limite de três inscrições neste mês.', 409);
     },
     async status(id, hash) {

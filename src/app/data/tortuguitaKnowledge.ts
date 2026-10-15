@@ -186,7 +186,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "registration_address", title: "Endereço e cidade atendida",
     questions: ["Quem mora fora de Vitória pode se cadastrar?", "Posso usar CEP de Vila Velha?", "O site aceita endereço de Serra?", "Preciso morar em Vitória-ES?", "Posso fazer online morando em outra cidade?", "Quais campos do endereço são obrigatórios?", "O complemento é obrigatório?", "Posso inventar um endereço de Vitória?"],
     keywords: ["fora de vitoria", "outra cidade", "vila velha", "serra", "morar em vitoria", "endereco obrigatorio", "complemento obrigatorio", "inventar endereco"],
-    answer: "O cadastro aceita somente endereços cujo CEP seja validado como Vitória-ES, inclusive para ofertas online. CEP, bairro, rua e número são obrigatórios; complemento é opcional. Use seu endereço verdadeiro e confira o preenchimento automático. Não use um CEP emprestado ou inventado para contornar a regra. Para exceções e outras oportunidades, consulte o atendimento oficial.",
+    answer: "O cadastro aceita somente endereços cujo CEP seja validado como Vitória-ES, inclusive para ofertas online. CEP, bairro e rua são obrigatórios; número e complemento são opcionais. Use seu endereço verdadeiro e confira o preenchimento automático. Não use um CEP emprestado ou inventado para contornar a regra. Para exceções e outras oportunidades, consulte o atendimento oficial.",
     followUps: ["Meu CEP não foi aceito", "Como entro em contato?"], actionPages: ["register", "contato"],
   },
   {
@@ -246,10 +246,10 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     followUps: ["Como editar meus dados?", "Como meus dados são armazenados?"], actionPages: ["profile"],
   },
   {
-    id: "profile_local", title: "Perfil local e ausência de login",
+    id: "profile_local", title: "Perfil e entrada com Google",
     questions: ["Meu perfil fica salvo em outro dispositivo?", "Como fazer login com senha?", "Esqueci minha senha", "Como recuperar a conta pelo e-mail?", "Posso entrar no celular com meu cadastro do computador?", "O site sincroniza meus dados?", "Onde está o botão de login?", "Existe conta compartilhada entre navegadores?"],
     keywords: ["outro dispositivo", "login", "senha", "recuperar conta", "sincroniza", "entre navegadores", "cadastro do computador", "entrar no celular"],
-    answer: "O perfil, a foto e os favoritos ficam no navegador usado. Novas inscrições em cursos são confirmadas por e-mail e registradas no servidor. Ao abrir o link pessoal de confirmação em outro navegador, o perfil do destinatário pode ser disponibilizado ali; fotos, favoritos e memória do chat não são transferidos. Não há login por senha nem recuperação automática pelo chatbot. Nunca envie o link pessoal ou credenciais à conversa.",
+    answer: "O perfil, a foto e os favoritos ficam no navegador usado. Novas inscrições em cursos são confirmadas por e-mail e registradas no servidor. Ao abrir o link pessoal de confirmação em outro navegador, o perfil do destinatário pode ser disponibilizado ali; fotos, favoritos e memória do chat não são transferidos. Quando disponível, use Entrar / Cadastrar → Continuar com Google e escolha a mesma conta Google do e-mail cadastrado para recuperar o perfil e as inscrições do servidor. Se a entrada estiver indisponível, a plataforma ainda precisa ativar a integração. Não há login por senha nem recuperação pelo chatbot. Nunca envie o link pessoal ou credenciais à conversa.",
     followUps: ["Meu perfil desapareceu", "Como meus dados são armazenados?", "Como entro em contato?"], actionPages: ["profile", "contato"],
   },
   {
