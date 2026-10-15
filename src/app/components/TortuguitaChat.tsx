@@ -32,7 +32,7 @@ const MAX_INPUT_LENGTH = 1000;
 const WELCOME: ChatMessage = {
   id: 0,
   role: "assistant",
-  text: "Olá! Sou a Tortuguita 🐢\nPosso ajudar a escolher e comparar cursos, orientar seu cadastro e explicar as regras da plataforma. Peça “quero me cadastrar” ou “quero informações sobre Excel” e eu abro a tela para você. Você pode reabrir o chat e continuar a conversa.\nO que você gostaria de saber?",
+  text: "Olá! Sou a Tortuguita Vix 🐢\nAjudo você a encontrar cursos, fazer seu cadastro e tirar dúvidas sobre a plataforma.\nComo posso ajudar hoje?",
 };
 
 function initialSuggestions(page: Page): string[] {
@@ -77,7 +77,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       : initialSuggestions(page)).slice(0, 4);
 
   useEffect(() => {
-    if (open && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+    if (open && logRef.current) logRef.current.scrollTop = messages.length === 1 ? 0 : logRef.current.scrollHeight;
   }, [open, messages]);
 
   useEffect(() => {
@@ -198,23 +198,26 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           ref={launcherRef}
           type="button"
           aria-label="Abrir assistente virtual"
-          className="fixed bottom-5 right-5 z-40 flex h-[74px] w-[74px] items-center justify-center rounded-full border-2 border-white bg-blue-700 shadow-xl transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
+          title="Converse com a Tortuguita Vix"
+          aria-description="Chatbot da Tortuguita Vix para ajudar com cursos e cadastro"
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full border-2 border-white bg-blue-700 py-1.5 pl-3.5 pr-1.5 text-white shadow-xl transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
         >
-          <span aria-hidden="true"><TurtleMascot size={64} /></span>
+          <span aria-hidden="true" className="text-left"><span className="block text-sm font-bold">Tortuguita Vix</span><span className="block text-xs text-blue-100">Seu chatbot de cursos</span></span>
+          <span aria-hidden="true"><TurtleMascot size={48} /></span>
         </button>
       </Dialog.Trigger>
 
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-slate-950/25" />
         <Dialog.Content
-          className="fixed bottom-4 right-4 z-[70] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:bottom-24 sm:max-h-[calc(100dvh-7rem)]"
-          style={{ height: "min(700px, calc(100dvh - 2rem))" }}
+          className="fixed bottom-4 right-4 z-[70] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:bottom-24 sm:max-h-[calc(100dvh-7rem)]"
+          style={{ height: "min(580px, calc(100dvh - 2rem))" }}
           onOpenAutoFocus={event => { event.preventDefault(); inputRef.current?.focus(); }}
           onCloseAutoFocus={event => { event.preventDefault(); launcherRef.current?.focus(); }}
           aria-describedby="tortuguita-description"
         >
-          <div className="flex shrink-0 items-center gap-3 bg-gradient-to-r from-blue-900 to-blue-700 px-4 py-4 text-white">
-            <span aria-hidden="true" className="shrink-0 rounded-2xl bg-white/15 p-1"><TurtleMascot size={46} /></span>
+          <div className="flex shrink-0 items-center gap-3 bg-gradient-to-r from-blue-900 to-blue-700 px-4 py-3 text-white">
+            <span aria-hidden="true" className="shrink-0 rounded-2xl bg-white/15 p-1"><TurtleMascot size={38} /></span>
             <div className="min-w-0 flex-1">
               <Dialog.Title className="text-base font-extrabold text-white">Tortuguita</Dialog.Title>
               <Dialog.Description id="tortuguita-description" className="mt-0.5 text-xs text-blue-100">Sua assistente sobre o Qualifica Vix</Dialog.Description>
@@ -245,26 +248,27 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           {memoryNotice && <div role="status" className="shrink-0 px-4 py-2 text-xs text-slate-700">{memoryNotice}</div>}
           {profile && !persistent && <div role="status" className="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-900">O navegador não permitiu salvar sua memória. Ela fica disponível somente enquanto esta página estiver aberta.</div>}
 
-          <div ref={logRef} role="log" aria-label="Conversa com a Tortuguita" aria-live="polite" aria-relevant="additions text"
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50 px-4 py-5">
-            {messages.map(message => (
-              <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[94%] min-w-0 rounded-2xl px-4 py-3 ${message.role === "user" ? "rounded-br-md bg-blue-700 text-white" : "rounded-bl-md border border-slate-200 bg-white text-slate-700"}`}>
-                  <span className="sr-only">{message.role === "user" ? "Você: " : "Tortuguita: "}</span>
-                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ overflowWrap: "anywhere" }}>{message.text}</p>
-                  {message.actions && message.actions.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {message.actions.map((action, index) => (
-                        <button key={`${action.label}-${index}`} type="button" onClick={() => followAction(action)}
-                          className="flex max-w-full items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-bold text-slate-800 hover:border-blue-500 focus-visible:outline-2 focus-visible:outline-blue-600">
-                          <span className="min-w-0 break-words">{action.label}</span><ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
+          <div ref={logRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-slate-50 px-4 py-4">
+            <div role="log" aria-label="Conversa com a Tortuguita" aria-live="polite" aria-relevant="additions text" className="space-y-3">
+              {messages.map(message => (
+                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[94%] min-w-0 rounded-2xl px-4 py-3 ${message.role === "user" ? "rounded-br-md bg-blue-700 text-white" : "rounded-bl-md border border-slate-200 bg-white text-slate-700"}`}>
+                    <span className="sr-only">{message.role === "user" ? "Você: " : "Tortuguita: "}</span>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ overflowWrap: "anywhere" }}>{message.text}</p>
+                    {message.actions && message.actions.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {message.actions.map((action, index) => (
+                          <button key={`${action.label}-${index}`} type="button" onClick={() => followAction(action)}
+                            className="flex max-w-full items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-bold text-slate-800 hover:border-blue-500 focus-visible:outline-2 focus-visible:outline-blue-600">
+                            <span className="min-w-0 break-words">{action.label}</span><ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
             {messages.length === 1 && (
               <details className="rounded-xl border border-slate-200 bg-white p-3 text-slate-600">
                 <summary className="cursor-pointer text-xs font-bold">Com o que posso ajudar?</summary>
@@ -273,24 +277,26 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                 </ul>
               </details>
             )}
+            <div className="pt-1">
+              <div className="mb-2 flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                <Sparkles className="h-3 w-3" aria-hidden="true" />{querySuggestions.length > 0 ? "Sugestões para sua pergunta" : messages.length === 1 ? "Comece por aqui" : "Continue a conversa"}
+              </div>
+              <div className="grid gap-2" aria-label="Perguntas sugeridas">
+                {suggestions.map(suggestion => (
+                  <button key={suggestion} type="button" onClick={() => sendMessage(suggestion)} disabled={sending}
+                    className="max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs leading-snug text-slate-700 hover:border-blue-400 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50">
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-4 pt-3">
-            <div className="mb-2 flex items-center gap-1 text-[11px] font-semibold text-slate-500">
-              <Sparkles className="h-3 w-3" aria-hidden="true" />{querySuggestions.length > 0 ? "Sugestões para sua pergunta" : "Continue a conversa"}
-            </div>
-            <div className="mb-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto" aria-label="Perguntas sugeridas">
-              {suggestions.map(suggestion => (
-                <button key={suggestion} type="button" onClick={() => sendMessage(suggestion)} disabled={sending}
-                  className="max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs leading-snug text-slate-700 hover:border-blue-400 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50">
-                  {suggestion}
-                </button>
-              ))}
-            </div>
+          <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-3 pt-3">
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <textarea ref={inputRef} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={handleInputKeyDown}
-                aria-label="Sua dúvida ou busca" aria-describedby="tortuguita-input-help" maxLength={MAX_INPUT_LENGTH} rows={2}
-                placeholder="Escreva sua dúvida…" className="min-w-0 flex-1 resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-600 focus:outline-2 focus:outline-blue-600" />
+                aria-label="Sua dúvida ou busca" aria-describedby="tortuguita-input-help" maxLength={MAX_INPUT_LENGTH} rows={1}
+                placeholder="Escreva sua dúvida…" className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-600 focus:outline-2 focus:outline-blue-600" />
               <button type="submit" disabled={!draft.trim() || sending} aria-label="Enviar mensagem"
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-40">
                 <Send className="h-4 w-4" aria-hidden="true" />
