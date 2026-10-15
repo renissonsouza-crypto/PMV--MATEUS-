@@ -36,7 +36,7 @@ const MAX_MESSAGES = 41;
 const WELCOME: ChatMessage = {
   id: 0,
   role: "assistant",
-  text: "Olá! Sou a Tortuguita 🐢\nPosso ajudar a escolher e comparar cursos, orientar seu cadastro e explicar as regras da plataforma. Você pode continuar a conversa com perguntas como “e quanto tempo dura?”.\nO que você gostaria de saber?",
+  text: "Olá! Sou a Tortuguita 🐢\nPosso ajudar a escolher e comparar cursos, orientar seu cadastro e explicar as regras da plataforma. Peça “quero me cadastrar” ou “quero informações sobre Excel” e eu abro a tela para você. Você pode reabrir o chat e continuar a conversa.\nO que você gostaria de saber?",
 };
 
 function initialSuggestions(page: Page): string[] {
@@ -130,6 +130,13 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       const response: ChatMessage = { id: nextIdRef.current++, role: "assistant", text: reply.text, actions: reply.actions };
       setMessages(current => [...current, userMessage, response].slice(-MAX_MESSAGES));
       setFollowUps(reply.suggestions);
+      if (reply.navigation) {
+        const { courseId, page: destination } = reply.navigation;
+        const alreadyThere = courseId !== undefined
+          ? page === "course-detail" && activeCourseId === courseId
+          : page === destination;
+        if (!alreadyThere) followAction(reply.navigation);
+      }
     } catch {
       setMessages(current => [...current, userMessage, {
         id: nextIdRef.current++,
