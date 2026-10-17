@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
+import { createServer as createHttpServer } from "node:http";
 import { mkdtemp, rm, mkdir, writeFile, copyFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -82,7 +83,7 @@ test("dev starts API and Vite on alternate ports and proxies real database mutat
   const origin = `http://127.0.0.1:${frontendPort}`;
   const child = spawn(process.execPath, ["scripts/dev.mjs", "--host", "127.0.0.1", "--port", String(frontendPort), "--strictPort"], {
     cwd: root,
-    env: { ...process.env, API_PORT: String(apiPort), DB_PATH: join(directory, "test.sqlite"), VITE_CACHE_DIR: join(directory, "vite-cache") },
+    env: { ...process.env, NODE_ENV: 'test', GOOGLE_CLIENT_ID: 'startup.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'startup-test-secret', APP_BASE_URL: origin, API_PORT: String(apiPort), DB_PATH: join(directory, "test.sqlite"), VITE_CACHE_DIR: join(directory, "vite-cache") },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
@@ -107,6 +108,9 @@ test("dev starts API and Vite on alternate ports and proxies real database mutat
     const entry = await fetch(`${origin}/src/main.tsx`);
     assert.equal(entry.status, 200);
     assert.match(entry.headers.get("content-type"), /javascript/);
+    const google = await fetch(`${origin}/api/auth?action=config`);
+    assert.equal(google.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await google.json(), { enabled: true, clientId: 'startup.apps.googleusercontent.com' }, 'Configured API must expose availability and public ID only');
 
     const created = await fetch(`${origin}/api/testimonials`, {
       method: "POST",
@@ -131,4 +135,28 @@ test("dev starts API and Vite on alternate ports and proxies real database mutat
     }
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('dev refuses to reuse a stale API without killing the existing service', { timeout: 10_000 }, async () => {
+  const api = createHttpServer((req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(req.url === '/api/health' ? { status: 'ok', database: 'connected' } : { enabled: false }));
+  }).listen(0, '127.0.0.1');
+  await once(api, 'listening');
+  const port = api.address().port;
+  try {
+    const child = spawn(process.execPath, ['scripts/dev.mjs'], {
+      cwd: root,
+      env: { ...process.env, API_PORT: String(port), GOOGLE_CLIENT_ID: 'startup.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'startup-test-secret', APP_BASE_URL: 'http://localhost:5173' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let output = '';
+    child.stdout.on('data', data => { output += data; });
+    child.stderr.on('data', data => { output += data; });
+    const [code] = await once(child, 'exit');
+    assert.equal(code, 1);
+    assert.match(output, /API já aberta.*Ctrl\+C/);
+    assert.doesNotMatch(output, /startup-test-secret|VITE v|Local:/);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/api/health`)).status, 200);
+  } finally { await new Promise(resolve => api.close(resolve)); }
 });

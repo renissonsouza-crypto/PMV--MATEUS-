@@ -2,7 +2,7 @@ import "../server/config/environment.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { getApiPort, requireSupportedNode, resolveViteCli } from "./dev-config.mjs";
+import { checkReusedGoogleApi, getApiPort, requireSupportedNode, resolveViteCli } from "./dev-config.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 let viteCli;
@@ -79,7 +79,9 @@ async function main() {
       return;
     }
   } else {
+    await checkReusedGoogleApi(apiPort);
     console.log(`API local já está disponível na porta ${apiPort}.`);
+    console.log('Se você alterou o .env, reinicie também essa API para aplicar os novos valores.');
   }
 
   if (stopping) return;

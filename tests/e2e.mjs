@@ -940,6 +940,33 @@ async function mockGoogleChooser(page, script = googleSdkFixture) {
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: script }));
   await page.route('**/api/auth?action=challenge', route => route.fulfill({ json: { nonce: 'a'.repeat(64) } }));
 }
+test("Google: configuração habilitada após reiniciar servidor pode ser consultada novamente", async page => {
+  let enabled = false;
+  await mockGoogleChooser(page);
+  await page.route('**/api/auth?action=config', route => route.fulfill({ json: enabled ? { enabled: true, clientId: 'test.apps.googleusercontent.com' } : { enabled: false } }));
+  await page.getByRole('button', { name: 'Entrar ou cadastrar', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Entrada com Google ainda indisponível', exact: true }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Entrada com Google ainda indisponível', exact: true }).isDisabled(), true);
+  enabled = true;
+  await page.getByRole('button', { name: 'Verificar novamente', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar com Google', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Entrar na sua conta' }).getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).waitFor();
+});
+
+test("Google: resposta inválida da API mostra falha de consulta e permite recuperar no celular", async page => {
+  let recovered = false;
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.route('**/api/auth?action=config', route => route.fulfill(recovered ? { json: { enabled: true, clientId: 'test.apps.googleusercontent.com' } } : { contentType: 'text/html', body: '<html>API unavailable</html>' }));
+  await navigate(page, 'Entrar / Cadastrar');
+  await page.getByRole('alert').filter({ hasText: 'Não foi possível consultar a entrada com Google.' }).waitFor();
+  assert.equal(await page.getByText('A entrada com Google ainda precisa ser configurada pela plataforma.', { exact: false }).count(), 0);
+  recovered = true;
+  await page.getByRole('button', { name: 'Verificar novamente', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar com Google', exact: true }).waitFor();
+  assert.equal(await page.getByRole('alert').count(), 0);
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+});
+
 test("Google: caixa de contas, sugestões oficiais e recuperação após autenticação", async page => {
   await mockGoogleChooser(page);
   await page.route('**/api/auth?action=credential', route => {

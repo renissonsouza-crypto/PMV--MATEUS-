@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { loadGoogleIdentity, rememberGoogleCourse, type GoogleIdentity } from '../services/googleIdentity';
 import { useEffect, useId, useRef, useState } from 'react';
-import { resolveGoogleAccess, cancelGoogleSignup, beginGoogleSignIn, completeGoogleSignIn, type GoogleSignupIdentity, type UserProfile } from '../services/api';
+import { getGoogleLoginConfig, resolveGoogleAccess, cancelGoogleSignup, beginGoogleSignIn, completeGoogleSignIn, type GoogleSignupIdentity, type UserProfile } from '../services/api';
 
 function GoogleAccountChooser({ clientId }: { clientId: string }) {
   const button = useRef<HTMLDivElement>(null);
@@ -70,15 +70,18 @@ function GoogleAccountChooser({ clientId }: { clientId: string }) {
 
 export function GoogleLoginButton({ courseId }: { courseId?: number }) {
   const [config, setConfig] = useState<{ enabled: boolean; clientId?: string } | null>(null);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const abort = new AbortController();
-    fetch('/api/auth?action=config', { signal: abort.signal, credentials: 'same-origin' })
-      .then(response => response.ok ? response.json() : null)
-      .then(data => { if (!abort.signal.aborted) setConfig({ enabled: data?.enabled === true, clientId: typeof data?.clientId === 'string' ? data.clientId : undefined }); })
-      .catch(() => { if (!abort.signal.aborted) setConfig({ enabled: false }); });
+    setConfig(null);
+    setError('');
+    getGoogleLoginConfig(abort.signal)
+      .then(data => { if (!abort.signal.aborted) setConfig(data); })
+      .catch(() => { if (!abort.signal.aborted) setError('Não foi possível consultar a entrada com Google. Verifique sua conexão e tente novamente.'); });
     return () => abort.abort();
-  }, []);
+  }, [attempt]);
   return <section aria-label="Acesso e cadastro com Google" className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 dark:bg-slate-900 dark:border-slate-700">
     <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100">Entre ou cadastre-se com Google</h2>
     <p className="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-300">Use sua conta Google para acessar o perfil ou começar seu cadastro.</p>
@@ -88,7 +91,11 @@ export function GoogleLoginButton({ courseId }: { courseId?: number }) {
         <DialogHeader><DialogTitle className="pr-8">Entrar na sua conta</DialogTitle><DialogDescription>Escolha sua conta Google para entrar ou completar seu cadastro no Qualifica Vix.</DialogDescription></DialogHeader>
         {open && <GoogleAccountChooser clientId={config.clientId} />}
       </DialogContent>
-    </Dialog> : <><button type="button" disabled className="min-h-12 w-full rounded-xl border-2 border-slate-200 px-4 py-3 font-bold text-slate-500 disabled:opacity-70">{config === null ? 'Verificando entrada com Google…' : 'Entrada com Google ainda indisponível'}</button>{config !== null && <p className="mt-2 text-sm text-slate-500">A entrada com Google será liberada após a configuração pela plataforma.</p>}</>}
+    </Dialog> : <>
+      <button type="button" disabled className="min-h-12 w-full rounded-xl border-2 border-slate-200 px-4 py-3 font-bold text-slate-500 disabled:opacity-70">{error ? 'Não foi possível verificar o Google' : config === null ? 'Verificando entrada com Google…' : 'Entrada com Google ainda indisponível'}</button>
+      {error ? <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</p> : config !== null && <p role="status" className="mt-2 text-sm text-slate-500">A entrada com Google ainda precisa ser configurada pela plataforma. Você pode continuar com o cadastro abaixo.</p>}
+      {(error || config !== null) && <button type="button" onClick={() => setAttempt(value => value + 1)} className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 px-4 py-2 font-semibold text-blue-700 dark:text-blue-300">Verificar novamente</button>}
+    </>}
   </section>;
 }
 

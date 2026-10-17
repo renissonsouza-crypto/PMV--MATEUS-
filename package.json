@@ -14,6 +14,8 @@
     "build": "vite build",
     "dev": "node scripts/dev.mjs",
     "server": "node server/server.mjs",
+    "auth:check": "node scripts/check-google-auth.mjs",
+    "auth:setup": "node scripts/setup-google-auth.mjs",
     "db:migrate": "node scripts/migrate-postgres.mjs",
     "test": "npm run test:unit && npm run test:validation && npm run test:security && npm run test:db && npm run test:serverless",
     "test:unit": "node --test \"tests/*.test.mjs\"",

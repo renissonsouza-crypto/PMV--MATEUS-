@@ -27,6 +27,8 @@ test('Google configuration fails closed and permits HTTP only on development loo
   assert.throws(() => googleConfiguration({}), error => error.statusCode === 503);
   const env = { GOOGLE_CLIENT_ID: config.clientId, GOOGLE_CLIENT_SECRET: config.secret, APP_BASE_URL: 'https://example.test' };
   assert.equal(googleConfiguration(env).redirectUri, config.redirectUri);
+  assert.equal(googleConfiguration({ ...env, GOOGLE_CLIENT_ID: ` ${env.GOOGLE_CLIENT_ID} `, GOOGLE_CLIENT_SECRET: ` ${env.GOOGLE_CLIENT_SECRET} ` }).clientId, config.clientId);
+  assert.throws(() => googleConfiguration({ ...env, GOOGLE_CLIENT_SECRET: '   ' }), error => error.statusCode === 503);
   for (const origin of ['http://example.test', 'https://example.test/elsewhere', 'https://user@example.test', 'https://example.test/#unsafe']) assert.throws(() => googleConfiguration({ ...env, APP_BASE_URL: origin }));
   assert.equal(googleConfiguration({ ...env, APP_BASE_URL: 'http://localhost:5173' }).secure, false);
   assert.throws(() => googleConfiguration({ ...env, APP_BASE_URL: 'http://localhost:5173', NODE_ENV: 'production' }));

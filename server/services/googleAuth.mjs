@@ -4,12 +4,15 @@ import { digest, newToken, fail } from './enrollmentConfirmation.mjs';
 
 const keys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'), { timeoutDuration: 5000 });
 export function googleConfiguration(env = process.env) {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.APP_BASE_URL) throw fail('A entrada com Google ainda não está configurada. Entre em contato com o atendimento.', 503);
+  const clientId = env.GOOGLE_CLIENT_ID?.trim();
+  const secret = env.GOOGLE_CLIENT_SECRET?.trim();
+  const baseUrl = env.APP_BASE_URL?.trim();
+  if (!clientId || !secret || !baseUrl) throw fail('A entrada com Google ainda não está configurada. Entre em contato com o atendimento.', 503);
   let origin;
-  try { origin = new URL(env.APP_BASE_URL); } catch { throw fail('Endereço de login não configurado.', 503); }
+  try { origin = new URL(baseUrl); } catch { throw fail('Endereço de login não configurado.', 503); }
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
   if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== '/' || (origin.protocol !== 'https:' && !(origin.protocol === 'http:' && local && env.NODE_ENV !== 'production'))) throw fail('Endereço de login não configurado.', 503);
-  return { clientId: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET, origin: origin.origin, secure: origin.protocol === 'https:', redirectUri: `${origin.origin}/api/auth?action=callback` };
+  return { clientId, secret, origin: origin.origin, secure: origin.protocol === 'https:', redirectUri: `${origin.origin}/api/auth?action=callback` };
 }
 export function authCookie(name, value, config, maxAge) {
   return `${name}=${value}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${config.secure ? '; Secure' : ''}`;

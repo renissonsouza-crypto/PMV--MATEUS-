@@ -19,6 +19,17 @@ export function requireSupportedNode(version = process.versions.node) {
     throw new Error(`Node.js ${version} não é compatível com este projeto. Instale o Node.js 24 LTS ou superior e abra um novo terminal.`);
   }
 }
+
+export async function checkReusedGoogleApi(port, environment = process.env, fetcher = fetch) {
+  if (![environment.GOOGLE_CLIENT_ID, environment.GOOGLE_CLIENT_SECRET, environment.APP_BASE_URL].every(value => value?.trim())) return;
+  try {
+    const response = await fetcher(`http://127.0.0.1:${port}/api/auth?action=config`, { signal: AbortSignal.timeout(2000), cache: 'no-store' });
+    const config = response.ok ? await response.json() : null;
+    if (config?.enabled === true && config.clientId === environment.GOOGLE_CLIENT_ID.trim()) return;
+  } catch { /* An older API may not implement this endpoint. */ }
+  throw new Error(`A API já aberta na porta ${port} não está usando a configuração Google deste terminal. Encerre a API antiga com Ctrl+C no terminal onde ela foi iniciada e execute npm run dev novamente. Para diagnosticar, execute npm run auth:check.`);
+}
+
 export async function resolveViteCli(fromUrl = import.meta.url) {
   try {
     const require = createRequire(fromUrl);

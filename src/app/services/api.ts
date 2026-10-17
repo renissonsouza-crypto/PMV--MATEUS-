@@ -33,6 +33,13 @@ function isTestimonial(value: unknown): value is StoredTestimonial {
   return isCourseId(entry.id) && [entry.name, entry.role, entry.course, entry.quote].every(text => typeof text === "string")
     && Number.isInteger(entry.rating) && entry.rating >= 1 && entry.rating <= 5;
 }
+export async function getGoogleLoginConfig(signal?: AbortSignal): Promise<{ enabled: boolean; clientId?: string }> {
+  const result = await request<{ enabled?: unknown; clientId?: unknown }>("/auth?action=config", { signal, cache: 'no-store', credentials: 'same-origin' });
+  if (result?.enabled === false) return { enabled: false };
+  if (result?.enabled === true && typeof result.clientId === 'string' && result.clientId.trim()) return { enabled: true, clientId: result.clientId };
+  throw new Error('Não foi possível verificar a entrada com Google. Tente novamente.');
+}
+
 export const getTestimonials = async () => {
   const data = await request<unknown>("/testimonials");
   if (!Array.isArray(data) || !data.every(isTestimonial)) throw new Error("Resposta de depoimentos inválida");

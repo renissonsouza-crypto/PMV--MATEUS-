@@ -171,3 +171,25 @@ APP_BASE_URL=http://localhost:5173
 ```
 
 Cadastre `http://localhost:5173` como origem JavaScript autorizada e `http://localhost:5173/api/auth?action=callback` como URI de redirecionamento. Reinicie `npm.cmd run dev` e abra o site exatamente em `http://localhost:5173`. Não envie o segredo pela conversa nem o adicione ao Git. `GET /api/auth?action=config` indica se as variáveis estão presentes, mas não valida as credenciais no Google. Para validar a integração real, escolha uma conta Google própria e complete o cadastro; os testes automatizados usam identidades assinadas e SDK isolado para não depender de credenciais reais.
+
+Se a entrada continuar indisponível, execute na raiz do projeto:
+
+```powershell
+npm.cmd run auth:check
+```
+
+O diagnóstico informa quais variáveis faltam, alerta sobre `.env.txt` ou `.env.local` (a API lê `.env` e as variáveis do terminal) e compara o ID público com a API já em execução. Ele não exibe o segredo nem valida credenciais com o Google. Variáveis fornecidas pelo terminal ou pelo provedor de hospedagem têm prioridade sobre o arquivo. Se você mudou o segredo ou o endereço, reinicie a API mesmo quando o ID não mudou. A interface permite **Verificar novamente** depois de corrigir a configuração e diferencia falha na consulta de configuração ausente.
+
+Para completar somente o endereço local quando ID e segredo já estão no `.env`:
+
+```powershell
+npm.cmd run auth:setup -- --origin http://localhost:5173
+```
+
+Também é possível baixar o JSON do cliente **Aplicativo da Web** no Google Cloud e importá-lo diretamente no computador:
+
+```powershell
+npm.cmd run auth:setup -- --credentials "C:\CAMINHO\client_secret_download.json" --origin http://localhost:5173
+```
+
+Esse comando preserva as demais configurações, grava somente no `.env` local ignorado pelo Git e recusa arquivos versionados ou links simbólicos. Nenhuma credencial é enviada pela rede. O JSON também contém um segredo: guarde-o fora do repositório; arquivos `client_secret*.json` são ignorados como proteção adicional. Após configurar, encerre o servidor com Ctrl+C e execute `npm.cmd run dev` novamente. Uma API antiga com login desativado ou outro ID impede a reutilização silenciosa da configuração incorreta; o comando orienta a reiniciá-la sem encerrar processos de terceiros.
