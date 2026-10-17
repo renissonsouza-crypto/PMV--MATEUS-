@@ -159,6 +159,10 @@ O retorno Google Identity Services é enviado por POST ao servidor e validado po
 
 Os testes usam JWTs assinados com chaves locais, o SDK simulado no navegador e um provedor isolado/injetado; não usam uma conta Google real. A validação final do OAuth publicado exige as credenciais e a URI de redirecionamento configuradas no Google Cloud.
 
+Para verificar especificamente a recuperação de contas existentes, execute `npm run test:google` (no Windows, `npm.cmd run test:google`), com Node.js 24+ e Chrome/Chromium/Edge instalado. A suíte abre o frontend e a API reais em portas temporárias, cria duas pessoas e inscrições em SQLite descartável e simula somente a interface Google e suas chaves públicas. O servidor continua validando assinatura RS256, emissor, destinatário, expiração, e-mail verificado e nonce. As respostas de autenticação, recuperação de perfil e sessões não são simuladas. Nenhuma conta Google externa é criada ou utilizada, e os dados do desenvolvimento são preservados. Não use `TEST_URL` nessa suíte.
+
+São verificados: primeiro acesso com o mesmo e-mail, identificação sem diferenciar maiúsculas e espaços, ausência de cadastro duplicado, preservação do nome e histórico de cursos, saída e nova entrada no celular, troca de pessoa com dados locais antigos, reconhecimento da identidade estável após mudança no e-mail, rejeição de identidade conflitante e de credenciais sem e-mail verificado ou com nonce incorreto. Uma conta Google sem cadastro segue para completar o formulário, sem acessar outro perfil nem criar um perfil incompleto. `npm test` também executa os testes dessas regras com o SQL de produção em PostgreSQL isolado via PGlite; isso não equivale a testar um banco Neon remoto ou uma conta Google real.
+
 No formulário, nascimento usa digitação `DD/MM/AAAA`, máscara automática e teclado numérico no celular; a API continua recebendo `AAAA-MM-DD` e rejeita datas inexistentes ou futuras. O número do endereço é opcional tanto no formulário quanto na validação dos dois bancos; vazio é armazenado como string vazia.
 
 

@@ -1,13 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { createServer as createViteServer } from "vite";
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -47,7 +48,7 @@ async function stopChild(child) {
 
 // All writes use the real application API against disposable SQLite data.
 // ViaCEP and the mail provider use local fixtures; tests never send real emails.
-export async function startTestEnvironment() {
+export async function startTestEnvironment({ google = false } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "qualificavix-e2e-"));
   const dbPath = join(directory, "test.sqlite");
   let api;
@@ -77,6 +78,12 @@ export async function startTestEnvironment() {
     rmSync(directory, { recursive: true, force: true });
   };
   try {
+    if (google && process.env.TEST_URL) throw new Error('Os testes Google exigem o frontend e a API temporários; não use TEST_URL.');
+    const googleKeys = google ? await generateKeyPair('RS256') : null;
+    const googleClientId = 'browser-fixture.apps.googleusercontent.com';
+    const googleKeyId = 'isolated-google-key';
+    const jwksPath = join(directory, 'google-public-jwks.json');
+    if (googleKeys) writeFileSync(jwksPath, JSON.stringify({ keys: [{ ...await exportJWK(googleKeys.publicKey), kid: googleKeyId, use: 'sig', alg: 'RS256' }] }));
     const cepPort = await listen(cepServer);
     const mailPort = await listen(mailServer);
     const frontendReservation = createServer();
@@ -85,9 +92,10 @@ export async function startTestEnvironment() {
     const reservation = createServer();
     const apiPort = await listen(reservation);
     await new Promise(resolveClose => reservation.close(resolveClose));
-    api = spawn(process.execPath, [join(root, "server/server.mjs")], {
+    const apiArguments = google ? ['--import', pathToFileURL(join(root, 'tests/fixtures/google-jwks.mjs')).href, join(root, 'server/server.mjs')] : [join(root, 'server/server.mjs')];
+    api = spawn(process.execPath, apiArguments, {
       cwd: root,
-      env: { ...process.env, NODE_ENV: "test", RESEND_API_KEY: "", MAIL_FROM: "", APP_BASE_URL: "", MAIL_TEST_URL: `http://127.0.0.1:${mailPort}/emails`, API_PORT: String(apiPort), DB_PATH: dbPath, VIA_CEP_BASE_URL: `http://127.0.0.1:${cepPort}/ws` },
+      env: { ...process.env, NODE_ENV: "test", RESEND_API_KEY: "", MAIL_FROM: "", GOOGLE_CLIENT_ID: google ? googleClientId : '', GOOGLE_CLIENT_SECRET: google ? 'isolated-google-server-secret' : '', APP_BASE_URL: google ? `http://127.0.0.1:${frontendPort}` : '', QV_TEST_GOOGLE_JWKS: google ? jwksPath : '', MAIL_TEST_URL: `http://127.0.0.1:${mailPort}/emails`, API_PORT: String(apiPort), DB_PATH: dbPath, VIA_CEP_BASE_URL: `http://127.0.0.1:${cepPort}/ws` },
       stdio: ["ignore", "pipe", "pipe"],
     });
     api.stdout.on("data", data => { output += data.toString(); });
@@ -115,6 +123,17 @@ export async function startTestEnvironment() {
     }
     return {
       baseURL, apiURL, cleanup, emails,
+      signGoogleCredential(identity, nonce, overrides = {}) {
+        if (!googleKeys) throw new Error('Google fixtures were not enabled.');
+        return new SignJWT({ email: identity.email, email_verified: true, name: identity.nome, nonce, ...overrides })
+          .setProtectedHeader({ alg: 'RS256', kid: googleKeyId }).setIssuer('https://accounts.google.com')
+          .setAudience(googleClientId).setSubject(identity.subject).setIssuedAt().setExpirationTime('5m').sign(googleKeys.privateKey);
+      },
+      registrationCount(email) {
+        const database = new DatabaseSync(dbPath, { readOnly: true });
+        try { return database.prepare('SELECT count(*) AS n FROM registrations WHERE lower(trim(email)) = ?').get(email.trim().toLowerCase()).n; }
+        finally { database.close(); }
+      },
       failNextEmail() { mailFailures++; },
       seedRegistration(profile) {
         profile.profileToken = randomBytes(32).toString("hex");

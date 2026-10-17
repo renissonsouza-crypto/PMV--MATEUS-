@@ -115,6 +115,57 @@ test('PostgreSQL direct enrollment is authenticated, idempotent under concurrenc
   assert.equal(mails.length, 0);
 });
 
+test('PostgreSQL Google signup of an existing email restores the original account and enrollment history without duplicate registration', async () => {
+  const { repository: enrollments, service } = await fixture();
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const { finishGoogleAccess, publicProfile } = await import('../server/services/googleAuth.mjs');
+  const repository = postgresAuthRepository();
+  const oldToken = '9'.repeat(64);
+  await enrollments.session(1, digest(oldToken));
+  await service.enroll({ registrationId: 1, courseId: 1 }, oldToken);
+  const cancelled = await service.enroll({ registrationId: 1, courseId: 2 }, oldToken);
+  await service.cancel({ requestId: cancelled.requestId }, oldToken);
+  await database.query('UPDATE registrations SET email = $1 WHERE id = 1', ['  EXISTING.OWNER@gmail.com  ']);
+  const original = (await database.query('SELECT payload FROM registrations WHERE id = 1')).rows[0].payload;
+  const identity = { email: 'existing.owner@gmail.com', subject: 'existing-google-owner', name: 'Google display name' };
+  const access = await finishGoogleAccess(repository, identity);
+  assert.equal(access.kind, 'session', 'An existing account must enter instead of starting signup');
+  const restored = publicProfile(await repository.authenticated(digest(access.token)), await repository.enrollments(1));
+  assert.equal(restored.id, 1);
+  assert.equal(restored.nome, 'Pessoa PostgreSQL');
+  assert.deepEqual(restored.enrollments.map(row => row.courseId), [1]);
+  assert.deepEqual(restored.enrollmentHistory.map(row => row.courseId).sort(), [1, 2]);
+  assert.equal(await repository.authenticated(digest(oldToken)), undefined);
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM registrations')).rows[0].n, 1);
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM google_signup_intents')).rows[0].n, 0);
+  assert.deepEqual((await database.query('SELECT payload FROM registrations WHERE id = 1')).rows[0].payload, original);
+  const again = await finishGoogleAccess(repository, identity);
+  assert.equal(again.kind, 'session');
+  assert.equal(Number((await repository.authenticated(digest(again.token))).id), 1);
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM google_identities')).rows[0].n, 1);
+});
+
+test('PostgreSQL existing Google identities cannot cross accounts after an email change or a conflicting subject', async () => {
+  await fixture();
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const { finishGoogleAccess } = await import('../server/services/googleAuth.mjs');
+  const repository = postgresAuthRepository();
+  const second = { nome: 'Outra pessoa', email: 'other@gmail.com', telefone: '27999999999' };
+  await database.query("INSERT INTO registrations(name,cpf,email,phone,birth_date,neighborhood,payload) VALUES ($1,'98765432100',$2,$3,'1990-01-01','Centro',$4)", [second.nome, second.email, second.telefone, JSON.stringify(second)]);
+  const owner = { email: 'postgres@example.test', subject: 'google-owner' };
+  await finishGoogleAccess(repository, owner);
+  await assert.rejects(finishGoogleAccess(repository, { ...owner, subject: 'different-google-subject' }), error => error.statusCode === 403);
+  const changedEmail = await finishGoogleAccess(repository, { ...owner, email: second.email });
+  assert.equal(Number((await repository.authenticated(digest(changedEmail.token))).id), 1);
+  const other = await finishGoogleAccess(repository, { email: second.email, subject: 'google-other-person' });
+  assert.equal(Number((await repository.authenticated(digest(other.token))).id), 2);
+  await repository.revoke([digest(changedEmail.token)]);
+  assert.equal(await repository.authenticated(digest(changedEmail.token)), undefined);
+  assert.equal(Number((await repository.authenticated(digest(other.token))).id), 2, 'Logout must preserve another person’s session');
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM registrations')).rows[0].n, 2);
+  assert.equal((await database.query('SELECT count(*)::int AS n FROM google_signup_intents')).rows[0].n, 0);
+});
+
 test('PostgreSQL registration and initial session commit together or roll back together', async () => {
   await fixture();
   const { createPostgresRegistration } = await import('../server/models/PostgresRegistrationModel.mjs');
