@@ -142,3 +142,58 @@ test('PostgreSQL first Google binding atomically invalidates prior unverified se
   await finishGoogleLogin(repository, { email: 'postgres@example.test', subject: 'owner' });
   assert.equal(Number((await repository.authenticated(digest(verified))).id), 1);
 });
+
+test('PostgreSQL Google chooser challenges are single-use across workers and expire', async () => {
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const repository = postgresAuthRepository();
+  const hash = digest('browser-login-challenge');
+  await repository.challenge(hash, new Date(Date.now() + 60000).toISOString());
+  const results = await Promise.all(Array.from({ length: 8 }, () => repository.consumeChallenge(hash)));
+  assert.equal(results.filter(Boolean).length, 1);
+  await repository.challenge(hash, '2000-01-01T00:00:00.000Z');
+  assert.equal(await repository.consumeChallenge(hash), false);
+});
+
+test('PostgreSQL completes Google signup atomically, rejects wrong email and preserves intent after database failure', async () => {
+  await fixture();
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const { finishGoogleAccess } = await import('../server/services/googleAuth.mjs');
+  const { createPostgresRegistration } = await import('../server/models/PostgresRegistrationModel.mjs');
+  const repository = postgresAuthRepository();
+  const identity = { email: 'signup-google@gmail.com', name: 'New Person', subject: 'new-google-subject' };
+  const access = await finishGoogleAccess(repository, identity);
+  assert.equal(access.kind, 'signup');
+  const data = { nome: identity.name, cpf: '52998224725', email: identity.email, telefone: '27999999999', dataNascimento: '1990-01-01', bairro: 'Centro' };
+  await assert.rejects(createPostgresRegistration({ ...data, email: 'other@gmail.com' }, digest('s'.repeat(64)), digest(access.token)), error => error.statusCode === 401);
+  assert(await repository.signup(digest(access.token)));
+  await database.exec("ALTER TABLE profile_sessions ADD CONSTRAINT reject_signup CHECK(token_hash <> 'reject-signup')");
+  try {
+    await assert.rejects(createPostgresRegistration(data, 'reject-signup', digest(access.token)));
+    assert.equal((await database.query('SELECT id FROM registrations WHERE email = $1', [identity.email])).rows.length, 0);
+    assert.equal(await repository.bySubject(identity.subject), undefined);
+    assert(await repository.signup(digest(access.token)), 'Rollback must preserve the verified identity for retry');
+  } finally { await database.exec('ALTER TABLE profile_sessions DROP CONSTRAINT reject_signup'); }
+  const id = await createPostgresRegistration(data, digest('s'.repeat(64)), digest(access.token));
+  assert.equal(Number((await repository.bySubject(identity.subject)).id), id);
+  assert.equal(await repository.signup(digest(access.token)), undefined);
+  assert.equal(Number((await repository.authenticated(digest('s'.repeat(64)))).id), id);
+  const returning = await finishGoogleAccess(repository, identity);
+  assert.equal(returning.kind, 'session');
+  assert.equal(Number((await repository.authenticated(digest(returning.token))).id), id);
+  assert.equal((await database.query('SELECT id FROM registrations WHERE email = $1', [identity.email])).rows.length, 1);
+});
+
+test('PostgreSQL concurrent Google signup consumes the confirmation once and creates one profile', async () => {
+  await fixture();
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const { finishGoogleAccess } = await import('../server/services/googleAuth.mjs');
+  const { createPostgresRegistration } = await import('../server/models/PostgresRegistrationModel.mjs');
+  const repository = postgresAuthRepository();
+  const identity = { email: 'concurrent-google@gmail.com', name: 'Person', subject: 'concurrent-new-subject' };
+  const pending = await finishGoogleAccess(repository, identity);
+  const data = { nome: identity.name, cpf: '52998224725', email: identity.email, telefone: '27999999999', dataNascimento: '1990-01-01', bairro: 'Centro' };
+  const attempts = await Promise.allSettled(['u', 'v'].map(value => createPostgresRegistration(data, digest(value.repeat(64)), digest(pending.token))));
+  assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal((await database.query('SELECT id FROM registrations WHERE email = $1', [identity.email])).rows.length, 1);
+  assert.equal(await repository.signup(digest(pending.token)), undefined);
+});

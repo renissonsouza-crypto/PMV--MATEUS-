@@ -1,3 +1,4 @@
+import { authCookie, registrationGoogleIntent, clearGoogleSignupCookie } from "../services/googleAuth.mjs";
 import { newToken, digest } from "../services/enrollmentConfirmation.mjs";
 import { authController } from "./authController.mjs";
 import { sqliteAuthRepository } from "../models/AuthRepository.mjs";
@@ -156,6 +157,7 @@ const server = createServer(async (req, res) => {
       req.body = await body(req);
       const bodyError = validateJsonMutation(req);
       if (bodyError) return json(res, bodyError.status, { error: bodyError.error });
+      const googleIntent = await registrationGoogleIntent(req, sqliteAuthRepository(db));
       const validation = validateRegistration(req.body);
       if (validation.error) return json(res, 400, { error: validation.error });
       const cepValidation = await validateVitoriaCep(validation.data.cep);
@@ -169,13 +171,19 @@ const server = createServer(async (req, res) => {
         if (duplicate) return json(res, 409, { error: "CPF ou e-mail já cadastrado" });
         db.exec("BEGIN IMMEDIATE");
         try {
+        if (googleIntent && !db.prepare('SELECT 1 FROM google_signup_intents WHERE token_hash = ? AND expires_at > ? AND email = ?').get(googleIntent.tokenHash, new Date().toISOString(), data.email)) throw Object.assign(new Error('A confirmação Google venceu ou já foi utilizada. Entre com Google novamente.'), { statusCode: 401 });
         const result = db.prepare(`INSERT INTO registrations
           (name, cpf, email, phone, birth_date, city, state, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
           .run(data.nome, data.cpf, data.email, data.telefone,
             data.dataNascimento, "Vitória", "ES", JSON.stringify(data));
         const profileToken = newToken();
         db.prepare("INSERT INTO profile_sessions(token_hash, registration_id, expires_at) VALUES (?, ?, ?)").run(digest(profileToken), Number(result.lastInsertRowid), new Date(Date.now() + 90 * 86400000).toISOString());
+        if (googleIntent) {
+          db.prepare('INSERT INTO google_identities(subject, registration_id) VALUES (?, ?)').run(googleIntent.subject, Number(result.lastInsertRowid));
+          db.prepare('DELETE FROM google_signup_intents WHERE token_hash = ?').run(googleIntent.tokenHash);
+        }
         db.exec("COMMIT");
+        if (googleIntent) res.setHeader("Set-Cookie", [clearGoogleSignupCookie, authCookie("qv_session", profileToken, { secure: process.env.NODE_ENV === "production" || process.env.APP_BASE_URL?.startsWith("https://") }, 90 * 86400)]);
         return json(res, 201, { id: Number(result.lastInsertRowid), profileToken, message: "Cadastro realizado" });
         } catch (error) { db.exec("ROLLBACK"); throw error; }
       } catch (error) {
