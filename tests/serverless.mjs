@@ -68,7 +68,7 @@ try {
   assert.ok(initial.every(result => result.status === "rejected"));
   assert.equal(schemaCalls, 1, "Falhas concorrentes devem compartilhar a tentativa de schema");
   await Promise.all([ensurePostgresSchema(), ensurePostgresSchema()]);
-  assert.equal(schemaCalls, 7, "Schema deve tentar novamente depois de falha transitória");
+  assert.equal(schemaCalls, 8, "Schema deve tentar novamente depois de falha transitória");
   const [{ default: registration }, { default: testimonials }, { default: health }] = await Promise.all([
     import("../api/registrations.mjs"), import("../api/testimonials.mjs"), import("../api/health.mjs"),
   ]);
@@ -163,7 +163,7 @@ try {
   delete process.env.DATABASE_URL;
   delete process.env.POSTGRES_URL;
   assert.equal((await call(health, "GET")).code, 503, "Conexão não configurada deve retornar resposta segura");
-  assert.equal(schemaCalls, 7, "Schema concluído deve ser reutilizado durante a instância");
+  assert.equal(schemaCalls, 8, "Schema concluído deve ser reutilizado durante a instância");
   console.log("✓ serverless: contratos HTTP, models PostgreSQL isolados, retry de schema e falhas seguras sem acesso ao banco real");
 } finally {
   hooks.deregister();

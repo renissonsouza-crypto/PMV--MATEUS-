@@ -153,3 +153,62 @@ test('first verified Google login revokes unverified registration sessions witho
     assert.equal((await repository.authenticated(digest(verified))).id, 1);
   } finally { db.close(); }
 });
+
+test('Google account chooser validates signed identity and issues one session per browser challenge', async () => {
+  const { db, repository } = fixture();
+  try {
+    const controller = authController(repository, { configuration: () => config, verify: (token, settings, nonce) => verifyGoogleIdentity(token, settings, nonce, publicKey) });
+    const challenge = await invoke(controller, '/api/auth?action=challenge', { method: 'POST', headers: { 'content-type': 'application/json' }, body: {} });
+    assert.equal(challenge.code, 200);
+    assert.equal(challenge.data.nonce.length, 64);
+    const cookie = challenge.headers['Set-Cookie'].split(';')[0];
+    const credential = await sign({ nonce: challenge.data.nonce });
+    const request = { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: { credential } };
+    const results = await Promise.all(Array.from({ length: 5 }, () => invoke(controller, '/api/auth?action=credential', request)));
+    assert.equal(results.filter(result => result.code === 200).length, 1);
+    assert.equal(results.filter(result => result.code === 403).length, 4);
+    const success = results.find(result => result.code === 200);
+    assert.deepEqual(success.data, { status: 'authenticated' });
+    assert(!JSON.stringify(success.data).includes(credential));
+    const sessionCookie = success.headers['Set-Cookie'][1].split(';')[0];
+    const restored = await invoke(controller, '/api/auth?action=session', { headers: { cookie: sessionCookie } });
+    assert.equal(restored.data.profile.email, 'person@gmail.com');
+    assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 1);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM google_login_challenges').get().n, 0);
+  } finally { db.close(); }
+});
+
+test('Google chooser rejects wrong nonce, missing browser state, cross origin, expired and superseded challenges', async () => {
+  const { db, repository } = fixture();
+  try {
+    const controller = authController(repository, { configuration: () => config, verify: (token, settings, nonce) => verifyGoogleIdentity(token, settings, nonce, publicKey) });
+    const headers = { 'content-type': 'application/json' };
+    assert.equal((await invoke(controller, '/api/auth?action=challenge')).code, 405);
+    assert.equal((await invoke(controller, '/api/auth?action=challenge', { method: 'POST', headers: { ...headers, origin: 'https://evil.test', host: 'example.test', 'x-forwarded-proto': 'https' }, body: {} })).code, 403);
+    const first = await invoke(controller, '/api/auth?action=challenge', { method: 'POST', headers, body: {} });
+    const cookie = first.headers['Set-Cookie'].split(';')[0];
+    assert.equal((await invoke(controller, '/api/auth?action=credential', { method: 'POST', headers, body: { credential: await sign() } })).code, 403);
+    assert.equal((await invoke(controller, '/api/auth?action=credential', { method: 'POST', headers: { ...headers, cookie }, body: { credential: await sign({ nonce: 'incorrect' }) } })).code, 403);
+    const second = await invoke(controller, '/api/auth?action=challenge', { method: 'POST', headers: { ...headers, cookie }, body: {} });
+    assert.equal((await invoke(controller, '/api/auth?action=credential', { method: 'POST', headers: { ...headers, cookie }, body: { credential: await sign({ nonce: first.data.nonce }) } })).code, 403);
+    db.prepare("UPDATE google_login_challenges SET expires_at = '2000-01-01'").run();
+    assert.equal((await invoke(controller, '/api/auth?action=credential', { method: 'POST', headers: { ...headers, cookie: second.headers['Set-Cookie'].split(';')[0] }, body: { credential: await sign({ nonce: second.data.nonce }) } })).code, 403);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 0);
+  } finally { db.close(); }
+});
+
+test('signing out invalidates a pending Google chooser challenge', async () => {
+  const { db, repository } = fixture();
+  try {
+    const controller = authController(repository, { configuration: () => config, verify: (token, settings, nonce) => verifyGoogleIdentity(token, settings, nonce, publicKey) });
+    const headers = { 'content-type': 'application/json' };
+    const challenge = await invoke(controller, '/api/auth?action=challenge', { method: 'POST', headers, body: {} });
+    const cookie = challenge.headers['Set-Cookie'].split(';')[0];
+    const signed = await sign({ nonce: challenge.data.nonce });
+    const logout = await invoke(controller, '/api/auth?action=logout', { method: 'POST', headers: { ...headers, cookie }, body: {} });
+    assert.equal(logout.code, 200);
+    const replay = await invoke(controller, '/api/auth?action=credential', { method: 'POST', headers: { ...headers, cookie }, body: { credential: signed } });
+    assert.equal(replay.code, 403);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 0);
+  } finally { db.close(); }
+});

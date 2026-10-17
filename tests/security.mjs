@@ -41,3 +41,13 @@ assert.deepEqual(await validateVitoriaCep("29050-945", lookup({ localidade: "Vit
 assert.deepEqual(await validateVitoriaCep("00000-000", lookup({ erro: true })), { valid: false, unavailable: false });
 assert.deepEqual(await validateVitoriaCep("29050-945", async () => { throw new Error("indisponível"); }), { valid: false, unavailable: true });
 console.log("✓ content-type JSON e origens cruzadas bloqueadas");
+
+const { readFileSync } = await import('node:fs');
+const deployment = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+const headers = Object.fromEntries(deployment.headers[0].headers.map(header => [header.key, header.value]));
+assert.equal(headers['Cross-Origin-Opener-Policy'], 'same-origin-allow-popups');
+const csp = headers['Content-Security-Policy'];
+assert.match(csp, /script-src 'self' https:\/\/accounts\.google\.com\/gsi\/client;/);
+assert.match(csp, /frame-src https:\/\/accounts\.google\.com\/gsi\/;/);
+assert.match(csp, /frame-ancestors 'none'/);
+assert.doesNotMatch(csp, /script-src[^;]*(?:unsafe-inline|unsafe-eval|\*)/);

@@ -142,3 +142,14 @@ test('PostgreSQL first Google binding atomically invalidates prior unverified se
   await finishGoogleLogin(repository, { email: 'postgres@example.test', subject: 'owner' });
   assert.equal(Number((await repository.authenticated(digest(verified))).id), 1);
 });
+
+test('PostgreSQL Google chooser challenges are single-use across workers and expire', async () => {
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const repository = postgresAuthRepository();
+  const hash = digest('browser-login-challenge');
+  await repository.challenge(hash, new Date(Date.now() + 60000).toISOString());
+  const results = await Promise.all(Array.from({ length: 8 }, () => repository.consumeChallenge(hash)));
+  assert.equal(results.filter(Boolean).length, 1);
+  await repository.challenge(hash, '2000-01-01T00:00:00.000Z');
+  assert.equal(await repository.consumeChallenge(hash), false);
+});

@@ -66,3 +66,19 @@ export async function finishGoogleLogin(repository, identity) {
   await repository.session(Number(linked.id), digest(token));
   return token;
 }
+
+
+export function beginGoogleIdentity(config) {
+  const start = beginGoogle(config);
+  const url = new URL(start.url);
+  const nonce = url.searchParams.get('nonce');
+  return { nonce, expiresAt: new Date(Date.now() + 600000).toISOString(), cookie: start.cookie.replace('qv_oauth=', 'qv_gis=') };
+}
+export function readGoogleIdentity(cookie, config) {
+  // Reuse the authenticated envelope validation, including its expiry and nonce.
+  if (typeof cookie !== 'string' || cookie.length > 2000) throw fail('Tentativa de login inválida.', 403);
+  let state;
+  try { state = JSON.parse(Buffer.from(cookie.split('.')[0], 'base64url').toString()).state; }
+  catch { throw fail('Tentativa de login inválida.', 403); }
+  return readGoogleState(cookie, state, config);
+}

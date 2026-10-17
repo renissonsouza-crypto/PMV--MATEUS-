@@ -4,6 +4,8 @@ import { postgresEnrollmentRepository } from './PostgresEnrollmentRepository.mjs
 export function sqliteAuthRepository(db) {
   return {
     session: sqliteEnrollmentRepository(db).session,
+    async challenge(hash, expires) { db.prepare('DELETE FROM google_login_challenges WHERE expires_at <= ?').run(new Date().toISOString()); db.prepare('INSERT INTO google_login_challenges VALUES (?, ?)').run(hash, expires); },
+    async consumeChallenge(hash) { return Boolean(db.prepare('DELETE FROM google_login_challenges WHERE token_hash = ? AND expires_at > ? RETURNING token_hash').get(hash, new Date().toISOString())); },
     async bySubject(subject) { return db.prepare('SELECT registration_id AS id FROM google_identities WHERE subject = ?').get(subject); },
     async bind(subject, id) {
       db.exec('BEGIN IMMEDIATE');
@@ -25,6 +27,8 @@ export function postgresAuthRepository() {
   const ready = async () => { await ensurePostgresSchema(); return getSql(); };
   return {
     session: postgresEnrollmentRepository().session,
+    async challenge(hash, expires) { const sql = await ready(); await sql`DELETE FROM google_login_challenges WHERE expires_at <= ${new Date().toISOString()}`; await sql`INSERT INTO google_login_challenges(token_hash, expires_at) VALUES (${hash}, ${expires})`; },
+    async consumeChallenge(hash) { const sql = await ready(); const rows = await sql`DELETE FROM google_login_challenges WHERE token_hash = ${hash} AND expires_at > ${new Date().toISOString()} RETURNING token_hash`; return rows.length === 1; },
     async bySubject(subject) { const sql = await ready(); const [row] = await sql`SELECT registration_id AS id FROM google_identities WHERE subject = ${subject}`; return row; },
     async bind(subject, id) {
       const sql = await ready();

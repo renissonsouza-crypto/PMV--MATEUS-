@@ -916,19 +916,83 @@ test("cadastro: gravação silenciosamente bloqueada mantém perfil acessível c
   assert.equal(await page.getByLabel("E-mail", { exact: true }).inputValue(), "silent-storage@example.test");
 });
 
-test("Google: opção de entrada e recuperação do perfil após retorno autenticado", async page => {
-  await page.route('**/api/auth?action=config', route => route.fulfill({ json: { enabled: true } }));
-  await page.getByRole('button', { name: 'Entrar ou cadastrar', exact: true }).first().click();
-  const google = page.getByRole('link', { name: 'Continuar com Google' });
-  await google.waitFor();
-  assert.equal(await google.getAttribute('href'), '/api/auth?action=start');
-  // Provider verification is covered with signed JWTs in google-auth.test.mjs.
+const googleSdkFixture = `
+  window.google = { accounts: { id: {
+    initialize(options) { window.__googleSettings = options; },
+    renderButton(parent, options) {
+      const button = document.createElement('button');
+      button.textContent = 'Entrar com Google (provedor de teste)';
+      button.style.cssText = 'min-height:44px;width:' + options.width + 'px;max-width:100%';
+      button.onclick = () => window.__googleSettings.callback({ credential: 'signed-provider-fixture' });
+      parent.append(button);
+    },
+    prompt() { window.__googlePrompts = (window.__googlePrompts || 0) + 1; },
+    cancel() { window.__googleCancelled = (window.__googleCancelled || 0) + 1; }
+  } } };
+`;
+async function mockGoogleChooser(page, script = googleSdkFixture) {
+  await page.route('**/api/auth?action=config', route => route.fulfill({ json: { enabled: true, clientId: 'test.apps.googleusercontent.com' } }));
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: script }));
+  await page.route('**/api/auth?action=challenge', route => route.fulfill({ json: { nonce: 'a'.repeat(64) } }));
+}
+test("Google: caixa de contas, sugestões oficiais e recuperação após autenticação", async page => {
+  await mockGoogleChooser(page);
+  await page.route('**/api/auth?action=credential', route => {
+    assert.deepEqual(route.request().postDataJSON(), { credential: 'signed-provider-fixture' });
+    return route.fulfill({ json: { status: 'authenticated' } });
+  });
   await page.route('**/api/auth?action=session', route => route.fulfill({ json: { profile: { ...profileFixture(), profileToken: 'a'.repeat(64) } } }));
-  await page.goto(`${new URL(page.url()).origin}/#google-login`);
+  await page.getByRole('button', { name: 'Entrar ou cadastrar', exact: true }).first().click();
+  assert.equal(await page.evaluate(() => Boolean(window.google)), false, 'Google is loaded only after the user opens sign-in');
+  await page.getByRole('button', { name: 'Continuar com Google', exact: true }).click();
+  const chooser = page.getByRole('dialog', { name: 'Entrar na sua conta' });
+  await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).waitFor();
+  assert.equal(await page.evaluate(() => window.__googleSettings.auto_select), false);
+  assert.equal(await page.evaluate(() => window.__googleSettings.use_fedcm_for_prompt), true);
+  assert.equal(await page.evaluate(() => window.__googlePrompts), 1);
+  assert.equal(await chooser.getByRole('link', { name: 'Continuar com Google em outra página' }).getAttribute('href'), '/api/auth?action=start');
+  await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).click();
   await page.getByRole('button', { name: 'Acessar meu perfil', exact: true }).click();
   await page.getByRole('heading', { name: 'Meu perfil', exact: true }).waitFor();
   assert.equal((await storedProfile(page)).email, profileFixture().email);
   assert.equal(new URL(page.url()).hash, '');
+});
+
+test("Google: caixa no celular, fechar restaura foco e credencial rejeitada permite nova tentativa", async page => {
+  await mockGoogleChooser(page);
+  await page.route('**/api/auth?action=credential', route => route.fulfill({ json: { status: 'rejected' } }));
+  await page.getByRole('button', { name: 'Entrar ou cadastrar', exact: true }).first().click();
+  await page.setViewportSize({ width: 320, height: 640 });
+  const trigger = page.getByRole('button', { name: 'Continuar com Google', exact: true });
+  await trigger.click();
+  const chooser = page.getByRole('dialog', { name: 'Entrar na sua conta' });
+  await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).waitFor();
+  const bounds = await chooser.boundingBox();
+  assert(bounds.x >= 0 && bounds.x + bounds.width <= 321);
+  assert(bounds.height <= 640);
+  await chooser.getByRole('button', { name: 'Fechar', exact: true }).click();
+  assert(await trigger.evaluate(element => element === document.activeElement));
+  assert.equal(await page.evaluate(() => window.__googleCancelled), 1);
+  await trigger.click();
+  await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).click();
+  await chooser.getByRole('alert').filter({ hasText: 'A plataforma não confirmou seu acesso.' }).waitFor();
+  assert.equal(await storedProfile(page), null);
+  await chooser.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+  await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).waitFor();
+  await page.keyboard.press('Escape');
+  assert(await trigger.evaluate(element => element === document.activeElement));
+});
+
+test("Google: falha no SDK oferece alternativa e permite recarregar", async page => {
+  await mockGoogleChooser(page, '/* Provider unavailable in this isolated test. */');
+  await page.getByRole('button', { name: 'Entrar ou cadastrar', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Continuar com Google', exact: true }).click();
+  const chooser = page.getByRole('dialog', { name: 'Entrar na sua conta' });
+  await chooser.getByRole('alert').filter({ hasText: 'Não foi possível carregar a entrada do Google.' }).waitFor();
+  await chooser.getByRole('link', { name: 'Continuar com Google em outra página' }).waitFor();
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: googleSdkFixture }));
+  await chooser.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+  await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).waitFor();
 });
 
 const environment = await startTestEnvironment();

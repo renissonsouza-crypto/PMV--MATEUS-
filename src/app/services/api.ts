@@ -412,3 +412,13 @@ export async function restoreGoogleProfile(): Promise<UserProfile> {
   const enrollments = normalizeEnrollments(incoming);
   return persistProfile({ ...saved, enrollments, enrolledCourseIds: enrollments.map(entry => entry.courseId), enrollmentHistory: normalizeEnrollmentHistory(incoming, enrollments) });
 }
+
+export async function beginGoogleSignIn(signal?: AbortSignal) {
+  const result = await request<{ nonce: string }>('/auth?action=challenge', { method: 'POST', body: '{}', credentials: 'same-origin', signal });
+  if (typeof result.nonce !== 'string' || !/^[a-f0-9]{64}$/.test(result.nonce)) throw new Error('Não foi possível preparar o acesso com Google.');
+  return result.nonce;
+}
+export async function completeGoogleSignIn(credential: string, signal?: AbortSignal) {
+  const result = await request<{ status: string }>('/auth?action=credential', { method: 'POST', credentials: 'same-origin', body: JSON.stringify({ credential }), signal });
+  if (result.status !== 'authenticated') throw new Error('A plataforma não confirmou seu acesso.');
+}
