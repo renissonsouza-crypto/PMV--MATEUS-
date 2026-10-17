@@ -18,7 +18,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "platform", title: "O que é a plataforma",
     questions: ["O que é o Qualifica Vix?", "Para que serve essa plataforma?", "Como funciona o site?", "Qual é a proposta do QualificaVix?", "O que posso fazer aqui?", "Sou novo no site, por onde começo?", "Que plataforma é essa?", "Me explique o Qualifica Vix"],
     keywords: ["qualifica vix", "qualificavix", "proposta da plataforma", "para que serve", "como funciona o site", "sou novo no site"],
-    answer: "O Qualifica Vix reúne oportunidades de qualificação profissional gratuitas voltadas a Vitória-ES. Você pode explorar o catálogo, pesquisar áreas, consultar fichas, guardar favoritos e fazer seu cadastro. Os dados do perfil ficam neste navegador; novas inscrições em cursos precisam da confirmação enviada por e-mail. Comece por Cursos e confira modalidade, disponibilidade e condições da turma; informações ausentes precisam ser confirmadas no canal oficial.",
+    answer: "O Qualifica Vix reúne oportunidades de qualificação profissional gratuitas voltadas a Vitória-ES. Você pode explorar o catálogo, pesquisar áreas, consultar fichas, guardar favoritos e fazer seu cadastro. Os dados do perfil ficam neste navegador; novas inscrições em cursos são confirmadas diretamente na plataforma e registradas no servidor. Comece por Cursos e confira modalidade, disponibilidade e condições da turma; informações ausentes precisam ser confirmadas no canal oficial.",
     followUps: ["Como encontro um curso?", "Como faço meu cadastro?", "Os cursos são gratuitos?"], actionPages: ["sobre", "cursos"],
   },
   {
@@ -179,7 +179,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "registration_email", title: "E-mail e confirmação",
     questions: ["Os e-mails não coincidem", "Meu e-mail aparece como inválido", "Por que preciso confirmar o e-mail?", "Como preencher Confirmar e-mail?", "Posso corrigir meu endereço de e-mail?", "Recebo um código de confirmação?", "A conta depende de confirmar uma mensagem?", "Preciso verificar minha caixa de entrada para cadastrar?"],
     keywords: ["emails nao coincidem", "email invalido", "confirmar email", "confirmacao de email", "codigo de confirmacao", "caixa de entrada", "corrigir email", "email de confirmacao", "link de confirmacao", "reenviar email"],
-    answer: "Informe um endereço válido com @ e domínio e repita o mesmo texto em Confirmar e-mail. Ao solicitar inscrição em um curso, confira a caixa de entrada e o spam: a plataforma envia um e-mail com os dados do curso e um único botão Confirmar minha inscrição. A inscrição fica pendente até esse clique; o link pessoal vence em 24 horas. Se não chegar, use Reenviar e-mail de confirmação na plataforma. Não envie links, códigos ou credenciais ao chat.",
+    answer: "Informe um endereço válido com @ e domínio e repita o mesmo texto em Confirmar e-mail para evitar erros de digitação. A inscrição não exige código, mensagem nem link por e-mail. Escolha o curso e clique em Confirmar minha inscrição diretamente na plataforma; aguarde o aviso de sucesso. Se houver uma falha, tente novamente. Não envie credenciais ao chat.",
     followUps: ["Como editar meus dados?", "Como faço meu cadastro?"], actionPages: ["register", "profile"],
   },
   {
@@ -228,7 +228,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "notifications", title: "Comunicações e avisos",
     questions: ["O site envia notificações?", "Vou receber aviso por WhatsApp?", "Como receber novidades por e-mail?", "Por que não chegou um aviso da turma?", "Como parar de receber mensagens?", "O chatbot manda lembretes?", "Há notificações automáticas de novas vagas?", "Marcar notificações garante o envio?"],
     keywords: ["receber notificacoes", "envia notificacoes", "aviso por whatsapp", "novidades por email", "parar de receber", "lembretes", "notificacoes automaticas", "nao chegou aviso"],
-    answer: "A preferência opcional por novidades por e-mail e WhatsApp não é necessária para receber a confirmação de inscrição. A confirmação é uma mensagem operacional: ao solicitar um curso, aguarde o e-mail e confirme no botão recebido. A inscrição fica pendente até esse clique. Não há campanhas automáticas de novidades ou lembretes implementadas. O chatbot não envia mensagens fora desta conversa.",
+    answer: "A preferência por novidades por e-mail e WhatsApp é opcional e não interfere na inscrição. A inscrição é concluída diretamente na plataforma, sem confirmação por e-mail. Não há campanhas automáticas de novidades ou lembretes de WhatsApp implementadas; marcar a preferência não garante envio. Consulte o perfil para acompanhar seus cursos.",
     followUps: ["Posso me inscrever em um curso em breve?", "Como entro em contato?", "Quais consentimentos são obrigatórios?"], actionPages: ["contato"],
   },
   {
@@ -249,7 +249,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "profile_local", title: "Perfil e entrada com Google",
     questions: ["Meu perfil fica salvo em outro dispositivo?", "Como fazer login com senha?", "Esqueci minha senha", "Como recuperar a conta pelo e-mail?", "Posso entrar no celular com meu cadastro do computador?", "O site sincroniza meus dados?", "Onde está o botão de login?", "Existe conta compartilhada entre navegadores?"],
     keywords: ["outro dispositivo", "login", "senha", "recuperar conta", "sincroniza", "entre navegadores", "cadastro do computador", "entrar no celular"],
-    answer: "O perfil, a foto e os favoritos ficam no navegador usado. Novas inscrições em cursos são confirmadas por e-mail e registradas no servidor. Ao abrir o link pessoal de confirmação em outro navegador, o perfil do destinatário pode ser disponibilizado ali; fotos, favoritos e memória do chat não são transferidos. Quando disponível, use Entrar / Cadastrar → Continuar com Google e escolha a mesma conta Google do e-mail cadastrado para recuperar o perfil e as inscrições do servidor. Se a entrada estiver indisponível, a plataforma ainda precisa ativar a integração. Não há login por senha nem recuperação pelo chatbot. Nunca envie o link pessoal ou credenciais à conversa.",
+    answer: "O perfil, a foto e os favoritos ficam no navegador usado. As inscrições são confirmadas diretamente na plataforma e registradas no servidor, sem validação por e-mail. Quando disponível, use Entrar / Cadastrar → Continuar com Google para recuperar o perfil e as inscrições do servidor. Fotos, favoritos e memória do chat não são transferidos. Não há login por senha nem recuperação pelo chatbot. Sessões antigas ou expiradas precisam de nova entrada.",
     followUps: ["Meu perfil desapareceu", "Como meus dados são armazenados?", "Como entro em contato?"], actionPages: ["profile", "contato"],
   },
   {
@@ -263,7 +263,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "logout", title: "Sair e remover dados deste navegador",
     questions: ["O que acontece quando clico em Sair?", "Como sair da plataforma?", "Sair apaga minha conta?", "Sair cancela a matrícula oficial?", "O botão Sair remove meus favoritos?", "Vou perder as inscrições ao sair?", "Como limpar meu perfil neste computador?", "Posso sair sem perder o perfil local?"],
     keywords: ["sair da plataforma", "botao sair", "clicar em sair", "sair apaga", "sair cancela", "limpar meu perfil", "perder ao sair", "logout"],
-    answer: "Sair da plataforma pede confirmação e remove deste navegador o perfil, a foto, as inscrições locais e os favoritos. Isso não cancela inscrições confirmadas no servidor, nem uma matrícula oficial em instituição externa, e não exclui o cadastro ou os depoimentos enviados à API. O link pessoal de confirmação pode abrir o perfil enquanto estiver válido; fotos e favoritos não são recuperados. Para cancelar uma inscrição, use o recurso do curso dentro do prazo.",
+    answer: "Sair da plataforma pede confirmação e remove deste navegador o perfil, a foto, as inscrições locais e os favoritos. Isso não cancela inscrições confirmadas no servidor, nem uma matrícula oficial em instituição externa, e não exclui o cadastro ou os depoimentos enviados à API. A recuperação com Google, quando disponível, permite acessar o perfil e as inscrições do servidor; fotos e favoritos não são recuperados. Para cancelar uma inscrição, use o recurso do curso dentro do prazo.",
     followUps: ["Como cancelar minha inscrição?", "Como solicitar exclusão dos meus dados?", "Meu perfil fica salvo em outro dispositivo?"], actionPages: ["profile"],
   },
   {
@@ -291,7 +291,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "enrollments", title: "Consultar inscrições locais",
     questions: ["Onde vejo meus cursos inscritos?", "Como consultar minhas inscrições?", "Como acompanhar os cursos cadastrados?", "Como confirmar que me inscrevi?", "Minha matrícula foi enviada à instituição?", "A lista do perfil é comprovante oficial?", "Tenho inscrição nesse curso?", "Como abrir um curso do meu perfil?"],
     keywords: ["meus cursos", "cursos cadastrados", "minhas inscricoes", "cursos inscritos", "comprovante oficial", "confirmar inscricao", "matricula enviada", "inscricoes ativas"],
-    answer: "Abra Meu perfil → Cursos cadastrados para ver as inscrições confirmadas e seus prazos de cancelamento. Pedidos pendentes aparecem em Inscrições aguardando confirmação por e-mail: confira a caixa de entrada e o spam e clique no botão recebido. O link vence em 24 horas e pode ser reenviado na plataforma. A confirmação registra sua inscrição no servidor, mas não comprova seleção oficial, frequência ou conclusão pela instituição. Ver curso abre a ficha.",
+    answer: "Abra Meu perfil → Cursos cadastrados para ver as inscrições confirmadas e seus prazos de cancelamento. Pedidos antigos ainda não concluídos aparecem no perfil; confirme-os diretamente na plataforma. Não é preciso abrir e-mail. A confirmação registra sua inscrição no servidor, mas não comprova seleção oficial, frequência ou conclusão pela instituição. Ver curso abre a ficha.",
     followUps: ["Quantos cursos posso fazer por mês?", "Como cancelar minha inscrição?", "Meu perfil fica salvo em outro dispositivo?"], actionPages: ["profile"],
   },
   {
@@ -305,7 +305,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "cancellation", title: "Cancelamento em até 72 horas",
     questions: ["Como cancelar minha inscrição?", "Posso desistir do curso?", "Qual é o prazo para desinscrever?", "O cancelamento está bloqueado", "Posso cancelar depois de três dias?", "São três dias úteis para desistir?", "Como sair de um curso sem sair da plataforma?", "Onde aparece Desinscrever-se?"],
     keywords: ["cancelar inscricao", "cancelamento", "desistir", "desinscrever", "desinscricao", "72 horas", "tres dias uteis", "sair de um curso"],
-    answer: "Abra Meu perfil → Cursos cadastrados, escolha Ver curso e use Desinscrever-se dentro de três dias corridos (72 horas) da confirmação. Confirme a pergunta da interface. Depois do prazo, o botão fica bloqueado. Para novas inscrições por e-mail, o cancelamento é registrado no servidor e o navegador precisa do acesso criado ao abrir o link de confirmação. Cancelar não libera a contagem mensal nem comprova cancelamento de uma matrícula externa.",
+    answer: "Abra Meu perfil → Cursos cadastrados, escolha Ver curso e use Desinscrever-se dentro de três dias corridos (72 horas) da confirmação. Confirme a pergunta da interface. Depois do prazo, o botão fica bloqueado. O cancelamento é registrado no servidor e exige uma sessão válida na plataforma. Cancelar não libera a contagem mensal nem comprova cancelamento de uma matrícula externa.",
     followUps: ["Cancelar libera meu limite mensal?", "Onde vejo meus cursos inscritos?", "Como entro em contato?"], actionPages: ["profile", "contato"],
   },
   {

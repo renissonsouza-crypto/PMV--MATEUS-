@@ -1,6 +1,6 @@
 import { POLICY_VERSION } from "../../../shared/policies.mjs";
 import { GoogleLoginButton } from "../components/GoogleLogin";
-import { EnrollmentEmailRequest } from "../components/EnrollmentEmail";
+import { EnrollmentAction } from "../components/CourseEnrollment";
 import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
@@ -333,12 +333,12 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
               <CheckCircle2 className="w-12 h-12 text-amber-300" />
             </div>
             <h2 ref={successTitleRef} tabIndex={-1} className="text-3xl font-black text-slate-900 dark:text-white mb-3">
-              {courseId ? "Falta confirmar sua inscrição" : "Cadastro realizado!"}
+              {courseId ? createdProfile?.enrolledCourseIds.includes(courseId) ? "Inscrição confirmada!" : "Perfil criado — concluindo inscrição" : "Cadastro realizado!"}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-              {courseId ? "Seu perfil foi criado, mas a inscrição no curso ainda está pendente. Clique em Confirmar minha inscrição no e-mail para finalizar." : "Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente."}
+              {courseId ? "Seu perfil foi criado. Acompanhe abaixo o resultado da inscrição no curso. Se houver uma falha, você pode tentar novamente sem repetir o cadastro." : "Seu perfil foi criado. Você pode atualizar seus dados e usá-los para se inscrever em outros cursos sem preencher o cadastro novamente."}
             </p>
-            {courseId && createdProfile && <div className="mb-6 text-left"><EnrollmentEmailRequest courseId={courseId} profile={createdProfile} automatic onProfileUpdated={next => { setCreatedProfile(next); onProfileCreated(next); }} /></div>}
+            {courseId && createdProfile && <div className="mb-6 text-left"><EnrollmentAction courseId={courseId} profile={createdProfile} automatic onProfileUpdated={next => { setCreatedProfile(next); onProfileCreated(next); }} /></div>}
             {sessionOnly && <p role="status" className="mb-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Seu navegador não permitiu salvar o perfil neste dispositivo. Ele ficará disponível apenas enquanto esta página estiver aberta.</p>}
             <div className="flex flex-col items-stretch gap-3">
               <button type="button" onClick={onOpenProfile}
@@ -931,8 +931,8 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
                       style={{ background: `${BLUE}08`, border: `1px solid ${BLUE}20` }}>
                       <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                         Seu perfil e favoritos ficam salvos neste navegador. Novas inscrições em cursos
-                        precisam da confirmação enviada ao seu e-mail e são registradas no servidor.
-                        Esse e-mail de confirmação é enviado mesmo que você não escolha receber notícias e oportunidades.
+                        são confirmadas diretamente na plataforma e registradas no servidor.
+                        A opção de receber notícias e oportunidades é independente da inscrição.
                         Consulte a <PlatformPolicyLink kind="privacy" className="underline font-bold">Política de Privacidade</PlatformPolicyLink> para
                         conhecer o armazenamento e os canais de atendimento.
                       </p>

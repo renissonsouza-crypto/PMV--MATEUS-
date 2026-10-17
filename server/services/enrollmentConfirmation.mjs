@@ -14,6 +14,15 @@ const publicResult = row => ({
 
 export function enrollmentService(repository, { send = sendCourseEmail, configuration = emailConfiguration } = {}) {
   return {
+    async enroll(input, profileToken) {
+      if (!validToken(profileToken)) throw fail('Entre novamente na plataforma para se inscrever.', 401);
+      if (!Number.isSafeInteger(input.registrationId) || input.registrationId < 1) throw fail('Dados do perfil inválidos.');
+      const course = COURSES.find(item => item.id === input.courseId && item.status !== 'coming-soon');
+      if (!course) throw fail('Este curso não está disponível para inscrição.', 409);
+      const now = new Date().toISOString();
+      const row = await repository.enrollDirect({ id: randomUUID(), registration_id: input.registrationId, course_id: course.id, token_hash: digest(newToken()), status_hash: digest(newToken()), created_at: now, expires_at: now }, digest(profileToken));
+      return publicResult(row);
+    },
     async request(input) {
       const course = COURSES.find(item => item.id === input.courseId);
       if (!course || course.status === 'coming-soon') throw fail('Este curso não está disponível para inscrição.');
@@ -63,7 +72,7 @@ export function enrollmentService(repository, { send = sendCourseEmail, configur
       return publicResult(row);
     },
     async cancel(input, profileToken) {
-      if (!validToken(profileToken) || typeof input.requestId !== 'string') throw fail('Abra a confirmação recebida por e-mail neste navegador antes de cancelar a inscrição.', 403);
+      if (!validToken(profileToken) || typeof input.requestId !== 'string') throw fail('Entre novamente na plataforma antes de cancelar a inscrição.', 403);
       const row = await repository.cancel(input.requestId, digest(profileToken), new Date().toISOString());
       return publicResult(row);
     },

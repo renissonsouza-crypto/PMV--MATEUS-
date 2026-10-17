@@ -23,6 +23,7 @@ const sql = async (parts, ...params) => {
     assert.match(query, /lower\(trim\(email\)\)/);
     return rows.registrations.filter(row => row.cpf.replace(/\D/g, "") === params[0] || row.email.trim().toLowerCase() === params[1]).slice(0, 1);
   }
+  if (/INSERT INTO profile_sessions/.test(query)) return [];
   if (/INSERT INTO registrations/.test(query)) {
     const [name, cpf, email, phone, birth_date, neighborhood, payload] = params;
     const row = { id: String(rows.registrations.length + 1), name, cpf, email, phone, birth_date, neighborhood, payload: JSON.parse(payload) };
@@ -39,6 +40,7 @@ const sql = async (parts, ...params) => {
   throw new Error(`SQL não esperado no teste: ${query}`);
 };
 sql.query = query => sql([query]);
+sql.transaction = statements => Promise.all(statements);
 globalThis.__qualificaVixTestSql = sql;
 const hooks = registerHooks({
   resolve(specifier, context, nextResolve) {

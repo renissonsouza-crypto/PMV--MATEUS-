@@ -12,8 +12,8 @@ export function enrollmentController(repository = postgresEnrollmentRepository()
     try {
       const action = req.body?.action;
       let result;
-      if (action === 'request') result = await service.request(req.body);
-      else if (action === 'confirm') result = await service.confirm(req.body);
+      if (action === 'enroll') result = await service.enroll(req.body, req.headers['x-profile-token']);
+      else if (action === 'request' || action === 'confirm') return res.status(410).json({ error: 'A confirmação por e-mail foi desativada. Faça sua inscrição diretamente na plataforma.' });
       else if (action === 'status') result = await service.status(req.body);
       else if (action === 'cancel') result = await service.cancel(req.body, req.headers['x-profile-token']);
       else return res.status(400).json({ error: 'Operação inválida' });

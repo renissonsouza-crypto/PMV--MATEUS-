@@ -196,7 +196,7 @@ test('email includes the archived accepted policies with one button, safe HTML a
   assert.match(email.text, /Texto aceito anteriormente/);
   assert.match(email.html, /&lt;script&gt;invalid/);
   assert.doesNotMatch(email.html, /<script>/);
-  assert.match(email.text, /versão 2026-10-15.1/);
+  assert.match(email.text, /versão 2026-10-16.2/);
   assert.match(email.text, /15\/10\/2026/);
   assert.match(email.text, /tratamento de dados autorizado; termos aceitos/);
   assert.match(email.text, /Lei Geral de Proteção de Dados Pessoais/);

@@ -120,17 +120,14 @@ try {
         await navigate(page, 'Cursos');
         await page.locator('main article').first().getByRole('button', { name: /Ver curso/ }).click();
         await page.getByRole('button', { name: 'Inscrever-se', exact: true }).click();
-        const confirm = page.getByRole('button', { name: 'Enviar e-mail de confirmação', exact: true });
+        const confirm = page.getByRole('button', { name: 'Confirmar minha inscrição', exact: true });
         await confirm.scrollIntoViewIfNeeded();
         await withinScreen(page, confirm);
         await noOverflow(page);
         await confirm.click();
-        await page.getByRole('status').getByText('Confirmação enviada por e-mail', { exact: true }).waitFor();
-        const mail = environment.emails.filter(item => item.to.includes('mobile@example.test')).at(-1);
-        const token = mail.html.match(/#confirm-enrollment=([a-f0-9]{64})/)[1];
-        await page.goto(`${environment.baseURL}/#confirm-enrollment=${token}`, { waitUntil: 'domcontentloaded' });
-        await page.getByRole('heading', { name: 'Inscrição confirmada!', exact: true }).waitFor();
-        await page.getByRole('button', { name: 'Acessar meu perfil', exact: true }).click();
+        await page.getByRole('status').filter({ hasText: 'Inscrição confirmada. O curso está disponível no seu perfil.' }).waitFor();
+        assert.equal(environment.emails.length, 0);
+        await navigate(page, 'Meu perfil');
       } else {
         await back.click();
       }

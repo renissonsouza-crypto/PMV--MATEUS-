@@ -1,3 +1,5 @@
+> Histórico: a confirmação por e-mail descrita nesta revisão foi desativada. O fluxo atual confirma inscrições diretamente na plataforma com sessão validada no servidor. As operações públicas antigas de envio e confirmação retornam 410; nenhum provedor de e-mail é necessário.
+
 # Revisão da confirmação por e-mail — 2026-10-15
 
 Escopo: código do serviço, rotas HTTP, consultas SQLite/PostgreSQL, template de e-mail, armazenamento de credenciais e testes locais. Não é uma certificação de segurança nem um teste de invasão do servidor publicado. Nenhum e-mail real ou banco de produção foi usado.

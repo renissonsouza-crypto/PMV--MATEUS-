@@ -1,3 +1,4 @@
+import { newToken, digest } from "../services/enrollmentConfirmation.mjs";
 import { authController } from "./authController.mjs";
 import { sqliteAuthRepository } from "../models/AuthRepository.mjs";
 import { enrollmentController } from "./enrollmentController.mjs";
@@ -166,11 +167,17 @@ const server = createServer(async (req, res) => {
           WHERE replace(replace(replace(cpf, '.', ''), '-', ''), ' ', '') = ?
             OR lower(trim(email)) = ? LIMIT 1`).get(data.cpf, data.email);
         if (duplicate) return json(res, 409, { error: "CPF ou e-mail já cadastrado" });
+        db.exec("BEGIN IMMEDIATE");
+        try {
         const result = db.prepare(`INSERT INTO registrations
           (name, cpf, email, phone, birth_date, city, state, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
           .run(data.nome, data.cpf, data.email, data.telefone,
             data.dataNascimento, "Vitória", "ES", JSON.stringify(data));
-        return json(res, 201, { id: Number(result.lastInsertRowid), message: "Cadastro realizado" });
+        const profileToken = newToken();
+        db.prepare("INSERT INTO profile_sessions(token_hash, registration_id, expires_at) VALUES (?, ?, ?)").run(digest(profileToken), Number(result.lastInsertRowid), new Date(Date.now() + 90 * 86400000).toISOString());
+        db.exec("COMMIT");
+        return json(res, 201, { id: Number(result.lastInsertRowid), profileToken, message: "Cadastro realizado" });
+        } catch (error) { db.exec("ROLLBACK"); throw error; }
       } catch (error) {
         if (String(error.message).includes("UNIQUE")) return json(res, 409, { error: "CPF ou e-mail já cadastrado" });
         throw error;

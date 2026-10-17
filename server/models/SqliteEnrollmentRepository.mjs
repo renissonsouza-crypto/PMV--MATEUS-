@@ -12,6 +12,16 @@ export function sqliteEnrollmentRepository(db) {
   const active = row => db.prepare('SELECT * FROM course_enrollment_requests WHERE registration_id = ? AND course_id = ? AND confirmed_at IS NOT NULL AND cancelled_at IS NULL ORDER BY confirmed_at LIMIT 1').get(row.registration_id, row.course_id);
   const count = row => db.prepare('SELECT count(*) AS count FROM course_enrollment_requests WHERE registration_id = ? AND confirmed_at >= ?').get(row.registration_id, monthStart(new Date().toISOString())).count;
   return {
+    async enrollDirect(row, sessionHash) {
+      return transaction(() => {
+        if (!db.prepare('SELECT 1 FROM profile_sessions WHERE token_hash = ? AND registration_id = ? AND expires_at > ?').get(sessionHash, row.registration_id, row.created_at)) throw fail('Sua sessão venceu. Entre novamente para se inscrever.', 401);
+        const existing = active(row);
+        if (existing) return existing;
+        if (count(row) >= 3) throw fail('Você já atingiu o limite de três inscrições neste mês.', 409);
+        db.prepare("INSERT INTO course_enrollment_requests(id, registration_id, course_id, token_hash, status_hash, delivery, created_at, expires_at, confirmed_at) VALUES (?, ?, ?, ?, ?, 'direct', ?, ?, ?)").run(row.id, row.registration_id, row.course_id, row.token_hash, row.status_hash, row.created_at, row.expires_at, row.created_at);
+        return { ...row, delivery: 'direct', confirmed_at: row.created_at };
+      });
+    },
     async registration(id) { return db.prepare('SELECT id, name, email, payload FROM registrations WHERE id = ?').get(id); },
     async session(id, hash) { db.prepare('INSERT INTO profile_sessions(token_hash, registration_id, expires_at) VALUES (?, ?, ?)').run(hash, id, new Date(Date.now() + 90 * 86400000).toISOString()); },
     async createRequest(row) {
@@ -47,7 +57,7 @@ export function sqliteEnrollmentRepository(db) {
     async cancel(id, hash, now) {
       return transaction(() => {
         const row = db.prepare('SELECT * FROM course_enrollment_requests WHERE id = ?').get(id);
-        if (!row || !db.prepare('SELECT 1 FROM profile_sessions WHERE token_hash = ? AND registration_id = ? AND expires_at > ?').get(hash, row.registration_id, now)) throw fail('Acesso ao perfil inválido. Abra o e-mail de confirmação neste navegador.', 403);
+        if (!row || !db.prepare('SELECT 1 FROM profile_sessions WHERE token_hash = ? AND registration_id = ? AND expires_at > ?').get(hash, row.registration_id, now)) throw fail('Sua sessão venceu. Entre novamente na plataforma.', 403);
         if (!row.confirmed_at) throw fail('Esta inscrição ainda não foi confirmada.', 409);
         if (row.cancelled_at) return row;
         if (Date.parse(now) - Date.parse(row.confirmed_at) > 3 * 86400000) throw fail('O prazo de três dias para cancelar a inscrição terminou.', 409);
