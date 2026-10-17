@@ -44,7 +44,7 @@ export const createTestimonial = async (data: Omit<StoredTestimonial, "id">) => 
   return result;
 };
 export const createRegistration = async (data: Record<string, unknown>) => {
-  const result = await request<{ id: number; message: string }>("/registrations", { method: "POST", body: JSON.stringify(data) });
+  const result = await request<{ id: number; message: string; profileToken?: string }>("/registrations", { method: "POST", body: JSON.stringify(data) });
   if (!isCourseId(result.id)) throw new Error("Resposta de cadastro inválida");
   return result;
 };
@@ -274,7 +274,7 @@ export function saveUserProfile(data: Record<string, unknown>, id: number, cours
 // A successful HTTP response alone is not enough: the profile must be usable.
 export async function createRegistrationProfile(data: Record<string, unknown>, courseId?: number): Promise<UserProfile> {
   const result = await createRegistration(data);
-  const saved = saveUserProfile(data, result.id);
+  const saved = saveUserProfile({ ...data, profileToken: result.profileToken }, result.id);
   const available = getUserProfile();
   if (!available || available.id !== saved.id || available.email !== saved.email) {
     throw new Error("O servidor recebeu seu cadastro, mas não foi possível disponibilizar seu perfil. Tente acessar Meu perfil ou entre em contato com o atendimento.");
@@ -384,36 +384,13 @@ function applyConfirmedEnrollment(result: EnrollmentResult) {
   return persistProfile(next);
 }
 
-export async function requestCourseConfirmation(courseId: number) {
+export async function enrollDirectly(courseId: number) {
   const profile = getUserProfile();
-  if (!profile) throw new Error("Faça seu cadastro antes de solicitar a inscrição.");
-  const result = await request<PendingEnrollment & { status: string }>("/enrollments", {
-    method: "POST", body: JSON.stringify({ action: "request", registrationId: profile.id, email: profile.email, courseId }),
-  });
-  if (result.status !== "pending" || result.courseId !== courseId || typeof result.requestId !== "string" || !/^[a-f0-9]{64}$/.test(result.statusToken) || typeof result.email !== "string" || typeof result.expiresAt !== "string") throw new Error("Resposta de envio inválida. Não foi possível confirmar o envio do e-mail.");
-  const current = getUserProfile();
-  if (!current || current.id !== profile.id) throw new Error("O perfil mudou durante a solicitação. Acesse o perfil usado no cadastro.");
-  const pendingEnrollments = [...(current.pendingEnrollments ?? []).filter(item => item.courseId !== courseId), result];
-  return persistProfile({ ...current, pendingEnrollments });
-}
-
-export async function confirmCourseEmail(token: string, signal?: AbortSignal) {
-  const result = await request<EnrollmentResult & { courseTitle: string; profile: UserProfile }>("/enrollments", { method: "POST", signal, body: JSON.stringify({ action: "confirm", token }) });
-  if (result.status !== "confirmed" || !result.profile || result.profile.id !== result.registrationId || typeof result.profile.profileToken !== "string" || !/^[a-f0-9]{64}$/.test(result.profile.profileToken)) throw new Error("Resposta de confirmação inválida.");
-  const current = getUserProfile();
-  saveUserProfile({ ...result.profile, ...(current?.id === result.registrationId ? current : {}), profileToken: result.profile.profileToken } as unknown as Record<string, unknown>, result.registrationId);
-  return { profile: applyConfirmedEnrollment(result), courseTitle: result.courseTitle };
-}
-
-export async function syncPendingEnrollments() {
-  const initial = getUserProfile();
-  if (!initial) return null;
-  for (const pending of initial.pendingEnrollments ?? []) {
-    const result = await request<EnrollmentResult>("/enrollments", { method: "POST", body: JSON.stringify({ action: "status", requestId: pending.requestId, statusToken: pending.statusToken }) });
-    if (getUserProfile()?.id !== initial.id) return getUserProfile();
-    if (result.status === "confirmed") applyConfirmedEnrollment(result);
-  }
-  return getUserProfile();
+  if (!profile) throw new Error("Faça seu cadastro antes de se inscrever.");
+  if (!profile.profileToken) throw new Error("Sua sessão antiga não permite novas inscrições. Entre novamente com Google para recuperar o acesso ao cadastro.");
+  const result = await request<EnrollmentResult>("/enrollments", { method: "POST", headers: { "x-profile-token": profile.profileToken }, body: JSON.stringify({ action: "enroll", registrationId: profile.id, courseId }) });
+  if (result.status !== "confirmed" || result.courseId !== courseId || result.registrationId !== profile.id) throw new Error("Não foi possível confirmar a inscrição. Tente novamente.");
+  return applyConfirmedEnrollment(result);
 }
 
 export async function cancelConfirmedEnrollment(courseId: number) {

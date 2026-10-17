@@ -139,3 +139,17 @@ test('profile recovery includes server-confirmed history and excludes pending re
     for (const field of ['cpf', 'payload', 'dataNascimento', 'autorizaDados']) assert.equal(profile[field], undefined);
   } finally { db.close(); }
 });
+
+
+test('first verified Google login revokes unverified registration sessions without revoking later verified sessions', async () => {
+  const { db, repository } = fixture();
+  try {
+    const old = 'a'.repeat(64);
+    await repository.session(1, digest(old));
+    const verified = await finishGoogleLogin(repository, { email: 'person@gmail.com', subject: 'google-owner' });
+    assert.equal(await repository.authenticated(digest(old)), undefined);
+    assert.equal((await repository.authenticated(digest(verified))).id, 1);
+    await finishGoogleLogin(repository, { email: 'person@gmail.com', subject: 'google-owner' });
+    assert.equal((await repository.authenticated(digest(verified))).id, 1);
+  } finally { db.close(); }
+});

@@ -99,3 +99,46 @@ test('PostgreSQL Google identity binding, authenticated profile and revocation u
   await repository.revoke([digest(token)]);
   assert.equal(await repository.authenticated(digest(token)), undefined);
 });
+
+test('PostgreSQL direct enrollment is authenticated, idempotent under concurrency and enforces monthly cap', async () => {
+  const { service, repository, input, mails } = await fixture();
+  const token = 'd'.repeat(64);
+  await repository.session(1, digest(token));
+  await assert.rejects(service.enroll(input, 'e'.repeat(64)), error => error.statusCode === 401);
+  const repeated = await Promise.all(Array.from({ length: 8 }, () => service.enroll(input, token)));
+  assert.equal(new Set(repeated.map(result => result.requestId)).size, 1);
+  const more = await Promise.allSettled([2, 3, 4].map(courseId => service.enroll({ ...input, courseId }, token)));
+  assert.equal(more.filter(result => result.status === 'fulfilled').length, 2);
+  assert.equal(more.filter(result => result.status === 'rejected').length, 1);
+  await service.cancel({ requestId: repeated[0].requestId }, token);
+  await assert.rejects(service.enroll({ ...input, courseId: 4 }, token), error => error.statusCode === 409);
+  assert.equal(mails.length, 0);
+});
+
+test('PostgreSQL registration and initial session commit together or roll back together', async () => {
+  await fixture();
+  const { createPostgresRegistration } = await import('../server/models/PostgresRegistrationModel.mjs');
+  const data = { nome: 'New person', cpf: '52998224725', email: 'atomic@example.test', telefone: '27999999999', dataNascimento: '1990-01-01', bairro: 'Centro' };
+  await database.exec("ALTER TABLE profile_sessions ADD CONSTRAINT reject_fixture CHECK(token_hash <> 'rejected-fixture')");
+  try {
+    await assert.rejects(createPostgresRegistration(data, 'rejected-fixture'));
+    assert.equal((await database.query('SELECT id FROM registrations WHERE email = $1', [data.email])).rows.length, 0);
+  } finally { await database.exec('ALTER TABLE profile_sessions DROP CONSTRAINT reject_fixture'); }
+  const id = await createPostgresRegistration(data, digest('f'.repeat(64)));
+  assert.equal((await database.query('SELECT registration_id FROM profile_sessions WHERE token_hash = $1', [digest('f'.repeat(64))])).rows[0].registration_id, id);
+});
+
+
+test('PostgreSQL first Google binding atomically invalidates prior unverified sessions', async () => {
+  await fixture();
+  const { postgresAuthRepository } = await import('../server/models/AuthRepository.mjs');
+  const { finishGoogleLogin } = await import('../server/services/googleAuth.mjs');
+  const repository = postgresAuthRepository();
+  const previous = 'a'.repeat(64);
+  await repository.session(1, digest(previous));
+  const verified = await finishGoogleLogin(repository, { email: 'postgres@example.test', subject: 'owner' });
+  assert.equal(await repository.authenticated(digest(previous)), undefined);
+  assert.equal(Number((await repository.authenticated(digest(verified))).id), 1);
+  await finishGoogleLogin(repository, { email: 'postgres@example.test', subject: 'owner' });
+  assert.equal(Number((await repository.authenticated(digest(verified))).id), 1);
+});

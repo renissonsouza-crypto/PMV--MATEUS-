@@ -54,6 +54,7 @@ test('mail transport requires provider acceptance and does not leak provider err
       assert.equal(options.headers['Idempotency-Key'], 'enrollment-fixture');
       assert.deepEqual(JSON.parse(options.body).to, ['person@example.test']);
       assert(options.signal instanceof AbortSignal);
+      assert.equal(options.redirect, 'error', 'Provider redirects must never forward secrets');
       return Response.json({ id: 'mail-fixture' });
     });
     await assert.rejects(sendCourseEmail(content, async () => Response.json({ error: 'private provider detail' }, { status: 401 })), error => error.statusCode === 503 && !/private provider/.test(error.message));
@@ -181,5 +182,38 @@ test('cross-user sessions, expired sessions, tampered tokens and status credenti
     db.prepare("UPDATE profile_sessions SET expires_at = '2000-01-01T00:00:00.000Z'").run();
     await assert.rejects(service.cancel({ requestId: confirmed.requestId }, confirmed.profile.profileToken), error => error.statusCode === 403);
     assert.equal(db.prepare('SELECT cancelled_at FROM course_enrollment_requests').get().cancelled_at, null);
+  } finally { db.close(); }
+});
+
+
+test('email includes the archived accepted policies with one button, safe HTML and truthful legacy notice', async () => {
+  const { policyReceipt } = await import('../shared/policies.mjs');
+  const receipt = policyReceipt(new Date('2026-10-15T12:00:00.000Z'));
+  receipt.policies.privacy.paragraphs[0] = 'Texto aceito anteriormente <script>invalid</script>';
+  const content = { name: 'Pessoa', course: COURSES[0], token: 'a'.repeat(64), origin: 'https://example.test' };
+  const email = buildCourseEmail({ ...content, consent: { receipt, dataAuthorized: true, termsAccepted: true } });
+  assert.equal((email.html.match(/<a /g) || []).length, 1);
+  assert.match(email.text, /Texto aceito anteriormente/);
+  assert.match(email.html, /&lt;script&gt;invalid/);
+  assert.doesNotMatch(email.html, /<script>/);
+  assert.match(email.text, /versão 2026-10-16.2/);
+  assert.match(email.text, /15\/10\/2026/);
+  assert.match(email.text, /tratamento de dados autorizado; termos aceitos/);
+  assert.match(email.text, /Lei Geral de Proteção de Dados Pessoais/);
+  assert.match(buildCourseEmail(content).text, /cadastro antigo não contém uma cópia versionada/);
+});
+
+test('enrollment email uses only consent stored on the server, not injected request data', async () => {
+  const { policyReceipt } = await import('../shared/policies.mjs');
+  const { db, service, input, mails } = fixture();
+  try {
+    const row = db.prepare('SELECT payload FROM registrations WHERE id = 1').get();
+    const payload = { ...JSON.parse(row.payload), policyReceipt: policyReceipt(), autorizaDados: true, aceitaTermos: true };
+    db.prepare('UPDATE registrations SET payload = ? WHERE id = 1').run(JSON.stringify(payload));
+    await service.request({ ...input, consent: { receipt: { version: 'forged' } }, policyReceipt: { version: 'forged' } });
+    assert.equal(mails[0].consent.receipt.version, payload.policyReceipt.version);
+    assert.equal(mails[0].consent.dataAuthorized, true);
+    assert.equal(mails[0].consent.termsAccepted, true);
+    assert.equal(mails[0].to, input.email);
   } finally { db.close(); }
 });

@@ -61,7 +61,7 @@ O catálogo apresenta os cursos definidos no projeto. A pesquisa, as categorias,
 
 Os contatos direcionam ao portal da Prefeitura de Vitória. Configure somente canais de atendimento verificados em `VITE_CONTACT_PHONE` e `VITE_CONTACT_EMAIL`, se disponíveis, antes de iniciar o Vite ou gerar o build. Variáveis `VITE_` ficam públicas no frontend e não devem conter segredos.
 
-O cadastro exige endereço de Vitória-ES, dados e consentimentos válidos, além de responsável legal para menores de 18 anos. O cadastro e os depoimentos são enviados à API; depoimentos podem ser exibidos publicamente. O perfil, a foto e os favoritos ficam no navegador utilizado. Novas inscrições são registradas no servidor e confirmadas por e-mail; o link pessoal também permite abrir o perfil do destinatário no navegador em que for usado. Editar o perfil atualiza esses dados locais. Sair limpa o perfil e os favoritos locais e solicita a revogação da sessão atual no servidor, sem excluir o cadastro. Sem conexão, essa revogação remota pode falhar.
+O cadastro exige endereço de Vitória-ES, dados e consentimentos válidos, além de responsável legal para menores de 18 anos. O cadastro e os depoimentos são enviados à API; depoimentos podem ser exibidos publicamente. O perfil, a foto e os favoritos ficam no navegador utilizado. Novas inscrições são confirmadas diretamente na plataforma e registradas no servidor, sem validação por e-mail. Editar o perfil atualiza esses dados locais. Sair limpa o perfil e os favoritos locais e solicita a revogação da sessão atual no servidor, sem excluir o cadastro. Sem conexão, essa revogação remota pode falhar.
 
 O limite é de três inscrições realizadas no mês, incluindo inscrições canceladas. O prazo de cancelamento é de três dias após cada inscrição. Dados antigos são normalizados ao carregar; se o navegador negar gravações, a interface informa que as alterações duram somente enquanto a página estiver aberta.
 
@@ -123,32 +123,23 @@ Nunca salve a URL real do banco no Git. Use `.env.example` apenas como referênc
 - `POST /api/registrations`: cria cadastro e exige responsável legal para menores de 18 anos.
   
 
-## Confirmação de inscrição por e-mail
+## Inscrição diretamente na plataforma
 
-Novas inscrições em cursos ficam pendentes até o aluno clicar em **Confirmar minha inscrição** no e-mail. O cadastro geral continua criando o perfil; ele não inscreve automaticamente em nenhum curso. O e-mail contém nome do curso, modalidade, carga horária, duração, período, nível, local, instituição, grade curricular e informações adicionais do catálogo compartilhado em `shared/courses.mjs`. Informações que o catálogo não fornece são identificadas como não informadas.
+Ao concluir o cadastro iniciado por um curso, o perfil e sua sessão são criados e a interface solicita a inscrição automaticamente ao servidor. Em um perfil existente, o aluno escolhe o curso, revisa os dados e clica em **Confirmar minha inscrição**. Só mostramos sucesso depois da confirmação da gravação. Falhas preservam o perfil e permitem tentar novamente sem refazer o cadastro.
 
-Para enviar e-mails reais:
+Não é necessário Resend, provedor de e-mail, código ou link externo. As antigas operações públicas de envio e confirmação por e-mail retornam 410; links antigos orientam a voltar à plataforma, sem criar sessão ou inscrição. Inscrições já confirmadas permanecem válidas. Pedidos antigos pendentes não são convertidos automaticamente: precisam ser confirmados na plataforma por uma sessão válida.
 
-1. Crie uma conta no Resend e verifique um domínio remetente (registros DNS indicados pelo provedor).
-2. Configure **somente no servidor** `RESEND_API_KEY`, `MAIL_FROM` (nome e e-mail verificado) e `APP_BASE_URL` (origem HTTPS pública do site). Nunca use prefixo `VITE_` para a chave.
-3. Na Vercel, configure essas variáveis junto de `DATABASE_URL` e publique uma nova implantação. Para desenvolvimento local, use o arquivo ignorado `.env`; o inicializador carrega seus valores sem substituir variáveis já injetadas pelo ambiente.
-4. Libere acesso HTTPS a `api.resend.com` no servidor. Ajuste o serviço de e-mail para não alterar os links com rastreamento de cliques.
-5. Faça uma inscrição de teste com um e-mail seu e confira a entrega e o clique no ambiente publicado. Aceitação pelo provedor não garante entrega: confira também eventos de bounce/spam no Resend.
+A API valida a sessão contra o cadastro, a disponibilidade do curso e o limite de três inscrições por mês, incluindo cancelamentos. Repetições e cliques simultâneos não duplicam inscrições. O cancelamento continua disponível por três dias. Sessões aleatórias têm seus hashes armazenados em `profile_sessions`; a implantação pública deve usar HTTPS para proteger essas credenciais em trânsito. O cadastro e sua sessão inicial são criados na mesma transação nos dois bancos.
 
-Sem a configuração, a plataforma mostra um erro de envio e mantém a inscrição sem confirmar; nunca simula um e-mail enviado. Se o provedor falhar, o perfil permanece acessível e é possível tentar o envio novamente, sem repetir o cadastro pessoal. Há limite de cinco solicitações por perfil por hora e intervalo de um minuto para reenvios aceitos do mesmo curso.
+Perfis antigos sem credencial de sessão, ou com sessão expirada/revogada, precisam entrar novamente com Google (quando configurado); o ID e o e-mail locais não concedem acesso ao cadastro. Não é seguro emitir uma sessão apenas porque alguém conhece esses dados. O cadastro novo funciona sem configuração Google ou de e-mail; recuperação de acesso via Google continua dependendo do OAuth configurado.
 
-Os links contêm um token aleatório de 256 bits, válido por 24 horas. Apenas hashes dos tokens são armazenados. O token fica no fragmento da URL, fora dos logs HTTP, e é removido do histórico quando a aplicação o recebe. Abrir o endereço via GET não altera inscrições: a aplicação confirma por POST. O link é de uso único: tentativas repetidas retornam erro 409 sem criar nova sessão nem alterar a inscrição já confirmada. Se a resposta da primeira confirmação se perder, a inscrição pode já estar confirmada; consulte o perfil no navegador original. A confirmação permite recuperar o perfil do destinatário em outro navegador; trate o link como pessoal. Sistemas de segurança de e-mail que executem JavaScript podem interagir com esse fluxo, por isso o provedor não deve transformar ou pré-processar o link como ação do usuário.
-
-O servidor aplica o limite de três confirmações no mês, incluindo inscrições canceladas, e o prazo de três dias para cancelamento. Para cancelar uma nova inscrição, o navegador precisa do acesso criado ao abrir o e-mail de confirmação. Inscrições antigas que existiam somente no navegador não são migradas automaticamente para o histórico do servidor. Alterações locais antigas de e-mail não atualizam o endereço do cadastro no banco; use o e-mail original ao solicitar a confirmação.
-
-As novas tabelas `course_enrollment_requests` e `profile_sessions` são criadas pela inicialização SQLite e pela migração PostgreSQL existente. `npm test` inclui testes SQLite e executa o SQL de produção em PostgreSQL/WASM (PGlite), sem credenciais externas. `npm run test:e2e` e `npm run test:mobile` usam uma caixa de e-mail HTTP isolada e verificam o fluxo real de confirmação. Nenhum teste envia e-mail para destinatários reais. `MAIL_TEST_URL` só funciona com `NODE_ENV=test` e destino HTTP de loopback.
-
+Os termos exibidos vêm de `shared/policies.mjs`; a versão deve ser atualizada junto com mudanças nos textos. O servidor conserva a cópia dos termos aceitos nos novos cadastros, sem reescrever os registros anteriores. E-mail é apenas um campo de contato e não é considerado verificado pelo cadastro direto.
 
 ## Entrada e recuperação com Google
 
 A página Entrar / Cadastrar oferece **Continuar com Google** quando o servidor está configurado. O seletor do Google pode mostrar as contas já usadas no navegador. A plataforma não solicita a senha Google e não implementa One Tap ou entrada silenciosa: a seleção/autorização acontece na página oficial do Google.
 
-A primeira entrada associa o e-mail verificado de uma conta Gmail ou Google Workspace ao cadastro existente. Após essa associação, a identidade é reconhecida pelo `sub` estável do Google, não apenas pelo texto do e-mail. Contas externas ao Gmail sem domínio Workspace verificado são recusadas. A entrada não cria cadastro incompleto e não confirma novas inscrições em cursos; cada inscrição continua exigindo o e-mail de confirmação.
+A primeira entrada associa o e-mail verificado de uma conta Gmail ou Google Workspace ao cadastro existente. Na primeira associação verificada com Google, as sessões anteriores desse cadastro são revogadas para impedir que credenciais emitidas antes da verificação de identidade mantenham acesso. Após essa associação, a identidade é reconhecida pelo `sub` estável do Google, não apenas pelo texto do e-mail. Contas externas ao Gmail sem domínio Workspace verificado são recusadas. A entrada não cria cadastro incompleto e não confirma novas inscrições em cursos; cada inscrição deve ser confirmada diretamente na plataforma.
 
 Para ativar:
 
@@ -158,7 +149,7 @@ Para ativar:
 4. Permita HTTPS de saída para `oauth2.googleapis.com` e `www.googleapis.com`. O navegador será redirecionado para `accounts.google.com`. O OAuth usa código de autorização, PKCE S256, nonce e estado assinado com validade de dez minutos em cookie HttpOnly/SameSite. Produção exige HTTPS e cookies Secure.
 5. Teste com uma conta própria cujo e-mail já esteja cadastrado. Saia, entre novamente, confira o perfil e as inscrições recuperadas. Para celular, use a origem pública HTTPS configurada; o endereço HTTP por IP local não é uma configuração suportada para esse login Google.
 
-Sem essas variáveis, a interface informa que a entrada ainda está indisponível e não simula autenticação. A integração Google não depende do Resend. O perfil e as inscrições confirmadas do servidor são recuperados; fotos, favoritos, edições locais e memória do chat não são sincronizados entre aparelhos. Sessões existentes em outro aparelho continuam válidas; Sair revoga somente as credenciais da sessão atual quando a solicitação chega ao servidor.
+Sem essas variáveis, a interface informa que a entrada ainda está indisponível e não simula autenticação. A integração Google é independente da inscrição direta. O perfil e as inscrições confirmadas do servidor são recuperados; fotos, favoritos, edições locais e memória do chat não são sincronizados entre aparelhos. Sessões existentes em outro aparelho continuam válidas; Sair revoga somente as credenciais da sessão atual quando a solicitação chega ao servidor.
 
 A sessão Google usa cookie HttpOnly e seu hash fica em `profile_sessions`, com validade de 90 dias. Para compatibilidade com o cancelamento de inscrições existente, o cliente autenticado também recebe a credencial de sessão e a armazena com o perfil local; isso mantém o risco residual de exposição em caso de XSS. As identidades ficam em `google_identities`, criada automaticamente nos dois bancos. O servidor valida assinatura RS256, emissor, destinatário, expiração, nonce e e-mail verificado; retornos nunca contêm tokens Google, CPF ou o payload integral do cadastro.
 

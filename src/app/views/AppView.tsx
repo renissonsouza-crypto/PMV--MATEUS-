@@ -1,5 +1,5 @@
 import { GoogleLoginResult } from "../components/GoogleLogin";
-import { EnrollmentEmailRequest, EnrollmentEmailConfirmation } from "../components/EnrollmentEmail";
+import { EnrollmentAction, RetiredEmailConfirmation } from "../components/CourseEnrollment";
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { RegisterPage } from "./RegisterView";
@@ -8,7 +8,7 @@ import { TortuguitaChat } from "../components/TortuguitaChat";
 import { HomeHeroBackground } from "../components/HomeHeroBackground";
 import { COURSES } from "../data/courses";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
-import { createTestimonial, cancelConfirmedEnrollment, syncPendingEnrollments, getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
+import { createTestimonial, cancelConfirmedEnrollment,  getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
 import { canUnsubscribeFromCourse, countEnrollmentsInCurrentMonth, formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
 import { useAppController } from "../controllers/useAppController";
 import { isValidBrazilianPhone, lookupVitoriaCep } from "../services/registrationValidation";
@@ -1982,7 +1982,7 @@ function CourseEnrollmentPage({ course, profile, onBack, onProfileUpdated, onEdi
         <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8">
           <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: C.orangeDark }}>Inscrição simplificada</p>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Confirmar inscrição</h1>
-          <p className="text-sm text-slate-500 mb-6">Confira seus dados e solicite o e-mail. A inscrição só será finalizada quando você clicar no botão de confirmação recebido.</p>
+          <p className="text-sm text-slate-500 mb-6">Confira seus dados e confirme a inscrição diretamente nesta página.</p>
           <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 mb-6">
             <p className="text-xs font-bold text-blue-700 mb-1">Curso selecionado</p>
             <p className="font-black text-slate-900">{course.title}</p>
@@ -2000,7 +2000,7 @@ function CourseEnrollmentPage({ course, profile, onBack, onProfileUpdated, onEdi
               </div>
             ))}
           </dl>
-          <EnrollmentEmailRequest courseId={course.id} profile={profile} onProfileUpdated={onProfileUpdated} />
+          <EnrollmentAction courseId={course.id} profile={profile} onProfileUpdated={onProfileUpdated} />
         </section>
       </div>
     </div>
@@ -2137,10 +2137,10 @@ function ProfilePage({ profile, courses, onBack, onProfileUpdated, onOpenCourse,
           </div>
 
           {!!profile.pendingEnrollments?.length && <section className="mb-6 space-y-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-            <h2 className="text-base font-bold text-slate-900">Inscrições aguardando confirmação por e-mail</h2>
+            <h2 className="text-base font-bold text-slate-900">Inscrições não concluídas</h2>
             {profile.pendingEnrollments.map(pending => <div key={pending.requestId} className="space-y-2">
               <p className="font-semibold text-slate-800">{courses.find(course => course.id === pending.courseId)?.title ?? "Curso"}</p>
-              <EnrollmentEmailRequest courseId={pending.courseId} profile={profile} onProfileUpdated={onProfileUpdated} />
+              <EnrollmentAction courseId={pending.courseId} profile={profile} onProfileUpdated={onProfileUpdated} />
             </div>)}
           </section>}
 
@@ -2280,23 +2280,6 @@ export default function App() {
     window.addEventListener("hashchange", receiveLink);
     return () => window.removeEventListener("hashchange", receiveLink);
   }, []);
-  useEffect(() => {
-    if (!profile?.pendingEnrollments?.length) return;
-    let disposed = false;
-    let syncing = false;
-    const sync = async () => {
-      if (syncing || document.hidden) return;
-      syncing = true;
-      try { const next = await syncPendingEnrollments(); if (!disposed && next) setProfile(next); }
-      catch { /* Keep pending requests visible; a later focus or refresh can retry. */ }
-      finally { syncing = false; }
-    };
-    void sync();
-    window.addEventListener("focus", sync);
-    document.addEventListener("visibilitychange", sync);
-    const interval = window.setInterval(sync, 30000);
-    return () => { disposed = true; clearInterval(interval); window.removeEventListener("focus", sync); document.removeEventListener("visibilitychange", sync); };
-  }, [profile?.id, profile?.pendingEnrollments?.map(item => item.requestId).join(",")]);
   const [catalogRequest, setCatalogRequest] = useState<CatalogRequest | null>(null);
   const navigate = (destination: Page) => {
     if (destination === "register" || (destination === "profile" && !profile)) setRegistrationCourseId(undefined);
@@ -2432,7 +2415,7 @@ export default function App() {
         {googleLogin ? (
           <GoogleLoginResult error={googleLogin === 'success' ? undefined : googleLogin} onProfile={value => { setProfile(value); setGoogleLogin(null); navigatePage('profile'); }} onHome={() => { setGoogleLogin(null); navigate('home'); }} />
         ) : confirmationToken ? (
-          <EnrollmentEmailConfirmation key={confirmationToken} token={confirmationToken} onProfileUpdated={setProfile} onOpenProfile={() => { setConfirmationToken(null); navigate("profile"); }} onHome={() => { setConfirmationToken(null); navigate("home"); }} />
+          <RetiredEmailConfirmation onHome={() => { setConfirmationToken(null); navigate("home"); }} />
         ) : registrationMode ? (
           <RegisterPage dark={darkMode} onOpenProfile={() => navigate("profile")} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
         ) : (

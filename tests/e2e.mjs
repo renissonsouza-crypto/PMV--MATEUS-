@@ -51,22 +51,13 @@ async function openProfile(page) {
   await page.getByRole("button", { name: /Abrir perfil de/i }).first().click();
   await page.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
 }
-async function confirmLatestEmail(page, email) {
-  await page.waitForFunction(() => document.body.innerText.includes("Confirmação enviada por e-mail"));
-  const message = environment.emails.filter(item => !email || item.to.includes(email)).at(-1);
-  assert(message, "The mail provider must accept a confirmation email");
-  assert.equal((message.html.match(/<a /g) || []).length, 1, "Email must have a single confirmation button");
-  assert.match(message.html, /Grade curricular/);
-  const token = message.html.match(/#confirm-enrollment=([a-f0-9]{64})/)?.[1];
-  assert(token);
-  await page.goto(`${environment.baseURL}/#confirm-enrollment=${token}`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Inscrição confirmada!", exact: true }).waitFor();
-  assert.equal(new URL(page.url()).hash, "", "Token must be removed from browser history");
+async function waitForDirectEnrollment(page) {
+  await page.getByRole('status').filter({ hasText: 'Inscrição confirmada. O curso está disponível no seu perfil.' }).waitFor();
+  assert.equal(environment.emails.length, 0, 'Direct enrollment must never send email');
 }
 async function requestAndConfirm(page, title) {
-  await page.getByRole("button", { name: "Enviar e-mail de confirmação", exact: true }).click();
-  await confirmLatestEmail(page);
-  await page.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
+  await page.getByRole('button', { name: 'Confirmar minha inscrição', exact: true }).click();
+  await waitForDirectEnrollment(page);
   await openCourse(page, title);
 }
 
@@ -309,9 +300,9 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
     page.getByRole("button", { name: "Concluir cadastro", exact: true }).click(),
   ]);
   assert.equal(response.status(), 201, await response.text());
-  await page.getByRole("heading", { name: "Falta confirmar sua inscrição", exact: true }).waitFor();
-  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [], "Course signup must remain pending before the email click");
-  await confirmLatestEmail(page, "registration-browser@example.test");
+  await page.getByRole("heading", { name: "Inscrição confirmada!", exact: true }).waitFor();
+  await waitForDirectEnrollment(page);
+  assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [1]);
   const profile = await storedProfile(page);
   assert.equal(profile.nome, "Pessoa Teste Navegador");
   assert.deepEqual(profile.enrolledCourseIds, [1]);
@@ -319,6 +310,8 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   assert.equal(persisted.email, "registration-browser@example.test");
   const payload = JSON.parse(persisted.payload);
   assert.equal(payload.dataNascimento, '1990-08-25');
+  assert.equal(payload.policyReceipt.version, '2026-10-16.2');
+  assert(payload.policyReceipt.policies.privacy.paragraphs.length > 0);
   assert.equal(payload.numero, '');
   assert.equal(payload.autorizaDados, true);
   assert.equal(payload.possuiDeficiencia, "sim");
@@ -464,43 +457,32 @@ test("inscrição: três cursos por mês bloqueiam o quarto", async page => {
   assert.deepEqual((await storedProfile(page)).enrolledCourseIds.toSorted((a, b) => a - b), [1, 2]);
 });
 
-test("inscrição: falha no e-mail permite reenvio e confirmação em outro navegador", async page => {
+test("inscrição direta: falha permite nova tentativa, repetição não duplica e outro navegador precisa autenticar", async page => {
   await seedProfile(page, profileFixture());
   await openCourse(page, courseTitles[0]);
-  await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
-  environment.failNextEmail();
-  await page.getByRole("button", { name: "Enviar e-mail de confirmação", exact: true }).click();
-  await page.getByRole("alert").filter({ hasText: /Não foi possível enviar o e-mail/i }).waitFor();
+  await page.getByRole('button', { name: 'Inscrever-se', exact: true }).click();
+  let fail = true;
+  await page.route('**/api/enrollments', async route => {
+    if (route.request().postDataJSON()?.action === 'enroll' && fail) {
+      fail = false;
+      return route.fulfill({ status: 503, json: { error: 'Não foi possível concluir a inscrição. Tente novamente.' } });
+    }
+    return route.continue();
+  });
+  await page.getByRole('button', { name: 'Confirmar minha inscrição', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: /Não foi possível concluir/ }).waitFor();
   assert.deepEqual((await storedProfile(page)).enrolledCourseIds, []);
   assert.equal(environment.confirmedEnrollments(1000).length, 0);
-  await page.getByRole("button", { name: "Enviar e-mail de confirmação", exact: true }).click();
-  await page.getByRole("status").getByText("Confirmação enviada por e-mail", { exact: true }).waitFor();
-  const message = environment.emails.filter(item => item.to.includes("browser@example.test")).at(-1);
-  const token = message.html.match(/#confirm-enrollment=([a-f0-9]{64})/)[1];
-  const context = await page.context().browser().newContext({ viewport: { width: 390, height: 700 } });
-  try {
-    await environment.prepareContext(context);
-    const other = await context.newPage();
-    // Loading the site alone cannot finalize the pending enrollment.
-    await other.goto(environment.baseURL, { waitUntil: "domcontentloaded" });
-    assert.equal(environment.confirmedEnrollments(1000).length, 0);
-    await other.goto(`${environment.baseURL}/#confirm-enrollment=${token}`, { waitUntil: "domcontentloaded" });
-    await other.getByRole("heading", { name: "Inscrição confirmada!", exact: true }).waitFor();
-    // A second email opened in the same tab must confirm its own course.
-    const second = await other.request.post(`${environment.apiURL}/api/enrollments`, { data: { action: "request", registrationId: 1000, email: "browser@example.test", courseId: 2 } });
-    assert.equal(second.status(), 202);
-    const secondToken = environment.emails.at(-1).html.match(/#confirm-enrollment=([a-f0-9]{64})/)[1];
-    await other.goto(`${environment.baseURL}/#confirm-enrollment=${secondToken}`, { waitUntil: "domcontentloaded" });
-    await other.getByRole("status").filter({ hasText: /Sua inscrição em Excel do Básico ao Avançado foi finalizada/ }).waitFor();
-    await other.getByRole("button", { name: "Acessar meu perfil", exact: true }).click();
-    await other.getByRole("heading", { name: "Meu perfil", exact: true }).waitFor();
-    assert.equal(await other.getByLabel("E-mail", { exact: true }).inputValue(), "browser@example.test");
-    assert.equal(environment.confirmedEnrollments(1000).length, 2);
-    await page.bringToFront();
-    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).enrolledCourseIds.includes(1), PROFILE_KEY);
-    assert.equal((await storedProfile(page)).pendingEnrollments.length, 0);
-  } finally { await context.close(); }
+  await page.getByRole('button', { name: 'Confirmar minha inscrição', exact: true }).click();
+  await waitForDirectEnrollment(page);
+  const profile = await storedProfile(page);
+  const again = await page.request.post(`${environment.apiURL}/api/enrollments`, { headers: { 'x-profile-token': profile.profileToken }, data: { action: 'enroll', registrationId: profile.id, courseId: 1 } });
+  assert.equal(again.status(), 200);
+  assert.equal(environment.confirmedEnrollments(1000).length, 1);
+  const anonymous = await page.request.post(`${environment.apiURL}/api/enrollments`, { data: { action: 'enroll', registrationId: profile.id, courseId: 2, email: profile.email } });
+  assert.equal(anonymous.status(), 401);
+  const oldLink = await page.request.post(`${environment.apiURL}/api/enrollments`, { data: { action: 'confirm', token: 'a'.repeat(64) } });
+  assert.equal(oldLink.status(), 410);
 }, { enrollmentFailures: true });
 
 test("inscrição: desistência encerrada permanece inscrita", async page => {

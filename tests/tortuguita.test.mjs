@@ -266,11 +266,11 @@ test("Tortuguita offers bounded relevant query suggestions", () => {
 });
 
 
-test("Tortuguita explains the email click required to finalize course enrollment", () => {
+test("Tortuguita explains direct enrollment without email verification", () => {
   for (const question of ["Não recebi o e-mail de confirmação", "Como reenviar o e-mail de confirmação?", "Recebo um código de confirmação?"]) {
     const result = ask(question);
-    assert.match(result.text, /pendente/);
-    assert.match(result.text, /24 horas/);
+    assert.match(result.text, /não exige código/);
+    assert.match(result.text, /diretamente na plataforma/);
     assert.match(result.text, /Confirmar minha inscrição/);
   }
 });
