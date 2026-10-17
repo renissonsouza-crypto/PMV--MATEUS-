@@ -63,7 +63,12 @@ async function requestAndConfirm(page, title) {
 
 async function fillPersonalData(page, overrides = {}) {
   const values = { nome: "Pessoa Teste Navegador", cpf: "529.982.247-25", dataNascimento: "01/01/1990", telefone: "27999999999", email: "registration-browser@example.test", emailConfirm: "registration-browser@example.test", ...overrides };
-  for (const [name, value] of Object.entries(values)) await page.locator(`[name="${name}"]`).fill(value);
+  for (const [name, value] of Object.entries(values)) {
+    const input = page.locator(`[name="${name}"]`);
+    if (!await input.count()) continue;
+    if (await input.isEditable()) await input.fill(value);
+    else assert.equal(await input.inputValue(), value);
+  }
   await page.locator('[name="sexo"]').selectOption("Prefiro não informar");
   await page.locator('[name="escolaridade"]').selectOption("Ensino médio completo");
   await page.locator('[name="situacaoEmprego"]').selectOption("Desempregado");
@@ -310,7 +315,7 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   assert.equal(persisted.email, "registration-browser@example.test");
   const payload = JSON.parse(persisted.payload);
   assert.equal(payload.dataNascimento, '1990-08-25');
-  assert.equal(payload.policyReceipt.version, '2026-10-16.2');
+  assert.equal(payload.policyReceipt.version, '2026-10-17.3');
   assert(payload.policyReceipt.policies.privacy.paragraphs.length > 0);
   assert.equal(payload.numero, '');
   assert.equal(payload.autorizaDados, true);
@@ -993,6 +998,51 @@ test("Google: falha no SDK oferece alternativa e permite recarregar", async page
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ contentType: 'application/javascript', body: googleSdkFixture }));
   await chooser.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
   await chooser.getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).waitFor();
+});
+
+test("Google: novo usuário completa cadastro verificado e se inscreve no curso sem e-mail", async (page, environment) => {
+  const identity = { nome: 'Pessoa Google Nova', email: 'new-google-signup@gmail.com', subject: 'browser-google-signup' };
+  const token = environment.seedGoogleSignup(identity);
+  await mockGoogleChooser(page);
+  await page.route('**/api/auth?action=credential', route => route.fulfill({ headers: { 'set-cookie': `qv_signup=${token}; Path=/; HttpOnly; SameSite=Lax` }, json: { status: 'registration-required' } }));
+  await openCourse(page, courseTitles[0]);
+  await page.getByRole('button', { name: 'Inscrever-se', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar com Google', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Entrar na sua conta' }).getByRole('button', { name: 'Entrar com Google (provedor de teste)' }).click();
+  await page.getByRole('button', { name: 'Completar meu cadastro', exact: true }).click();
+  await page.getByRole('status').filter({ hasText: `Conta Google confirmada: ${identity.email}` }).waitFor();
+  assert.equal((await storedProfile(page)), null, 'Identity alone must not create an incomplete profile');
+  assert.equal(await page.locator('[name="email"]').isEditable(), false);
+  assert.equal(await page.locator('[name="nome"]').inputValue(), identity.nome);
+  assert.equal(await page.locator('[name="emailConfirm"]').count(), 0);
+  const tampered = await page.request.post(`${environment.baseURL}/api/registrations`, { data: { googleSignup: true, email: 'other-account@gmail.com' } });
+  assert.equal(tampered.status(), 400);
+  assert.equal(environment.googleIdentity(identity.subject), undefined);
+  await fillPersonalData(page, { nome: identity.nome, cpf: '987.654.321-00', email: identity.email, emailConfirm: identity.email });
+  await page.getByRole('button', { name: 'Próximo', exact: true }).click();
+  await fillAddress(page);
+  await page.getByRole('button', { name: 'Próximo', exact: true }).click();
+  await page.getByRole('button', { name: 'Próximo', exact: true }).click();
+  await page.locator('[name="autorizaDados"]').check();
+  await page.locator('[name="aceitaTermos"]').check();
+  const [response] = await Promise.all([
+    page.waitForResponse(result => result.url().endsWith('/api/registrations') && result.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Concluir cadastro', exact: true }).click(),
+  ]);
+  assert.equal(response.status(), 201, await response.text());
+  await waitForDirectEnrollment(page);
+  const profile = await storedProfile(page);
+  assert.equal(profile.email, identity.email);
+  assert.equal(environment.googleIdentity(identity.subject).registration_id, profile.id);
+  assert.equal(environment.confirmedEnrollments(profile.id).length, 1);
+  assert(!(await page.context().cookies()).some(cookie => cookie.name === 'qv_signup'));
+  const replay = await page.request.post(`${environment.baseURL}/api/registrations`, { headers: { Cookie: `qv_signup=${token}` }, data: { googleSignup: true, email: identity.email } });
+  assert.equal(replay.status(), 401, 'Consumed signup confirmation cannot create another profile');
+  const session = await page.request.get(`${environment.baseURL}/api/auth?action=session`);
+  assert.equal(session.status(), 200);
+  assert.equal((await session.json()).profile.id, profile.id);
+  await page.getByRole('button', { name: 'Acessar meu perfil', exact: true }).click();
+  await page.getByRole('heading', { name: 'Meu perfil', exact: true }).waitFor();
 });
 
 const environment = await startTestEnvironment();

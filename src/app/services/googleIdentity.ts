@@ -29,3 +29,15 @@ export function loadGoogleIdentity(): Promise<GoogleIdentity> {
   }
   return pending.catch(error => { pending = null; throw error; });
 }
+
+
+export function rememberGoogleCourse(courseId?: number) {
+  try { if (courseId) sessionStorage.setItem('qualificavix-google-course', String(courseId)); else sessionStorage.removeItem('qualificavix-google-course'); } catch { /* Account verification works even when storage is blocked. */ }
+}
+export function takeGoogleCourse(): number | undefined {
+  try {
+    const value = Number(sessionStorage.getItem('qualificavix-google-course'));
+    sessionStorage.removeItem('qualificavix-google-course');
+    return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+  } catch { return undefined; }
+}

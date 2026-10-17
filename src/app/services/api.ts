@@ -349,9 +349,9 @@ export function updateUserProfile(updates: Partial<UserProfile>) {
   return persistProfile(updated);
 }
 
-export function logoutUserProfile() {
+export function logoutUserProfile({ revokeSession = true }: { revokeSession?: boolean } = {}) {
   const token = getUserProfile()?.profileToken;
-  void request("/auth?action=logout", { method: "POST", headers: { "x-profile-token": token ?? "" }, body: "{}" }).catch(() => { /* Local sign-out still works offline; server session expires independently. */ });
+  if (revokeSession) void request("/auth?action=logout", { method: "POST", headers: { "x-profile-token": token ?? "" }, body: "{}" }).catch(() => { /* Local sign-out still works offline; server session expires independently. */ });
   cachedProfile = null;
   cachedFavorites = [];
   profileSessionOnly = false;
@@ -404,13 +404,23 @@ export async function cancelConfirmedEnrollment(courseId: number) {
 }
 
 
-export async function restoreGoogleProfile(): Promise<UserProfile> {
-  const result = await request<{ profile: UserProfile }>("/auth?action=session");
+export type GoogleSignupIdentity = { nome: string; email: string };
+export async function resolveGoogleAccess(): Promise<{ profile: UserProfile; signup?: never } | { signup: GoogleSignupIdentity; profile?: never }> {
+  const result = await request<{ profile?: UserProfile; status?: string; identity?: GoogleSignupIdentity }>("/auth?action=session");
+  if (result.status === 'registration-required') {
+    if (!result.identity || typeof result.identity.nome !== 'string' || typeof result.identity.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.identity.email)) throw new Error('O Google não confirmou os dados para seu cadastro.');
+    return { signup: result.identity };
+  }
   const incoming = result.profile;
   if (!incoming || !Number.isSafeInteger(incoming.id) || typeof incoming.profileToken !== "string" || !/^[a-f0-9]{64}$/.test(incoming.profileToken)) throw new Error("Não foi possível recuperar o perfil com segurança.");
   const saved = saveUserProfile(incoming as unknown as Record<string, unknown>, incoming.id);
   const enrollments = normalizeEnrollments(incoming);
-  return persistProfile({ ...saved, enrollments, enrolledCourseIds: enrollments.map(entry => entry.courseId), enrollmentHistory: normalizeEnrollmentHistory(incoming, enrollments) });
+  return { profile: persistProfile({ ...saved, enrollments, enrolledCourseIds: enrollments.map(entry => entry.courseId), enrollmentHistory: normalizeEnrollmentHistory(incoming, enrollments) }) };
+}
+export async function restoreGoogleProfile(): Promise<UserProfile> {
+  const result = await resolveGoogleAccess();
+  if (!result.profile) throw new Error('Complete seu cadastro para acessar a plataforma.');
+  return result.profile;
 }
 
 export async function beginGoogleSignIn(signal?: AbortSignal) {
@@ -420,5 +430,11 @@ export async function beginGoogleSignIn(signal?: AbortSignal) {
 }
 export async function completeGoogleSignIn(credential: string, signal?: AbortSignal) {
   const result = await request<{ status: string }>('/auth?action=credential', { method: 'POST', credentials: 'same-origin', body: JSON.stringify({ credential }), signal });
-  if (result.status !== 'authenticated') throw new Error('A plataforma não confirmou seu acesso.');
+  if (!['authenticated', 'registration-required'].includes(result.status)) throw new Error('A plataforma não confirmou seu acesso.');
+}
+
+
+export async function cancelGoogleSignup() {
+  const result = await request<{ status: string }>('/auth?action=cancel-signup', { method: 'POST', body: '{}', credentials: 'same-origin' });
+  if (result.status !== 'cancelled') throw new Error('Não foi possível encerrar esta tentativa. Tente novamente.');
 }

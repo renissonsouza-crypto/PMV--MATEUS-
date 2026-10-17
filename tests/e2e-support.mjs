@@ -127,6 +127,18 @@ export async function startTestEnvironment() {
           database.prepare('INSERT INTO profile_sessions(token_hash, registration_id, expires_at) VALUES (?, ?, ?)').run(createHash('sha256').update(profile.profileToken).digest('hex'), profile.id, new Date(Date.now() + 86400000).toISOString());
         } finally { database.close(); }
       },
+      seedGoogleSignup(identity) {
+        const token = randomBytes(32).toString('hex');
+        const database = new DatabaseSync(dbPath);
+        try { database.prepare('INSERT INTO google_signup_intents VALUES (?, ?, ?, ?, ?)').run(createHash('sha256').update(token).digest('hex'), identity.subject, identity.email, identity.nome, new Date(Date.now() + 1800000).toISOString()); }
+        finally { database.close(); }
+        return token;
+      },
+      googleIdentity(subject) {
+        const database = new DatabaseSync(dbPath, { readOnly: true });
+        try { return database.prepare('SELECT registration_id FROM google_identities WHERE subject = ?').get(subject); }
+        finally { database.close(); }
+      },
       confirmedEnrollments(id) {
         const database = new DatabaseSync(dbPath, { readOnly: true });
         try { return database.prepare("SELECT * FROM course_enrollment_requests WHERE registration_id = ? AND confirmed_at IS NOT NULL AND cancelled_at IS NULL").all(id); }

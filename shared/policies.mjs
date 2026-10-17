@@ -1,4 +1,4 @@
-export const POLICY_VERSION = "2026-10-16.2";
+export const POLICY_VERSION = "2026-10-17.3";
 
 export const PLATFORM_POLICIES = {
   "terms": {
@@ -19,7 +19,7 @@ export const PLATFORM_POLICIES = {
     "paragraphs": [
       "O cadastro envia ao serviço da plataforma seus dados pessoais, endereço, contato, escolaridade e os demais campos preenchidos, incluindo informações opcionais e autorizações.",
       "As inscrições e os cancelamentos são registrados diretamente no servidor da plataforma. Não enviamos e-mail para validar inscrições. Uma sessão de acesso é criada no cadastro e deve ser mantida em sigilo; o e-mail de contato não é uma prova de identidade.",
-      "Quando disponível, Continuar com Google usa a identidade e o e-mail verificado da sua conta Google para recuperar o cadastro existente e as inscrições registradas no servidor. A plataforma não recebe sua senha Google. Guardamos o identificador da conta Google e uma sessão de acesso; fotos, favoritos e conversas locais não são transferidos.",
+      "Quando disponível, Continuar com Google usa a identidade e o e-mail verificado da sua conta Google para iniciar um novo cadastro ou recuperar o perfil existente e as inscrições registradas no servidor. No primeiro cadastro, nome e e-mail são pré-preenchidos e você completa os demais dados e consentimentos; a confirmação Google de cadastro é temporária e válida por 30 minutos. A plataforma não recebe sua senha Google. Guardamos o identificador da conta Google e uma sessão de acesso; fotos, favoritos e conversas locais não são transferidos.",
       "O perfil, a foto, os favoritos e as inscrições em cursos também ficam salvos no navegador utilizado. Em um navegador que bloqueie esse armazenamento, a plataforma informa quando os dados estarão disponíveis somente enquanto a página estiver aberta.",
       "Com um perfil cadastrado, as conversas recentes com a Tortuguita, os interesses, as preferências e as conclusões de cursos informadas por você são guardados neste navegador, separados por perfil, para retomar o atendimento. Essa memória não é enviada a um serviço de IA nem sincronizada entre dispositivos. Você pode consultá-la e apagá-la em Sua memória com a Tortuguita, sem alterar suas inscrições.",
       "O CEP informado é consultado no ViaCEP para verificar se o endereço pertence a Vitória-ES. As imagens externas do catálogo são carregadas do Unsplash.",

@@ -1,3 +1,4 @@
+import { takeGoogleCourse } from "../services/googleIdentity";
 import { GoogleLoginResult } from "../components/GoogleLogin";
 import { EnrollmentAction, RetiredEmailConfirmation } from "../components/CourseEnrollment";
 import { useState, useEffect, useRef, type FormEvent } from "react";
@@ -8,7 +9,7 @@ import { TortuguitaChat } from "../components/TortuguitaChat";
 import { HomeHeroBackground } from "../components/HomeHeroBackground";
 import { COURSES } from "../data/courses";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
-import { createTestimonial, cancelConfirmedEnrollment,  getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, saveFavoriteCourseIds, updateUserProfile, type UserProfile } from "../services/api";
+import { createTestimonial, cancelGoogleSignup, cancelConfirmedEnrollment,  getFavoriteCourseIds, getTestimonials, getUserProfile, isFavoritesSessionOnly, isProfileSessionOnly, logoutUserProfile, saveFavoriteCourseIds, updateUserProfile, type GoogleSignupIdentity, type UserProfile } from "../services/api";
 import { canUnsubscribeFromCourse, countEnrollmentsInCurrentMonth, formatDateBR, getUnsubscribeDeadline } from "../services/enrollmentPolicy.js";
 import { useAppController } from "../controllers/useAppController";
 import { isValidBrazilianPhone, lookupVitoriaCep } from "../services/registrationValidation";
@@ -2262,6 +2263,7 @@ export default function App() {
   const [favoriteCourseIds, setFavoriteCourseIds] = useState<number[]>(getFavoriteCourseIds);
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [returnToEnrollmentConfirmation, setReturnToEnrollmentConfirmation] = useState(false);
+  const [googleSignup, setGoogleSignup] = useState<GoogleSignupIdentity | undefined>();
   const [registrationCourseId, setRegistrationCourseId] = useState<number | undefined>();
   const [googleLogin, setGoogleLogin] = useState(() => {
     const hash = window.location.hash.slice(1);
@@ -2413,11 +2415,11 @@ export default function App() {
       `}</style>
       <div className="min-h-screen bg-white" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
         {googleLogin ? (
-          <GoogleLoginResult error={googleLogin === 'success' ? undefined : googleLogin} onProfile={value => { setProfile(value); setGoogleLogin(null); navigatePage('profile'); }} onHome={() => { setGoogleLogin(null); navigate('home'); }} />
+          <GoogleLoginResult error={googleLogin === 'success' ? undefined : googleLogin} onProfile={value => { setProfile(value); setGoogleLogin(null); setGoogleSignup(undefined); navigatePage('profile'); }} onSignup={identity => { logoutUserProfile({ revokeSession: false }); setProfile(null); setFavoriteCourseIds([]); setGoogleSignup(identity); const courseId = takeGoogleCourse(); if (COURSES.some(course => course.id === courseId && course.status !== 'coming-soon')) setRegistrationCourseId(courseId); setGoogleLogin(null); navigatePage('register'); }} onHome={() => { setGoogleLogin(null); navigate('home'); }} />
         ) : confirmationToken ? (
           <RetiredEmailConfirmation onHome={() => { setConfirmationToken(null); navigate("home"); }} />
         ) : registrationMode ? (
-          <RegisterPage dark={darkMode} onOpenProfile={() => navigate("profile")} onBack={() => navigate("home")} courseId={registrationCourseId} onProfileCreated={setProfile} />
+          <RegisterPage googleSignup={googleSignup} dark={darkMode} onOpenProfile={() => navigate("profile")} onBack={() => { if (googleSignup) { void cancelGoogleSignup().then(() => { setGoogleSignup(undefined); navigate("home"); }).catch(error => alert(error instanceof Error ? error.message : "Não foi possível encerrar esta tentativa.")); } else navigate("home"); }} courseId={registrationCourseId} onProfileCreated={value => { setProfile(value); setGoogleSignup(undefined); }} />
         ) : (
           <>
             <a href="#main-content" className="skip-link">Pular para o conteúdo</a>

@@ -4,7 +4,7 @@ import { EnrollmentAction } from "../components/CourseEnrollment";
 import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import qualificaVixLogo from "../../assets/qualifica-vix-logo.svg";
-import { createRegistrationProfile, isProfileSessionOnly, type UserProfile } from "../services/api";
+import { createRegistrationProfile, isProfileSessionOnly, type GoogleSignupIdentity, type UserProfile } from "../services/api";
 import { getBirthDateAge, formatBirthDateInput, birthDateToISO, isValidBrazilianPhone, lookupVitoriaCep, type VitoriaAddress } from "../services/registrationValidation";
 import { PlatformPolicyLink } from "../components/PlatformPolicy";
 import {
@@ -78,9 +78,9 @@ function FieldWrap({ children, className = "" }: { children: React.ReactNode; cl
 }
 
 function Input({
-  reg, placeholder, type = "text", error, mask,
+  reg, placeholder, type = "text", error, mask, readOnly = false,
 }: {
-  reg: any; placeholder?: string; type?: string; error?: string; mask?: string;
+  reg: any; placeholder?: string; type?: string; error?: string; mask?: string; readOnly?: boolean;
 }) {
   const [showPwd, setShowPwd] = useState(false);
   const isPassword = type === "password";
@@ -92,6 +92,7 @@ function Input({
           if (reg.name === "dataNascimento") event.target.value = formatBirthDateInput(event.target.value);
           void reg.onChange(event);
         }}
+        readOnly={readOnly}
         maxLength={reg.name === "dataNascimento" ? 10 : undefined}
         id={`registration-${reg.name}`}
         aria-invalid={Boolean(error)}
@@ -181,7 +182,7 @@ const STEPS = [
 ];
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileCreated }: { onBack: () => void; onOpenProfile: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
+export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileCreated, googleSignup }: { googleSignup?: GoogleSignupIdentity; onBack: () => void; onOpenProfile: () => void; dark: boolean; courseId?: number; onProfileCreated: (profile: UserProfile) => void }) {
   const [step, setStep] = useState(1);
   const formRef = useRef<HTMLFormElement>(null);
   const previousStep = useRef(step);
@@ -227,6 +228,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
     getValues,
     setValue,
   } = useForm<RegisterData>({ mode: "onBlur", defaultValues: {
+    nome: googleSignup?.nome ?? "", email: googleSignup?.email ?? "", emailConfirm: googleSignup?.email ?? "",
     possuiDeficiencia: "nao", beneficioProgramaSocial: "nao", quaisBeneficios: [],
   } });
   const age = getBirthDateAge(watch("dataNascimento"));
@@ -308,6 +310,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
       const registration = {
         ...data,
         policyVersion: POLICY_VERSION,
+        googleSignup: Boolean(googleSignup),
         menorDeIdade,
         ...(menorDeIdade ? {} : { nomeResponsavel: "", cpfResponsavel: "", grauParentesco: "", telefoneResponsavel: "" }),
         ...(data.possuiDeficiencia === "sim" ? {} : { tiposDeficiencia: "", necessitaAdaptacao: "", tiposAdaptacao: "" }),
@@ -364,7 +367,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
         {/* ─── Header da página ─── */}
         <div className="registration-header sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-sm">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center gap-4 py-4">
-            <button onClick={onBack}
+            <button disabled={isSubmitting} onClick={onBack}
               className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               aria-label="Voltar">
               <ArrowLeft className="w-5 h-5" />
@@ -420,7 +423,7 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
           </div>
 
           {/* ─── Formulário ─── */}
-          {step === 1 && <GoogleLoginButton />}
+          {step === 1 && <><GoogleLoginButton courseId={courseId} />{googleSignup && <p role="status" className="mb-5 break-words rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">Conta Google confirmada: {googleSignup.email}. Complete os dados e aceite os termos para criar seu perfil.</p>}</>}
           <form ref={formRef} aria-busy={isSubmitting} noValidate onSubmit={event => {
             if (step < 4) { event.preventDefault(); void nextStep(); }
             else void handleSubmit(onSubmit, onInvalid)(event);
@@ -492,17 +495,17 @@ export function RegisterPage({ onBack, onOpenProfile, dark, courseId, onProfileC
                           required: "E-mail obrigatório",
                           pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "E-mail inválido" }
                         })}
-                          placeholder="seu@email.com" type="email" error={errors.email?.message} />
+                          readOnly={Boolean(googleSignup)} placeholder="seu@email.com" type="email" error={errors.email?.message} />
                       </FieldWrap>
 
-                      <FieldWrap>
+                      {!googleSignup && <FieldWrap>
                         <Label required htmlFor="emailConfirm">Confirmar e-mail</Label>
                         <Input reg={register("emailConfirm", {
                           required: "Confirmação obrigatória",
                           validate: v => v === getValues("email") || "Os e-mails não coincidem",
                         })}
                           placeholder="Repita seu e-mail" type="email" error={errors.emailConfirm?.message} />
-                      </FieldWrap>
+                      </FieldWrap>}
 
                       <FieldWrap>
                         <Label required htmlFor="escolaridade">Escolaridade</Label>

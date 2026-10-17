@@ -23,7 +23,7 @@ export function beginGoogle(config) {
   const state = newToken(), nonce = newToken(), verifier = randomBytes(32).toString('base64url');
   const value = Buffer.from(JSON.stringify({ state, nonce, verifier, expires: Date.now() + 600000 })).toString('base64url');
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.search = new URLSearchParams({ client_id: config.clientId, redirect_uri: config.redirectUri, response_type: 'code', scope: 'openid email', state, nonce, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString();
+  url.search = new URLSearchParams({ client_id: config.clientId, redirect_uri: config.redirectUri, response_type: 'code', scope: 'openid email profile', state, nonce, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', prompt: 'select_account' }).toString();
   return { url: url.href, cookie: authCookie('qv_oauth', `${value}.${mac(value, config.secret)}`, config, 600) };
 }
 export function readGoogleState(cookie, state, config) {
@@ -42,7 +42,7 @@ export async function verifyGoogleIdentity(idToken, config, nonce, keySet = keys
   // Google is authoritative for Gmail and verified Workspace domains, not arbitrary external addresses.
   const email = payload.email.trim().toLowerCase();
   if (!/^[^@\s]+@gmail\.com$/.test(email) && !(typeof payload.hd === 'string' && payload.hd && email.endsWith(`@${payload.hd.toLowerCase()}`))) throw fail('Use uma conta Gmail ou Google Workspace com domínio verificado.', 403);
-  return { email, subject: payload.sub };
+  return { email, subject: payload.sub, name: typeof payload.name === 'string' ? payload.name.trim().slice(0, 120) : '' };
 }
 export async function exchangeGoogle(code, state, config, fetcher = fetch) {
   if (typeof code !== 'string' || !code || code.length > 4096) throw fail('Código de login inválido.', 400);
@@ -82,3 +82,24 @@ export function readGoogleIdentity(cookie, config) {
   catch { throw fail('Tentativa de login inválida.', 403); }
   return readGoogleState(cookie, state, config);
 }
+
+
+export async function finishGoogleAccess(repository, identity) {
+  const bound = await repository.bySubject(identity.subject);
+  const matches = bound ? [bound] : await repository.byEmail(identity.email);
+  if (matches.length) return { kind: 'session', token: await finishGoogleLogin(repository, identity) };
+  const token = newToken();
+  await repository.createSignup(digest(token), identity, new Date(Date.now() + 30 * 60000).toISOString());
+  return { kind: 'signup', token };
+}
+
+export async function registrationGoogleIntent(req, repository) {
+  const token = cookieValue(req, 'qv_signup');
+  if (!token && req.body?.googleSignup !== true) return null;
+  if (!/^[a-f0-9]{64}$/.test(token)) throw fail('A confirmação Google venceu. Entre novamente com Google para concluir o cadastro.', 401);
+  const intent = await repository.signup(digest(token));
+  if (!intent) throw fail('A confirmação Google venceu ou já foi utilizada. Entre novamente com Google.', 401);
+  if (typeof req.body?.email !== 'string' || req.body.email.trim().toLowerCase() !== intent.email) throw fail('Use o e-mail confirmado pela sua conta Google.', 400);
+  return { ...intent, tokenHash: digest(token) };
+}
+export const clearGoogleSignupCookie = 'qv_signup=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0';

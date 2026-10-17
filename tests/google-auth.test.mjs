@@ -212,3 +212,49 @@ test('signing out invalidates a pending Google chooser challenge', async () => {
     assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 0);
   } finally { db.close(); }
 });
+
+test('new Google identity starts registration without creating an incomplete profile or a session', async () => {
+  const { db, repository } = fixture();
+  try {
+    const controller = authController(repository, { configuration: () => config, verify: (token, settings, nonce) => verifyGoogleIdentity(token, settings, nonce, publicKey) });
+    const headers = { 'content-type': 'application/json' };
+    const challenge = await invoke(controller, '/api/auth?action=challenge', { method: 'POST', headers, body: {} });
+    const credential = await sign({ email: 'new-user@gmail.com', name: 'Nova Pessoa', nonce: challenge.data.nonce });
+    const result = await invoke(controller, '/api/auth?action=credential', { method: 'POST', headers: { ...headers, cookie: challenge.headers['Set-Cookie'].split(';')[0] }, body: { credential } });
+    assert.equal(result.code, 200);
+    assert.deepEqual(result.data, { status: 'registration-required' });
+    const cookie = result.headers['Set-Cookie'][2].split(';')[0];
+    assert.match(result.headers['Set-Cookie'][2], /HttpOnly; SameSite=Lax; Path=\/; Max-Age=1800; Secure/);
+    const pending = await invoke(controller, '/api/auth?action=session', { headers: { cookie } });
+    assert.deepEqual(pending.data, { status: 'registration-required', identity: { nome: 'Nova Pessoa', email: 'new-user@gmail.com' } });
+    assert.equal(db.prepare('SELECT count(*) AS n FROM registrations').get().n, 1);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM profile_sessions').get().n, 0);
+    const raw = cookie.slice('qv_signup='.length);
+    assert(db.prepare('SELECT 1 FROM google_signup_intents WHERE token_hash = ?').get(digest(raw)));
+    assert(!db.prepare('SELECT 1 FROM google_signup_intents WHERE token_hash = ?').get(raw));
+    const { registrationGoogleIntent } = await import('../server/services/googleAuth.mjs');
+    await assert.rejects(registrationGoogleIntent({ headers: {}, body: { googleSignup: true, email: 'new-user@gmail.com' } }, repository), error => error.statusCode === 401);
+    await assert.rejects(registrationGoogleIntent({ headers: { cookie }, body: { googleSignup: true, email: 'victim@gmail.com' } }, repository), error => error.statusCode === 400);
+    assert.equal((await registrationGoogleIntent({ headers: { cookie }, body: { googleSignup: true, email: 'new-user@gmail.com' } }, repository)).subject, 'google-person-123');
+    const cancelled = await invoke(controller, '/api/auth?action=cancel-signup', { method: 'POST', headers: { ...headers, cookie }, body: {} });
+    assert.equal(cancelled.code, 200);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM google_signup_intents').get().n, 0);
+    assert.equal((await invoke(controller, '/api/auth?action=session', { headers: { cookie } })).code, 401);
+  } finally { db.close(); }
+});
+
+test('redirect Google login also supports a new user and pending registration expires', async () => {
+  const { db, repository } = fixture();
+  try {
+    const controller = authController(repository, { configuration: () => config, exchange: async () => ({ email: 'redirect-new@gmail.com', subject: 'redirect-subject', name: 'New User' }) });
+    const start = await invoke(controller, '/api/auth?action=start');
+    const state = new URL(start.headers.Location).searchParams.get('state');
+    const result = await invoke(controller, `/api/auth?action=callback&code=temporary-code&state=${state}`, { headers: { cookie: start.headers['Set-Cookie'].split(';')[0] } });
+    assert.equal(result.code, 302);
+    assert.equal(result.headers.Location, 'https://example.test/#google-login');
+    const cookie = result.headers['Set-Cookie'][2].split(';')[0];
+    assert.equal((await invoke(controller, '/api/auth?action=session', { headers: { cookie } })).data.status, 'registration-required');
+    db.prepare("UPDATE google_signup_intents SET expires_at = '2000-01-01'").run();
+    assert.equal((await invoke(controller, '/api/auth?action=session', { headers: { cookie } })).code, 401);
+  } finally { db.close(); }
+});

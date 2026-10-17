@@ -4,6 +4,9 @@ import { postgresEnrollmentRepository } from './PostgresEnrollmentRepository.mjs
 export function sqliteAuthRepository(db) {
   return {
     session: sqliteEnrollmentRepository(db).session,
+    async createSignup(hash, identity, expires) { db.prepare('DELETE FROM google_signup_intents WHERE expires_at <= ?').run(new Date().toISOString()); db.prepare('INSERT INTO google_signup_intents VALUES (?, ?, ?, ?, ?)').run(hash, identity.subject, identity.email, identity.name ?? '', expires); },
+    async signup(hash) { return db.prepare('SELECT subject, email, name FROM google_signup_intents WHERE token_hash = ? AND expires_at > ?').get(hash, new Date().toISOString()); },
+    async revokeSignup(hash) { db.prepare('DELETE FROM google_signup_intents WHERE token_hash = ?').run(hash); },
     async challenge(hash, expires) { db.prepare('DELETE FROM google_login_challenges WHERE expires_at <= ?').run(new Date().toISOString()); db.prepare('INSERT INTO google_login_challenges VALUES (?, ?)').run(hash, expires); },
     async consumeChallenge(hash) { return Boolean(db.prepare('DELETE FROM google_login_challenges WHERE token_hash = ? AND expires_at > ? RETURNING token_hash').get(hash, new Date().toISOString())); },
     async bySubject(subject) { return db.prepare('SELECT registration_id AS id FROM google_identities WHERE subject = ?').get(subject); },
@@ -27,6 +30,9 @@ export function postgresAuthRepository() {
   const ready = async () => { await ensurePostgresSchema(); return getSql(); };
   return {
     session: postgresEnrollmentRepository().session,
+    async createSignup(hash, identity, expires) { const sql = await ready(); await sql`DELETE FROM google_signup_intents WHERE expires_at <= ${new Date().toISOString()}`; await sql`INSERT INTO google_signup_intents(token_hash, subject, email, name, expires_at) VALUES (${hash}, ${identity.subject}, ${identity.email}, ${identity.name ?? ''}, ${expires})`; },
+    async signup(hash) { const sql = await ready(); const [row] = await sql`SELECT subject, email, name FROM google_signup_intents WHERE token_hash = ${hash} AND expires_at > ${new Date().toISOString()}`; return row; },
+    async revokeSignup(hash) { const sql = await ready(); await sql`DELETE FROM google_signup_intents WHERE token_hash = ${hash}`; },
     async challenge(hash, expires) { const sql = await ready(); await sql`DELETE FROM google_login_challenges WHERE expires_at <= ${new Date().toISOString()}`; await sql`INSERT INTO google_login_challenges(token_hash, expires_at) VALUES (${hash}, ${expires})`; },
     async consumeChallenge(hash) { const sql = await ready(); const rows = await sql`DELETE FROM google_login_challenges WHERE token_hash = ${hash} AND expires_at > ${new Date().toISOString()} RETURNING token_hash`; return rows.length === 1; },
     async bySubject(subject) { const sql = await ready(); const [row] = await sql`SELECT registration_id AS id FROM google_identities WHERE subject = ${subject}`; return row; },

@@ -179,7 +179,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "registration_email", title: "E-mail e confirmação",
     questions: ["Os e-mails não coincidem", "Meu e-mail aparece como inválido", "Por que preciso confirmar o e-mail?", "Como preencher Confirmar e-mail?", "Posso corrigir meu endereço de e-mail?", "Recebo um código de confirmação?", "A conta depende de confirmar uma mensagem?", "Preciso verificar minha caixa de entrada para cadastrar?"],
     keywords: ["emails nao coincidem", "email invalido", "confirmar email", "confirmacao de email", "codigo de confirmacao", "caixa de entrada", "corrigir email", "email de confirmacao", "link de confirmacao", "reenviar email"],
-    answer: "Informe um endereço válido com @ e domínio e repita o mesmo texto em Confirmar e-mail para evitar erros de digitação. A inscrição não exige código, mensagem nem link por e-mail. Escolha o curso e clique em Confirmar minha inscrição diretamente na plataforma; aguarde o aviso de sucesso. Se houver uma falha, tente novamente. Não envie credenciais ao chat.",
+    answer: "No cadastro manual, informe um endereço válido com @ e domínio e repita o mesmo texto em Confirmar e-mail para evitar erros de digitação. Ao começar com Google, o e-mail vem da conta verificada e não precisa ser repetido. A inscrição não exige código, mensagem nem link por e-mail. Escolha o curso e clique em Confirmar minha inscrição diretamente na plataforma; aguarde o aviso de sucesso. Se houver uma falha, tente novamente. Não envie credenciais ao chat.",
     followUps: ["Como editar meus dados?", "Como faço meu cadastro?"], actionPages: ["register", "profile"],
   },
   {
@@ -249,7 +249,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
     id: "profile_local", title: "Perfil e entrada com Google",
     questions: ["Meu perfil fica salvo em outro dispositivo?", "Como fazer login com senha?", "Esqueci minha senha", "Como recuperar a conta pelo e-mail?", "Posso entrar no celular com meu cadastro do computador?", "O site sincroniza meus dados?", "Onde está o botão de login?", "Existe conta compartilhada entre navegadores?"],
     keywords: ["outro dispositivo", "login", "senha", "recuperar conta", "sincroniza", "entre navegadores", "cadastro do computador", "entrar no celular"],
-    answer: "O perfil, a foto e os favoritos ficam no navegador usado. As inscrições são confirmadas diretamente na plataforma e registradas no servidor, sem validação por e-mail. Quando disponível, use Entrar / Cadastrar → Continuar com Google para recuperar o perfil e as inscrições do servidor. Fotos, favoritos e memória do chat não são transferidos. Não há login por senha nem recuperação pelo chatbot. Sessões antigas ou expiradas precisam de nova entrada.",
+    answer: "O perfil, a foto e os favoritos ficam no navegador usado. As inscrições são confirmadas diretamente na plataforma e registradas no servidor, sem validação por e-mail. Quando disponível, use Entrar / Cadastrar → Continuar com Google para iniciar seu cadastro ou recuperar o perfil e as inscrições do servidor. No primeiro acesso, complete os dados obrigatórios e os consentimentos após escolher a conta Google. Fotos, favoritos e memória do chat não são transferidos. Não há login por senha nem recuperação pelo chatbot. Sessões antigas ou expiradas precisam de nova entrada.",
     followUps: ["Meu perfil desapareceu", "Como meus dados são armazenados?", "Como entro em contato?"], actionPages: ["profile", "contato"],
   },
   {
