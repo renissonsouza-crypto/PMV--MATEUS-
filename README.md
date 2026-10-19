@@ -3,6 +3,12 @@
 
 Aplicação React/Vite com API local em SQLite e API de produção serverless para Vercel usando PostgreSQL (Neon).
 
+## Tutorial de uso em PDF
+
+[**Abrir o guia completo do Qualifica Vix**](docs/tutorial-qualifica-vix.pdf) — 63 páginas, 26 imagens, sumário clicável, instruções de uso, validações, documentos e roteiro de apresentação. Edição de 19/10/2026, com dados fictícios nas capturas.
+
+Para salvar uma cópia, abra o PDF no GitHub e use **Download raw file** ou [baixe diretamente](https://github.com/renissonsouza-crypto/PMV--MATEUS-/raw/refs/heads/main/docs/tutorial-qualifica-vix.pdf). Em repositórios privados, entre na sua conta GitHub com acesso ao projeto.
+
 ## Arquitetura MVC
 
 ```text
