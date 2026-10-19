@@ -1,0 +1,12 @@
+mascot.svg: Paths oficiais de src/app/components/TurtleMascot.tsx; somente JSX convertido para SVG.
+bridge.svg: Ilustração vetorial original inspirada na paisagem e Terceira Ponte de Vitória, sem afirmar precisão cartográfica.
+journey.svg: Diagrama vetorial original de cinco marcos.
+icons.svg: Vinte símbolos vetoriais originais, IDs icon-{nome}; viewBox 0 0 24 24.
+photo-hero.webp: src/assets/hero/vitoria-terceira-ponte-noturna.jpg; 1600x900; WebP quality84.
+photo-technology.webp: src/assets/hero/qualificavix-informatica.jpg; 720x480; WebP quality84.
+photo-cooking.webp: src/assets/hero/qualificavix-cozinha-aula.jpg; 720x480; WebP quality84.
+photo-electrician.webp: src/assets/hero/qualificavix-eletricista-predial.jpg; 720x480; WebP quality84.
+
+Outras fotos: imagens do catálogo (URLs Unsplash em shared/courses.mjs).
+Capturas: plataforma local, dados fictícios, 19/10/2026.
+Tipografia: Noto Sans sob SIL Open Font License 1.1; ver FONT-LICENSE.txt.

@@ -1,0 +1,51 @@
+QUALIFICA VIX · UMA JORNADA DE POSSIBILIDADES
+Apresentação de uso da plataforma · edição 19/10/2026
+
+PARA COMEÇAR
+1. Extraia todos os arquivos deste ZIP para uma pasta.
+2. Dê dois cliques em APRESENTACAO.html para abrir no navegador.
+3. Use Chrome ou Edge atualizado. A apresentação funciona sem internet.
+4. Pressione F para tela cheia. Use as setas para avançar e voltar.
+
+DURAÇÃO
+30 slides principais + 4 slides de consulta. Cerca de 23 minutos.
+O slide 29 propõe uma pequena atividade com cronômetro de 1 minuto.
+O PDF é uma cópia estática para leitura ou impressão. As animações estão no HTML.
+
+ATALHOS
+Setas esquerda/direita, PageUp/PageDown: voltar/avançar.
+Espaço: avançar. Shift + Espaço: voltar.
+Home / End: primeiro / último slide.
+F: tela cheia, quando suportada pelo navegador.
+I: índice com busca e filtros.
+N: notas do slide na tela atual (o público também as vê se esta tela for projetada).
+P: painel separado do apresentador, com notas e próximo slide.
+M: pausar ou retomar os efeitos contínuos.
+B: pausar a projeção. B ou Esc: retomar.
+L: apontador luminoso. Esc desativa.
+?: ajuda com os atalhos.
+
+DICAS PARA APRESENTAR
+- Use P para abrir o painel do apresentador e mova-o para outra tela.
+- Projete somente a janela principal; o painel de notas deve ficar com você.
+- Se o painel separado não abrir, o navegador exibirá as notas na tela atual.
+- Em um telefone ou tablet, use a tela na horizontal e deslize para navegar.
+- A preferência por movimento reduzido do sistema é respeitada.
+- A apresentação não avança sozinha. Você controla o ritmo.
+- O cronômetro do exercício pode ser pausado e reiniciado. Ao sair do slide, ele pausa.
+
+MATERIAL INCLUÍDO
+APRESENTACAO.html: apresentação animada independente, com todos os recursos visuais.
+APRESENTACAO.pdf: 34 páginas estáticas, com texto selecionável e marcadores.
+ROTEIRO-DO-APRESENTADOR.txt: notas de fala e referências por slide.
+CREDITOS.txt e FONT-LICENSE.txt: créditos e licença da tipografia.
+
+SOBRE O CONTEÚDO
+Baseado no guia completo e no comportamento da plataforma em 19/10/2026.
+As capturas usam dados fictícios. Informações e disponibilidade de ofertas
+podem mudar. A ficha do curso é a referência para a decisão.
+Os links para o guia e páginas externas precisam de internet.
+O funcionamento da apresentação sem internet não torna a plataforma offline.
+
+GUIA COMPLETO (PDF)
+https://github.com/renissonsouza-crypto/PMV--MATEUS-/raw/refs/heads/main/docs/tutorial-qualifica-vix.pdf

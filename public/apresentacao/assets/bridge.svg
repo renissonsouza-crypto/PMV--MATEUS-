@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" fill="none" role="img" aria-label="Ilustração de Vitória e da Terceira Ponte">
+<defs>
+ <linearGradient id="sky" x1="1000" y1="60" x2="300" y2="760" gradientUnits="userSpaceOnUse"><stop stop-color="#0a2f61"/><stop offset=".6" stop-color="#0057d9"/><stop offset="1" stop-color="#0078ce"/></linearGradient>
+ <linearGradient id="sea" x1="350" y1="510" x2="950" y2="800" gradientUnits="userSpaceOnUse"><stop stop-color="#0078ce"/><stop offset="1" stop-color="#0a2f61"/></linearGradient>
+ <linearGradient id="sun" x1="800" y1="100" x2="800" y2="460" gradientUnits="userSpaceOnUse"><stop stop-color="#ffb21a"/><stop offset="1" stop-color="#ff8500"/></linearGradient>
+ <linearGradient id="deck" x1="90" y1="430" x2="1130" y2="430" gradientUnits="userSpaceOnUse"><stop stop-color="#cdeeff"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#cdeeff"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#ffb21a" stop-opacity=".2"/><stop offset="1" stop-color="#ffb21a" stop-opacity="0"/></radialGradient>
+ <pattern id="grain" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="white" opacity=".08"/></pattern>
+ <clipPath id="round"><rect width="1200" height="800" rx="38"/></clipPath>
+</defs>
+<g clip-path="url(#round)">
+ <rect width="1200" height="800" fill="url(#sky)"/>
+ <rect width="1200" height="800" fill="url(#grain)"/>
+ <g id="bridge-sun"><circle cx="885" cy="246" r="267" fill="url(#halo)"/><circle cx="885" cy="246" r="113" fill="url(#sun)"/><circle cx="885" cy="246" r="137" stroke="#ffb21a" stroke-opacity=".18"/><circle cx="885" cy="246" r="162" stroke="#ffb21a" stroke-opacity=".12"/></g>
+ <g id="bridge-clouds" stroke="#cdeeff" stroke-opacity=".24" stroke-width="2" stroke-linecap="round"><path d="M90 166h170m-130 15h86M1050 100h87m-52 17h86M400 96h100m-70 16h130"/></g>
+ <g id="bridge-hills"><path d="M0 410c95-5 114-85 169-89s90 73 124 66c48-9 55-90 117-104s98 97 149 91c45-5 103-83 142-76 49 9 63 85 118 71 76-19 97-150 176-156 51-4 89 118 135 123 34 4 46-25 70-24v235H0Z" fill="#0a2f61" opacity=".5"/><path d="M940 455c28-21 46-69 78-83 28-12 35 13 60 19 26 6 35-34 60-32 25 2 48 46 62 59v90H900Z" fill="#0a2f61" opacity=".7"/>
+ <path d="M10 502c95-3 117-41 156-78 34-33 80-39 115-16 24 16 41 55 65 67 19 10 47 5 80 27Z" fill="#0a2f61"/><path d="m188 414 12-19h9l14 19m-19-18v-9m-9 27h26v18h-26z" stroke="#cdeeff" stroke-opacity=".6" stroke-width="3"/>
+ </g>
+ <g id="bridge-city" fill="#0a2f61" opacity=".62"><path d="M18 449h34v-34h26v47h18v-67h39v54h14v-21h24v55H18Z M959 450h17v-35h18v15h11v-63h34v70h15v-28h31v43h15v-70h26v57h23v-25h22v52H959Z"/><g stroke="#cdeeff" stroke-opacity=".55" stroke-width="2"><path d="M1112 393v35m10-35v35M1012 380h18m-18 10h18M113 407h14m-14 11h14M62 427h8m-8 10h8"/></g></g>
+ <path d="M0 510c206-28 378-16 598 2 265 23 424 2 602-16v304H0Z" fill="url(#sea)"/>
+ <g id="bridge-reflections" stroke-linecap="round"><path d="M812 540h149m-123 17h108m-86 17h62m-72 19h91m-74 20h44m-57 22h71" stroke="#ffb21a" stroke-opacity=".45" stroke-width="4"/><path d="M86 603h235m-120 22h189m100-65h111m400 80h146M70 695h139m470-25h165m-342 62h202m224-24h140" stroke="#cdeeff" stroke-opacity=".17" stroke-width="2"/></g>
+ <g id="bridge-main" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M70 486c142-15 278-34 415-52s314-23 650-3" stroke="#0a2f61" stroke-width="22"/>
+ <path d="M70 481c142-15 278-34 415-52s314-23 650-3" stroke="url(#deck)" stroke-width="7"/>
+ <path d="M527 439v152m30-156v168m215-175v180m30-179v160" stroke="#0a2f61" stroke-width="15"/>
+ <path d="M531 432v-235h23v232m221-6V197h23v226" stroke="#cdeeff" stroke-width="8"/>
+ <path d="M532 240h21m-21 16h21m222-16h22m-22 16h22" stroke="#ffb21a" stroke-width="4"/>
+ <g stroke="#cdeeff" stroke-width="1.8" opacity=".86"><path d="m532 207-271 252m271-252L306 454m226-247L351 448m181-241L394 441m138-234L436 436m96-229L481 430m73-223 46 216m-46-216 91 213m-91-213 137 212m-137-212 181 213M775 207l-42 213m42-213-88 212m88-212-134 212m134-212-180 215m203-215 47 216m-47-216 92 220m-92-220 138 221m-138-221 181 224m-181-224 226 226m-226-226 272 229"/></g>
+ <path d="M532 197h21m222 0h22" stroke="#ff8500" stroke-width="9"/>
+ <path d="M71 480c142-15 278-34 415-52s314-23 650-3" stroke="white" stroke-width="2" opacity=".85"/>
+ </g>
+ <g id="bridge-boat"><path d="m365 609 60 1-10 15h-39z" fill="#ff8500"/><path d="M396 559v49h-27Z" fill="#cdeeff"/><path d="M400 573v34h23Z" fill="white"/><path d="M357 633h81m-65 9h50" stroke="#cdeeff" stroke-opacity=".26" stroke-width="2" stroke-linecap="round"/></g>
+ <g id="bridge-foreground"><path d="M0 752c120-71 203-54 299-25 91 28 156 44 240 73H0Z" fill="#0a2f61"/><path d="M1050 800c45-55 84-72 150-97v97Z" fill="#0a2f61"/><g stroke="#cdeeff" stroke-opacity=".35" stroke-width="2"><path d="m34 735 17-18m7 13 19-17m107 16 14-12m879 63 20-21"/></g></g>
+ <g id="bridge-stars" fill="#cdeeff"><circle cx="365" cy="170" r="2.5" opacity=".8"/><circle cx="642" cy="89" r="2" opacity=".6"/><circle cx="1099" cy="228" r="2.5" opacity=".6"/><path d="m236 235 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" opacity=".8"/><path d="m1043 143 2 6 6 2-6 2-2 6-2-6-6-2 6-2z" opacity=".6"/></g>
+</g></svg>

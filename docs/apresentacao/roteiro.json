@@ -1,0 +1,781 @@
+{
+  "title": "Qualifica Vix — Seu próximo passo começa aqui",
+  "edition": "19 de outubro de 2026",
+  "sourceRevision": "b1d80f9",
+  "sourceDocument": "Guia_Completo_Qualifica_Vix.pdf",
+  "audience": "Público geral, sem conhecimento de programação",
+  "mainSlides": 30,
+  "appendixSlides": 4,
+  "durationSeconds": 1380,
+  "slides": [
+    {
+      "id": "01",
+      "chapter": "Abertura",
+      "kicker": "QUALIFICA VIX",
+      "title": "Seu próximo passo começa aqui.",
+      "subtitle": "Uma visita guiada para encontrar um curso, criar seu perfil e acompanhar sua inscrição.",
+      "bullets": [],
+      "speakerNotes": "Hoje vamos percorrer a plataforma do ponto de vista de quem quer aprender algo novo. Não é preciso conhecer programação nem dominar ferramentas digitais. Vamos começar pela escolha de um curso, entender as informações da oferta e chegar ao cadastro e ao acompanhamento da inscrição. Também veremos os recursos do celular, a assistente Tortuguita e onde procurar ajuda. As imagens desta apresentação são exemplos de demonstração, com dados fictícios. O conteúdo retrata a versão analisada em 19 de outubro de 2026; disponibilidade e condições das ofertas precisam ser conferidas no momento do uso.",
+      "durationSeconds": 35,
+      "takeaway": "Você vai aprender um percurso completo, da descoberta ao acompanhamento.",
+      "appendix": false,
+      "sourcePages": [
+        1,
+        6
+      ]
+    },
+    {
+      "id": "02",
+      "chapter": "Abertura",
+      "kicker": "O PERCURSO",
+      "title": "Três ações. Três resultados.",
+      "subtitle": "Explorar, cadastrar-se e inscrever-se têm objetivos diferentes.",
+      "bullets": [
+        "Explorar: conhecer as opções",
+        "Cadastrar-se: criar seu perfil",
+        "Inscrever-se: registrar um curso"
+      ],
+      "speakerNotes": "Antes de clicar, vale separar três ideias. Explorar é consultar os cursos e guardar opções de interesse; isso pode ser feito antes de criar uma conta. Cadastrar-se é informar os dados necessários e criar seu perfil na plataforma. Inscrever-se é registrar a escolha de um curso disponível. Uma ação não substitui automaticamente a outra. Ao final do cadastro, procure a mensagem de perfil criado. Ao final da inscrição, procure “Inscrição confirmada” e confira o curso no perfil. Participar das aulas e cumprir condições da instituição são etapas próprias da formação, que precisam ser confirmadas com o ofertante.",
+      "durationSeconds": 45,
+      "takeaway": "Perfil criado e inscrição confirmada são resultados diferentes.",
+      "appendix": false,
+      "sourcePages": [
+        6
+      ]
+    },
+    {
+      "id": "03",
+      "chapter": "Descobrir",
+      "kicker": "UM CATÁLOGO PARA EXPLORAR",
+      "title": "Comece pelo que desperta seu interesse.",
+      "subtitle": "10 cursos na versão analisada em 19/10/2026.",
+      "bullets": [
+        "Tecnologia, gestão e criatividade",
+        "Opções online e presenciais",
+        "Conteúdo e condições em cada ficha"
+      ],
+      "speakerNotes": "O catálogo examinado reúne dez cursos: seis online e quatro presenciais. Há áreas como tecnologia, administração, design, educação, marketing, gastronomia e formação técnica. Essa é uma fotografia da versão analisada, não uma promessa de que todas as ofertas estarão abertas no dia da apresentação. Em vez de escolher apenas por um nome conhecido, pense no objetivo: iniciar uma nova área, aprimorar uma habilidade ou conhecer uma profissão. Depois, confira modalidade, horas e conteúdo. Os números gerais de divulgação presentes no site não foram validados como resultados institucionais; aqui usamos somente o catálogo efetivamente examinado.",
+      "durationSeconds": 40,
+      "takeaway": "Use seu objetivo para orientar a primeira escolha.",
+      "appendix": false,
+      "sourcePages": [
+        7,
+        9,
+        48
+      ]
+    },
+    {
+      "id": "04",
+      "chapter": "Descobrir",
+      "kicker": "NAVEGAÇÃO",
+      "title": "Você sempre tem um caminho.",
+      "subtitle": "O menu reúne os principais lugares da plataforma.",
+      "bullets": [
+        "Início · Cursos · Categorias",
+        "Favoritos · Sobre · Contato",
+        "Entrar / Cadastrar · Meu perfil"
+      ],
+      "speakerNotes": "O logotipo ou Início leva à apresentação e aos atalhos. Cursos abre a pesquisa completa; Categorias ajuda a explorar por área. Favoritos reúne os cursos guardados neste navegador. Sobre apresenta a proposta do site, enquanto Contato mostra os canais publicados. Entrar ou Cadastrar abre o acesso; depois de criar ou recuperar um perfil, o avatar e Meu perfil levam à área pessoal. A lupa do cabeçalho também pesquisa cursos. No formulário de cadastro, o cabeçalho habitual não aparece: use os botões próprios da etapa. Mostre os destinos devagar para que a audiência reconheça os nomes na tela.",
+      "durationSeconds": 45,
+      "takeaway": "Reconheça o destino antes de tocar no menu.",
+      "appendix": false,
+      "sourcePages": [
+        7,
+        8
+      ]
+    },
+    {
+      "id": "05",
+      "chapter": "Descobrir",
+      "kicker": "NO SEU RITMO",
+      "title": "No celular, a mesma jornada.",
+      "subtitle": "A organização muda para acompanhar a tela e o toque.",
+      "bullets": [
+        "Menu de três linhas para navegar",
+        "A+ e A− para ajustar as letras",
+        "Sol / lua para escolher o tema",
+        "Feche o teclado para ver os próximos passos"
+      ],
+      "speakerNotes": "No telefone, abra o menu de três linhas para encontrar os mesmos destinos do computador. A lupa abre a busca e o X fecha o painel. Os ajustes de tamanho das letras e de tema ficam dentro do menu nas telas pequenas. Aumentar o texto e escolher modo claro ou escuro são decisões de conforto; use o que facilitar sua leitura. Se o teclado esconder um botão, termine o campo e recolha o teclado. No computador, Tab percorre controles, Shift e Tab voltam e Enter ativa. Há também “Pular para o conteúdo”. Os ajustes do site não substituem as adaptações físicas de uma instituição.",
+      "durationSeconds": 45,
+      "takeaway": "Escolha a forma de navegar que for mais confortável.",
+      "appendix": false,
+      "sourcePages": [
+        8,
+        35,
+        36
+      ]
+    },
+    {
+      "id": "06",
+      "chapter": "Escolher",
+      "kicker": "BUSCA INTELIGÍVEL",
+      "title": "Encontre menos opções. Escolha melhor.",
+      "subtitle": "Combine uma palavra com os filtros do catálogo.",
+      "bullets": [
+        "Pesquise por nome, assunto ou área",
+        "Combine Categoria e Modalidade",
+        "Confira os cursos encontrados",
+        "Use Limpar filtros para recomeçar"
+      ],
+      "speakerNotes": "Abra Cursos e digite, por exemplo, Excel. A lista considera nome, área, descrição e tópicos do conteúdo. Também é possível selecionar uma categoria e uma modalidade, como Online ou Presencial. Os filtros funcionam juntos e o total de resultados ajuda a perceber o que mudou. Maiúsculas e acentos não impedem a pesquisa, mas erros de digitação podem exigir outra tentativa. Se não houver resultado, experimente um termo mais simples ou limpe os filtros. Na página Categorias, escolher uma área mostra seus cursos; uma área vazia apenas indica que não há oferta cadastrada ali naquele momento.",
+      "durationSeconds": 45,
+      "takeaway": "Combine filtros; simplifique a busca quando não houver resultado.",
+      "appendix": false,
+      "sourcePages": [
+        9,
+        10
+      ]
+    },
+    {
+      "id": "07",
+      "chapter": "Escolher",
+      "kicker": "SUA LISTA DE INTERESSES",
+      "title": "Um coração guarda uma ideia.",
+      "subtitle": "Favoritar ajuda a comparar; a inscrição vem depois.",
+      "bullets": [
+        "Toque no coração de um curso",
+        "Abra Favoritos no menu",
+        "Leia e compare as fichas",
+        "Toque de novo para remover"
+      ],
+      "speakerNotes": "O coração funciona como uma lista para consultar depois. Ele aparece nos cartões e também na ficha do curso. Ao selecionar, o coração fica preenchido e o curso aparece em Favoritos. Use essa lista para comparar carga horária, modalidade e assuntos antes de decidir. Isso não reserva vaga e não registra inscrição. Os favoritos são guardados no navegador utilizado: outro aparelho pode mostrar uma lista diferente, e limpar os dados ou sair da plataforma pode remover essa lista local. Se o site avisar que não conseguiu salvar, anote os nomes antes de fechar a página. Não dependa apenas do coração para acompanhar cursos já inscritos.",
+      "durationSeconds": 40,
+      "takeaway": "Favoritar organiza interesses; não reserva nem inscreve.",
+      "appendix": false,
+      "sourcePages": [
+        11
+      ]
+    },
+    {
+      "id": "08",
+      "chapter": "Escolher",
+      "kicker": "A FICHA DO CURSO",
+      "title": "Leia a oferta antes de decidir.",
+      "subtitle": "O título é só o começo da escolha.",
+      "bullets": [
+        "Modalidade · horas · duração · período",
+        "Instituição · local · público indicado",
+        "Situação atual das inscrições",
+        "Calendário e condições: confirme com o ofertante"
+      ],
+      "speakerNotes": "Em Ver curso, confira a carga horária, a duração estimada, a modalidade, o nível e o período. Quatro meses, por exemplo, não informa por si só datas de início e término. Online também exige confirmar dispositivo, conexão e ambiente de aulas. No presencial, confira unidade e endereço antes de sair. Inscrições abertas e Últimas vagas permitem iniciar o fluxo; Em breve não permite inscrição naquele momento. Não há contador real de vagas demonstrado nesta versão. Referência salarial não é promessa de remuneração. Se uma informação não estiver disponível na ficha, confirme com o responsável pela oferta antes de assumir um compromisso.",
+      "durationSeconds": 50,
+      "takeaway": "Uma boa escolha considera condições, não apenas o nome.",
+      "appendix": false,
+      "sourcePages": [
+        12
+      ]
+    },
+    {
+      "id": "09",
+      "chapter": "Escolher",
+      "kicker": "SEIS ABAS, UMA DECISÃO INFORMADA",
+      "title": "Veja o que você vai aprender.",
+      "subtitle": "Cada aba responde a uma parte da escolha.",
+      "bullets": [
+        "Sobre o curso · Conteúdo programático",
+        "Instrutor · Requisitos",
+        "Certificado · Instituição"
+      ],
+      "speakerNotes": "A ficha tem seis abas. Sobre o curso apresenta a proposta e os dados da oferta. Conteúdo programático reúne os assuntos previstos, em tópicos; esses tópicos não abrem aulas. Instrutor informa quando os dados docentes não foram publicados. Requisitos orienta a confirmar idade, escolaridade, documentos e critérios. Certificado apresenta o que foi ou não informado sobre emissão e condições. Instituição reúne a referência de oferta e local disponíveis. No celular, as abas se organizam em duas colunas. Não interprete o nível Iniciante como ausência de requisitos nem uma aba Certificado como garantia de emissão. Confira a chamada oficial da turma.",
+      "durationSeconds": 50,
+      "takeaway": "A grade mostra assuntos; as condições dependem da oferta.",
+      "appendix": false,
+      "sourcePages": [
+        13
+      ]
+    },
+    {
+      "id": "10",
+      "chapter": "Cadastrar",
+      "kicker": "ACESSO À PLATAFORMA",
+      "title": "Novo perfil ou conta que já existe?",
+      "subtitle": "O caminho muda conforme sua situação.",
+      "bullets": [
+        "Primeiro cadastro: preencha o formulário",
+        "Google disponível: confirme sua identidade",
+        "Já tem perfil? Evite criar outro cadastro"
+      ],
+      "speakerNotes": "Entrar ou Cadastrar oferece o formulário comum e o Google quando a integração está habilitada. O cadastro comum não pede uma senha própria da plataforma. Antes de começar, tenha os dados do participante, telefone com DDD, e-mail e endereço residencial de Vitória. Menores precisam dos dados do responsável. Se você já se cadastrou e perdeu o acesso local, tente a mesma conta Google correspondente ao e-mail original, quando disponível. Não repita todo o cadastro para contornar um aviso de CPF ou e-mail existente. Se a recuperação não funcionar, procure o atendimento publicado. Uma conta duplicada não resolve uma dificuldade de acesso.",
+      "durationSeconds": 45,
+      "takeaway": "Quem já tem cadastro deve recuperar o acesso, sem duplicar o perfil.",
+      "appendix": false,
+      "sourcePages": [
+        17
+      ]
+    },
+    {
+      "id": "11",
+      "chapter": "Cadastrar",
+      "kicker": "ENTRADA COM GOOGLE",
+      "title": "A mesma pessoa. O perfil certo.",
+      "subtitle": "Escolha a conta correspondente ao seu cadastro original.",
+      "bullets": [
+        "Perfil reconhecido: acesse sua conta",
+        "Primeiro acesso: complete os dados",
+        "O site não recebe sua senha Google"
+      ],
+      "speakerNotes": "Ao tocar em Continuar com Google, a escolha da conta acontece pelo serviço oficial. As sugestões dependem do navegador e das contas conectadas; a plataforma não recebe uma lista de contas pessoais. Se já existir um cadastro reconhecido, o perfil e as inscrições do servidor são recuperados. Se for o primeiro acesso, nome e e-mail ajudam a iniciar o formulário, mas os demais dados e consentimentos ainda precisam ser concluídos. O e-mail confirmado fica protegido contra alteração nesse primeiro cadastro. No telefone, use o endereço público seguro autorizado da instalação. Acesso por um IP local pode abrir o site comum e ainda assim impedir o Google.",
+      "durationSeconds": 50,
+      "takeaway": "Google confirma a identidade; o primeiro cadastro ainda precisa ser concluído.",
+      "appendix": false,
+      "sourcePages": [
+        18,
+        41
+      ]
+    },
+    {
+      "id": "12",
+      "chapter": "Cadastrar",
+      "kicker": "QUATRO ETAPAS",
+      "title": "Um cadastro, passo a passo.",
+      "subtitle": "Avance com calma e leia os avisos de cada tela.",
+      "bullets": [
+        "1 · Dados pessoais",
+        "2 · Endereço e responsável",
+        "3 · Acessibilidade e renda",
+        "4 · Privacidade e consentimentos"
+      ],
+      "speakerNotes": "O formulário está dividido em quatro etapas para organizar as informações. Primeiro vêm os dados pessoais do participante. Depois, o endereço e, quando necessário, os dados de um responsável legal. A terceira etapa reúne informações opcionais de acessibilidade e renda. A última apresenta os documentos e as escolhas de consentimento. O botão Próximo verifica a etapa atual; ao concluir, o serviço confere os dados novamente. Leia os campos com asterisco e use informações verdadeiras. Enquanto estiver preenchendo, evite atualizar ou fechar a página: não há garantia de recuperar um rascunho depois. Na demonstração, mostre exemplos fictícios e mantenha dados pessoais reais fora da projeção.",
+      "durationSeconds": 40,
+      "takeaway": "Siga a ordem e confira cada etapa antes de avançar.",
+      "appendix": false,
+      "sourcePages": [
+        17,
+        19,
+        21,
+        23,
+        25
+      ]
+    },
+    {
+      "id": "13",
+      "chapter": "Cadastrar",
+      "kicker": "ETAPA 1 · DADOS PESSOAIS",
+      "title": "Confira o que identifica você.",
+      "subtitle": "Um pequeno erro aqui pode dificultar o contato ou o acesso.",
+      "bullets": [
+        "Nome e CPF nos campos próprios",
+        "Nascimento em DD/MM/AAAA",
+        "Telefone com DDD e e-mail correto",
+        "Escolaridade e situação profissional"
+      ],
+      "speakerNotes": "Informe nome completo, CPF, nascimento, telefone e e-mail nos campos correspondentes. No cadastro comum, repita exatamente o e-mail na confirmação. O telefone precisa ter DDD e dez ou onze dígitos. A data deve existir, estar completa e não ser futura; confira principalmente o ano, pois ele define se será necessário um responsável. As listas de sexo, escolaridade e situação profissional devem descrever a situação real; há a opção de não informar o sexo. A conferência de CPF é de formato, sem consulta de titularidade à Receita. O formulário também não faz uma ligação nem envia um código para confirmar o telefone.",
+      "durationSeconds": 50,
+      "takeaway": "Revise nascimento, DDD e e-mail antes de tocar em Próximo.",
+      "appendix": false,
+      "sourcePages": [
+        19,
+        20
+      ]
+    },
+    {
+      "id": "14",
+      "chapter": "Cadastrar",
+      "kicker": "ETAPA 2 · ENDEREÇO",
+      "title": "Seu endereço real. Sem inventar número.",
+      "subtitle": "O cadastro desta versão aceita CEPs de Vitória–ES.",
+      "bullets": [
+        "Digite o CEP e aguarde a consulta",
+        "Confira bairro e rua",
+        "Número e complemento são opcionais",
+        "Menor de 18 anos: informe o responsável"
+      ],
+      "speakerNotes": "Digite os oito números do CEP e espere a consulta. Bairro e rua podem ser preenchidos automaticamente, mas precisam ser revisados. Número e complemento são opcionais no cadastro inicial: se não houver número, deixe vazio ou informe sem número. A versão atual restringe o cadastro a endereços de Vitória, no Espírito Santo. Não use um endereço de outra pessoa para ultrapassar essa regra. Para menores de dezoito anos, nome, CPF, parentesco e telefone do responsável são obrigatórios. O aviso de autorização presencial deve ser confirmado com a instituição; o site não oferece assinatura digital nem envio desse documento em arquivo.",
+      "durationSeconds": 50,
+      "takeaway": "Aguarde a validação do CEP e revise o endereço preenchido.",
+      "appendix": false,
+      "sourcePages": [
+        21,
+        22
+      ]
+    },
+    {
+      "id": "15",
+      "chapter": "Cadastrar",
+      "kicker": "ETAPA 3 · ACESSIBILIDADE E RENDA",
+      "title": "Você escolhe o que compartilhar.",
+      "subtitle": "As informações complementares desta etapa são opcionais.",
+      "bullets": [
+        "Necessidades de acessibilidade",
+        "Adaptações e descrição complementar",
+        "Renda, dependentes e programas sociais",
+        "Você pode seguir sem preencher"
+      ],
+      "speakerNotes": "Nesta etapa, é possível informar uma deficiência, uma adaptação necessária e uma descrição complementar. As listas permitem uma escolha por vez, e o texto ajuda a explicar necessidades adicionais. Também há renda familiar, dependentes e programas sociais, com possibilidade de selecionar mais de um programa. Esses campos são opcionais: a pessoa pode seguir sem preencher. Informar uma necessidade não garante que toda unidade tenha o recurso disponível; consulte o atendimento antes de se inscrever. Da mesma forma, renda e benefícios não criam prioridade automática. Os valores de renda são os rótulos do formulário, sem atualização automática do salário mínimo. Não envie laudos pelo chat.",
+      "durationSeconds": 45,
+      "takeaway": "Compartilhe somente o necessário e confirme as adaptações com o ofertante.",
+      "appendix": false,
+      "sourcePages": [
+        23,
+        24
+      ]
+    },
+    {
+      "id": "16",
+      "chapter": "Cadastrar",
+      "kicker": "ETAPA 4 · PRIVACIDADE",
+      "title": "Concordar precisa ser uma escolha consciente.",
+      "subtitle": "Leia os textos antes de marcar as caixas.",
+      "bullets": [
+        "Obrigatórios: dados pessoais e termos / privacidade",
+        "Opcionais: uso de imagem e novidades",
+        "Abra os documentos e leia o alcance"
+      ],
+      "speakerNotes": "Duas escolhas são necessárias para concluir: a concordância com o tratamento dos dados pessoais e a aceitação dos Termos de Uso e da Política de Privacidade. Outras duas são opcionais: autorização de uso de imagem e recebimento de novidades. Não trate as quatro caixas como um único aceite. Os links abrem documentos para leitura; feche a janela depois para retornar ao formulário. A autorização de imagem descreve usos institucionais e deve ser lida com atenção. Novidades por e-mail ou WhatsApp não são confirmação de inscrição, e campanhas automáticas não estão implementadas. Para corrigir registros ou revogar autorizações, procure o responsável pela plataforma.",
+      "durationSeconds": 50,
+      "takeaway": "Leia os documentos e diferencie os dois aceites obrigatórios das escolhas opcionais.",
+      "appendix": false,
+      "sourcePages": [
+        25
+      ]
+    },
+    {
+      "id": "17",
+      "chapter": "Cadastrar",
+      "kicker": "QUANDO APARECE UM AVISO",
+      "title": "A mensagem mostra o próximo passo.",
+      "subtitle": "Corrija o campo indicado sem refazer tudo.",
+      "bullets": [
+        "Data impossível? Confira dia, mês e ano",
+        "E-mails diferentes? Revise os dois campos",
+        "CEP em análise? Aguarde a resposta",
+        "Cadastro existente? Recupere o acesso"
+      ],
+      "speakerNotes": "Os avisos são orientações para corrigir uma informação ou entender uma condição. Uma data impossível precisa ser revisada; e-mails diferentes precisam coincidir. Se o CEP estiver em consulta, aguarde antes de insistir. Para menor de idade, confira se os quatro dados do responsável foram preenchidos. Quando o aviso disser que os termos mudaram, releia a versão atual e confirme novamente se concordar. CPF ou e-mail já cadastrado pede recuperação de acesso ou atendimento, não outro cadastro. Uma falha de conexão pode esconder um resultado que foi recebido: leia o próximo aviso antes de repetir. Não use informações falsas para ultrapassar uma validação.",
+      "durationSeconds": 45,
+      "takeaway": "Leia a mensagem inteira e resolva a causa indicada.",
+      "appendix": false,
+      "sourcePages": [
+        26,
+        40
+      ]
+    },
+    {
+      "id": "18",
+      "chapter": "Cadastrar",
+      "kicker": "A CONCLUSÃO",
+      "title": "Espere a resposta. Reconheça o sucesso.",
+      "subtitle": "Criar o perfil e registrar o curso podem acontecer em sequência.",
+      "bullets": [
+        "Toque em Concluir cadastro uma vez",
+        "Aguarde o envio terminar",
+        "Cadastro realizado: seu perfil foi criado",
+        "Inscrição confirmada: o curso foi registrado"
+      ],
+      "speakerNotes": "Depois de revisar os dados e consentimentos, toque em Concluir cadastro e aguarde. Sem um curso escolhido, “Cadastro realizado” indica que o perfil foi criado; Acessar meu perfil permite continuar. Se o caminho começou na ficha de um curso, a plataforma pode criar o perfil e depois tentar registrar a inscrição. A mensagem “Perfil criado — concluindo inscrição” indica que essa segunda parte ainda está em andamento. Só considere o curso registrado quando aparecer a confirmação da inscrição. Se o perfil foi criado e o curso falhou, use a tentativa de inscrição disponível; não é preciso preencher todo o cadastro novamente.",
+      "durationSeconds": 45,
+      "takeaway": "Perfil criado não basta para presumir que o curso foi confirmado.",
+      "appendix": false,
+      "sourcePages": [
+        27
+      ]
+    },
+    {
+      "id": "19",
+      "chapter": "Acompanhar",
+      "kicker": "INSCRIÇÃO DIRETA",
+      "title": "Confirme no site. Acompanhe no perfil.",
+      "subtitle": "Sem código ou botão de confirmação por e-mail.",
+      "bullets": [
+        "Abra uma oferta disponível",
+        "Revise curso, local e dados do perfil",
+        "Toque em Confirmar minha inscrição",
+        "Confira Cursos cadastrados"
+      ],
+      "speakerNotes": "Com o perfil disponível, abra a ficha de uma oferta e toque em Inscrever-se. Na tela de confirmação, confira o curso, a modalidade, as horas, o local informado e os dados do perfil. Se necessário, use Editar perfil e volte para a inscrição. Depois, toque em Confirmar minha inscrição e aguarde a resposta. O processo desta versão termina na plataforma: não precisa esperar um e-mail ou clicar em um link externo. A mensagem de sucesso e a presença do curso em Cursos cadastrados são as referências para acompanhar o registro. Isso não substitui regras de seleção ou matrícula de uma instituição externa.",
+      "durationSeconds": 45,
+      "takeaway": "Confirmação na tela + curso no perfil são os sinais do registro.",
+      "appendix": false,
+      "sourcePages": [
+        28
+      ]
+    },
+    {
+      "id": "20",
+      "chapter": "Acompanhar",
+      "kicker": "REGRA DE INSCRIÇÃO",
+      "title": "Até 3 inscrições por mês.",
+      "subtitle": "O limite considera as inscrições realizadas, inclusive canceladas.",
+      "bullets": [
+        "A contagem é do mês do calendário",
+        "Cancelar não devolve uma inscrição ao limite",
+        "Um curso não recebe duas inscrições ativas"
+      ],
+      "speakerNotes": "A plataforma permite até três inscrições por perfil no mesmo mês do calendário. Não é uma janela móvel de trinta dias. Se você registrar três cursos e cancelar um, continuam sendo três inscrições realizadas naquele mês: o cancelamento não abre uma quarta opção. Também não é criada uma segunda inscrição ativa no mesmo curso. Antes de tentar novamente, confira Cursos cadastrados para saber o que já está registrado. A contagem utiliza a referência de mês do serviço e pode exigir atenção perto da virada. Escolha com cuidado; não crie outro perfil nem apague dados para contornar a regra.",
+      "durationSeconds": 45,
+      "takeaway": "Cancelar um curso não libera uma quarta inscrição no mesmo mês.",
+      "appendix": false,
+      "sourcePages": [
+        29
+      ]
+    },
+    {
+      "id": "21",
+      "chapter": "Acompanhar",
+      "kicker": "DESISTÊNCIA",
+      "title": "72 horas para cancelar na plataforma.",
+      "subtitle": "O prazo começa na confirmação da inscrição.",
+      "bullets": [
+        "Abra Meu perfil → Cursos cadastrados",
+        "Confira o prazo final de desistência",
+        "Entre na ficha e use Desinscrever-se",
+        "Aguarde a confirmação do cancelamento"
+      ],
+      "speakerNotes": "A desistência pode ser feita por três dias corridos, ou setenta e duas horas, depois da inscrição. Se o registro foi segunda-feira às duas da tarde, o prazo vai até quinta-feira às duas da tarde. Não são três dias úteis. Em Cursos cadastrados, confira o prazo final; abra a ficha e use Desinscrever-se enquanto o botão estiver disponível. Leia a pergunta e confirme somente se quiser cancelar. Depois, aguarde o resultado e confira a lista ativa. Quando o prazo terminar, procure atendimento. Sair da plataforma não cancela o curso, e um cancelamento no site não comprova cancelamento de matrícula externa.",
+      "durationSeconds": 45,
+      "takeaway": "Confira o prazo exato; sair da conta não é cancelar a inscrição.",
+      "appendix": false,
+      "sourcePages": [
+        30
+      ]
+    },
+    {
+      "id": "22",
+      "chapter": "Acompanhar",
+      "kicker": "MEU PERFIL",
+      "title": "Seu ponto de acompanhamento.",
+      "subtitle": "Dados do perfil e Cursos cadastrados ficam no mesmo lugar.",
+      "bullets": [
+        "Revise seus dados de contato",
+        "Consulte as inscrições confirmadas",
+        "Edite os campos disponíveis",
+        "Use Salvar alterações para concluir"
+      ],
+      "speakerNotes": "Meu perfil reúne duas abas principais: os dados e os cursos cadastrados. A edição permite revisar contato, endereço, escolaridade e situação de emprego, além da foto. Confira os campos obrigatórios antes de salvar. Há uma diferença importante nesta versão: número é opcional no cadastro inicial, mas a edição pede preenchimento; se não existir, escreva sem número. CPF, nascimento e consentimentos não são alterados nessa tela. As alterações atuais são locais, neste navegador, e não sincronizam o cadastro original do servidor. Para corrigir o registro remoto ou dados que não aparecem para edição, procure o responsável pela plataforma.",
+      "durationSeconds": 45,
+      "takeaway": "A edição atualiza este navegador; correções remotas exigem atendimento.",
+      "appendix": false,
+      "sourcePages": [
+        31
+      ]
+    },
+    {
+      "id": "23",
+      "chapter": "Acompanhar",
+      "kicker": "FOTO E DADOS GUARDADOS",
+      "title": "O que acompanha você em outro aparelho?",
+      "subtitle": "Alguns dados estão na plataforma; outros ficam neste navegador.",
+      "bullets": [
+        "Servidor: cadastro e inscrições confirmadas",
+        "Navegador: foto, favoritos e memória",
+        "Foto opcional: PNG, JPG ou WebP até 5 MB",
+        "Sair encerra o acesso, sem excluir a conta"
+      ],
+      "speakerNotes": "A foto é opcional. Use Escolher foto, selecione PNG, JPG ou WebP de até cinco megabytes e depois Salvar alterações. Remover foto também precisa ser salvo. Ela fica no navegador, assim como favoritos, preferências e memória da assistente. Cadastro original e inscrições confirmadas ficam no serviço da plataforma e podem ser recuperados pelo acesso Google correspondente, quando habilitado. Outro aparelho não recebe automaticamente a foto ou a lista de favoritos. Sair remove o acesso local e os favoritos, mas não apaga o cadastro nem cancela cursos. Em aparelho compartilhado, revise a memória da assistente antes de sair se quiser apagá-la.",
+      "durationSeconds": 50,
+      "takeaway": "Recuperar a conta não transfere automaticamente todos os dados locais.",
+      "appendix": false,
+      "sourcePages": [
+        32,
+        33
+      ]
+    },
+    {
+      "id": "24",
+      "chapter": "Pedir ajuda",
+      "kicker": "TORTUGUITA VIX",
+      "title": "Uma conversa pode orientar o próximo passo.",
+      "subtitle": "A assistente fica no canto inferior da tela.",
+      "bullets": [
+        "Pergunte por um curso ou uma regra",
+        "Refine: online, assunto ou carga horária",
+        "Compare opções e abra as fichas",
+        "Use os botões para continuar no site"
+      ],
+      "speakerNotes": "Abra Tortuguita Vix, no canto inferior direito. Comece com uma pergunta simples, como “Quero cursos online”. Depois refine: “E com até quarenta horas?”. Também é possível citar dois cursos para comparar ou pedir uma orientação de cadastro. As sugestões são enviadas ao tocar, e os botões da resposta levam às fichas e às áreas do site. A assistente usa o catálogo e textos preparados para a plataforma; não consulta uma inteligência artificial externa nesta versão. Ela orienta, mas não realiza inscrições, cancelamentos ou alterações por você. Quando faltarem datas, requisitos ou critérios oficiais, confirme com o responsável pela oferta.",
+      "durationSeconds": 50,
+      "takeaway": "A Tortuguita orienta; você confirma as ações nas telas da plataforma.",
+      "appendix": false,
+      "sourcePages": [
+        37,
+        38
+      ]
+    },
+    {
+      "id": "25",
+      "chapter": "Pedir ajuda",
+      "kicker": "CONVERSA E MEMÓRIA",
+      "title": "Fechar, reiniciar e apagar são ações diferentes.",
+      "subtitle": "Você controla a memória da assistente neste navegador.",
+      "bullets": [
+        "Fechar: esconde a conversa",
+        "Reiniciar: começa outro assunto",
+        "Apagar memória: remove os registros do chat",
+        "Inscrições permanecem intactas"
+      ],
+      "speakerNotes": "Fechar o chat apenas recolhe a janela; ao abrir de novo, a conversa pode continuar. Reiniciar conversa limpa as mensagens e o assunto, preservando interesses e conclusões guardadas. Apagar minha memória remove os registros da assistente daquele perfil no navegador, sem alterar inscrições. Com perfil, o painel Sua memória com a Tortuguita ajuda a consultar interesses e conclusões informadas; sem perfil, a conversa fica apenas na página aberta. Dizer “Já concluí Excel” é uma declaração na conversa, não um certificado nem uma comprovação de frequência. Não escreva CPF, senhas, documentos ou dados bancários no chat. A memória não sincroniza automaticamente entre aparelhos.",
+      "durationSeconds": 45,
+      "takeaway": "Apagar a memória da assistente não apaga seu cadastro nem seus cursos.",
+      "appendix": false,
+      "sourcePages": [
+        39
+      ]
+    },
+    {
+      "id": "26",
+      "chapter": "Participar",
+      "kicker": "COMUNIDADE E INFORMAÇÃO",
+      "title": "Compartilhe histórias. Confirme as condições.",
+      "subtitle": "Depoimentos e página Sobre ajudam a conhecer a proposta.",
+      "bullets": [
+        "Leia as histórias da página inicial",
+        "Publique somente o que deseja tornar público",
+        "Sobre apresenta a proposta da plataforma",
+        "Confirme detalhes oficiais com o ofertante"
+      ],
+      "speakerNotes": "A página inicial reúne histórias e permite compartilhar uma experiência com nome, situação profissional, curso, texto e avaliação. Esse relato pode aparecer para visitantes, por isso evite CPF, contatos privados e dados de terceiros. O formulário não exige login e não oferece edição ou exclusão pelo visitante; para solicitar remoção, use o responsável. Os exemplos iniciais estão identificados como personagens fictícios e não devem ser apresentados como depoimentos comprovados. Sobre explica a proposta da plataforma, mas nomes de instituições e indicadores de divulgação não são confirmação de parceria ou resultado. Para decidir sobre uma turma, confira a ficha e os canais oficiais.",
+      "durationSeconds": 45,
+      "takeaway": "Relatos públicos pedem cuidado; apresentação institucional não substitui confirmação da oferta.",
+      "appendix": false,
+      "sourcePages": [
+        14,
+        15
+      ]
+    },
+    {
+      "id": "27",
+      "chapter": "Pedir ajuda",
+      "kicker": "DOCUMENTOS E CONTATO",
+      "title": "Leia as regras. Saiba a quem recorrer.",
+      "subtitle": "Os links do rodapé também fazem parte da jornada.",
+      "bullets": [
+        "Termos de Uso: regras da plataforma",
+        "Privacidade: uso e armazenamento dos dados",
+        "LGPD: informações sobre dados pessoais",
+        "Contato: canais publicados nesta instalação"
+      ],
+      "speakerNotes": "Os documentos podem ser abertos pelos links do cadastro ou do rodapé. Termos de Uso apresenta as regras; Política de Privacidade explica dados, serviços e armazenamento; a área LGPD reúne orientações e acesso ao texto legal externo. Leia, role e feche a janela para continuar. Contato mostra os canais efetivamente publicados: telefone e e-mail só aparecem quando configurados. Não há promessa de WhatsApp ou conversa com atendente humano dentro dessa página. Nesta versão, não existe envio de documentos pessoais, comprovante de inscrição em PDF nem emissão ou download de certificado. Condições e documentos da turma devem ser confirmados com o ofertante.",
+      "durationSeconds": 50,
+      "takeaway": "Procure os documentos e os canais que a instalação realmente publicou.",
+      "appendix": false,
+      "sourcePages": [
+        16,
+        34
+      ]
+    },
+    {
+      "id": "28",
+      "chapter": "Pedir ajuda",
+      "kicker": "SE ALGO NÃO FUNCIONAR",
+      "title": "Peça ajuda com a informação certa.",
+      "subtitle": "Mensagem completa + etapa + aparelho ajudam a encontrar a causa.",
+      "bullets": [
+        "Leia o aviso antes de repetir a operação",
+        "Confira a internet e o endereço acessado",
+        "Não duplique um cadastro existente",
+        "Oculte dados pessoais nas capturas"
+      ],
+      "speakerNotes": "Um número de erro sozinho não conta toda a história. Informe o que estava tentando fazer, a mensagem completa, a etapa e o aparelho utilizado. Se houver bloqueio do Google, diga se a tela era do Google ou da plataforma e qual endereço do site foi usado. Estar no Wi-Fi privado não impede o acesso; o problema pode envolver o endereço autorizado para o login. Antes de limpar dados do navegador, lembre que isso pode remover foto, favoritos e memória locais. Em capturas, cubra CPF, e-mail privado e credenciais. Não envie documentos ao chat e não repita um cadastro já existente para tentar resolver acesso.",
+      "durationSeconds": 45,
+      "takeaway": "Descreva o contexto do erro sem expor dados pessoais.",
+      "appendix": false,
+      "sourcePages": [
+        40,
+        41,
+        42
+      ]
+    },
+    {
+      "id": "29",
+      "chapter": "Encerramento",
+      "kicker": "AGORA É COM VOCÊ",
+      "title": "Três passos para praticar.",
+      "subtitle": "Uma atividade sem cadastro ou dados pessoais reais.",
+      "bullets": [
+        "Encontre um curso de seu interesse",
+        "Guarde-o em Favoritos",
+        "Abra a grade e confira o que falta confirmar"
+      ],
+      "speakerNotes": "Vamos transformar a explicação em uma pequena prática. Escolha um objetivo e encontre um curso, usando busca ou categoria. Confira modalidade e carga horária. Depois, marque o coração e abra Favoritos. Pergunte ao grupo: isso já inscreveu alguém? A resposta é não; o coração apenas guarda a referência. Agora abra a ficha e encontre Conteúdo programático e Certificado. Peça que uma pessoa diga um assunto previsto e uma informação que precisaria confirmar com o ofertante. Se não for possível usar o site ao vivo, conduza a mesma atividade com as imagens. Ninguém precisa informar dados reais nem concluir uma inscrição para participar.",
+      "durationSeconds": 60,
+      "takeaway": "Encontrar, guardar e conferir já são passos que todos podem praticar.",
+      "appendix": false,
+      "sourcePages": [
+        45
+      ]
+    },
+    {
+      "id": "30",
+      "chapter": "Encerramento",
+      "kicker": "SEU PRÓXIMO PASSO",
+      "title": "Escolha com clareza. Acompanhe com confiança.",
+      "subtitle": "Explore → confira → cadastre-se → confirme → acompanhe.",
+      "bullets": [
+        "Uma escolha informada começa na ficha",
+        "Uma inscrição concluída aparece no perfil",
+        "Uma dúvida bem descrita encontra o canal certo"
+      ],
+      "speakerNotes": "Você já conhece o percurso principal: explorar, conferir a oferta, criar ou recuperar o perfil, confirmar a inscrição e acompanhar os cursos. Leve três ideias com você. Primeiro, favoritos e cadastro não substituem a confirmação do curso. Segundo, os limites são três inscrições no mês e desistência em até setenta e duas horas. Terceiro, o atendimento e os documentos ajudam quando falta informação ou surge um erro. A plataforma organiza esse caminho, mas calendário, requisitos e certificação precisam ser confirmados com o ofertante. Agora podemos retomar uma tela específica ou abrir espaço para dúvidas. O tutorial completo fica como material de consulta depois desta apresentação.",
+      "durationSeconds": 40,
+      "takeaway": "Seu próximo passo é uma escolha informada, confirmada e acompanhada.",
+      "appendix": false,
+      "sourcePages": [
+        43
+      ]
+    },
+    {
+      "id": "A1",
+      "chapter": "Consulta",
+      "kicker": "APOIO · CATÁLOGO",
+      "title": "10 cursos na versão analisada.",
+      "subtitle": "Fotografia de 19/10/2026; disponibilidade sujeita à consulta atual.",
+      "bullets": [
+        "6 online · 4 presenciais",
+        "Tecnologia, administração, design e outras áreas",
+        "Nomes e cargas horárias no quadro de consulta"
+      ],
+      "speakerNotes": "Este quadro serve para consulta durante perguntas, não para prometer uma oferta futura. Os dez cursos e suas horas foram extraídos das fichas analisadas em dezenove de outubro de dois mil e vinte e seis. Se alguém perguntar por uma formação, localize o nome, abra a ficha correspondente e confira a situação atual. Gestão de Projetos estava marcada como início em breve na versão examinada; isso não permite reservar uma vaga pelo favorito. Saúde aparecia como área sem curso. Os cursos online e presenciais também precisam de confirmação de calendário, requisitos e instituição responsável antes de qualquer decisão de participação.",
+      "durationSeconds": 0,
+      "takeaway": "O catálogo de consulta é uma fotografia da versão, não garantia de vaga.",
+      "appendix": true,
+      "catalog": [
+        {
+          "title": "Introdução à Programação",
+          "hours": 120,
+          "modality": "Online",
+          "status": "Inscrições abertas"
+        },
+        {
+          "title": "Excel do Básico ao Avançado",
+          "hours": 60,
+          "modality": "Online",
+          "status": "Últimas vagas"
+        },
+        {
+          "title": "Design Gráfico para Iniciantes",
+          "hours": 80,
+          "modality": "Presencial",
+          "status": "Inscrições abertas"
+        },
+        {
+          "title": "Marketing Digital na Prática",
+          "hours": 60,
+          "modality": "Online",
+          "status": "Inscrições abertas"
+        },
+        {
+          "title": "Desenvolvimento Web Completo",
+          "hours": 150,
+          "modality": "Online",
+          "status": "Inscrições abertas"
+        },
+        {
+          "title": "Gestão de Projetos",
+          "hours": 60,
+          "modality": "Online",
+          "status": "Início em breve"
+        },
+        {
+          "title": "Informática para o Mercado",
+          "hours": 100,
+          "modality": "Presencial",
+          "status": "Inscrições abertas"
+        },
+        {
+          "title": "Atendimento ao Cliente",
+          "hours": 40,
+          "modality": "Online",
+          "status": "Inscrições abertas"
+        },
+        {
+          "title": "Gastronomia Brasileira",
+          "hours": 80,
+          "modality": "Presencial",
+          "status": "Últimas vagas"
+        },
+        {
+          "title": "Eletricista Predial",
+          "hours": 160,
+          "modality": "Presencial",
+          "status": "Inscrições abertas"
+        }
+      ],
+      "sourcePages": [
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57
+      ]
+    },
+    {
+      "id": "A2",
+      "chapter": "Consulta",
+      "kicker": "APOIO · VALIDAÇÕES",
+      "title": "Um aviso, uma ação de revisão.",
+      "subtitle": "Use este quadro quando surgir uma dúvida de preenchimento.",
+      "bullets": [
+        "CPF: 11 dígitos / formato aceito",
+        "Telefone: DDD + 10 ou 11 dígitos no total",
+        "Nascimento: data existente e não futura",
+        "CEP: 8 dígitos e endereço de Vitória–ES"
+      ],
+      "speakerNotes": "Este apoio reúne as revisões mais frequentes. CPF e telefone têm conferência de formato; isso não verifica titularidade nem envia uma mensagem ao número. No cadastro comum, os dois e-mails devem coincidir. A data define a necessidade de responsável: confira o ano quando a idade parecer errada. Menores precisam de nome, CPF, parentesco e telefone do responsável. Número residencial e complemento são opcionais no primeiro cadastro. Acessibilidade e renda também são opcionais. Os dois aceites obrigatórios ficam na última etapa. Se a consulta de CEP estiver indisponível, aguarde; não substitua o endereço real para tentar passar. Cadastro existente pede recuperação ou atendimento.",
+      "durationSeconds": 0,
+      "takeaway": "Corrija a causa do aviso, mantendo os dados verdadeiros.",
+      "appendix": true,
+      "sourcePages": [
+        19,
+        20,
+        21,
+        22,
+        25,
+        26
+      ]
+    },
+    {
+      "id": "A3",
+      "chapter": "Consulta",
+      "kicker": "APOIO · DOCUMENTOS",
+      "title": "O que é documento da plataforma?",
+      "subtitle": "Regras e privacidade são diferentes de matrícula e certificado.",
+      "bullets": [
+        "Leia termos, privacidade e informações LGPD",
+        "Não há upload de documentos pessoais",
+        "Não há comprovante de inscrição em PDF",
+        "Não há emissão de certificado nesta versão"
+      ],
+      "speakerNotes": "Os textos da plataforma explicam regras de uso e tratamento de dados. Eles não são edital de seleção, prova de frequência, certificado ou comprovação de parceria institucional. A lista de cursos no perfil mostra registros feitos no site e não confirma matrícula externa. A turma pode exigir documentos ou autorização presencial que precisam ser combinados com o responsável pela oferta. A plataforma analisada não oferece envio de documento pessoal nem assinatura digital de autorização. Solicitações de correção, exclusão do cadastro ou revogação devem ser encaminhadas ao responsável. Ao apresentar esses documentos, descreva o conteúdo e o caminho de acesso, sem transformar a exposição em um parecer jurídico.",
+      "durationSeconds": 0,
+      "takeaway": "Documentos do site não substituem as condições oficiais da formação.",
+      "appendix": true,
+      "sourcePages": [
+        34,
+        58,
+        59,
+        60,
+        61
+      ]
+    },
+    {
+      "id": "A4",
+      "chapter": "Consulta",
+      "kicker": "APOIO · DÚVIDAS FREQUENTES",
+      "title": "O acesso mudou. O cadastro pode continuar lá.",
+      "subtitle": "Não apague nem refaça tudo como primeira tentativa.",
+      "bullets": [
+        "Outro aparelho: dados locais podem mudar",
+        "Google: use o e-mail original correspondente",
+        "Google no celular: endereço público seguro autorizado",
+        "Sair não exclui conta nem cancela inscrição"
+      ],
+      "speakerNotes": "Se o perfil ou a foto desaparecer, confira navegador, aparelho e endereço usado. Foto, favoritos e memória podem existir apenas naquele contexto local. O cadastro recebido e as inscrições confirmadas podem continuar no serviço. Quando habilitado, Google recupera o perfil reconhecido pelo acesso correspondente; não transfere automaticamente todos os dados locais. Caso o Google esteja indisponível, o usuário não precisa criar uma conta de desenvolvedor para usar o cadastro comum. Bloqueios do provedor exigem a mensagem e o endereço para diagnóstico. No telefone, use a instalação pública segura autorizada. Se a dúvida permanecer, procure Contato antes de duplicar cadastro ou apagar informações.",
+      "durationSeconds": 0,
+      "takeaway": "Primeiro entenda onde o dado está guardado; depois escolha a correção.",
+      "appendix": true,
+      "sourcePages": [
+        18,
+        33,
+        41,
+        42
+      ]
+    }
+  ]
+}

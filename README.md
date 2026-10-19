@@ -9,6 +9,12 @@ Aplicação React/Vite com API local em SQLite e API de produção serverless pa
 
 Para salvar uma cópia, abra o PDF no GitHub e use **Download raw file** ou [baixe diretamente](https://github.com/renissonsouza-crypto/PMV--MATEUS-/raw/refs/heads/main/docs/tutorial-qualifica-vix.pdf). Em repositórios privados, entre na sua conta GitHub com acesso ao projeto.
 
+## Apresentação animada para o navegador
+
+[**Baixar a apresentação do Qualifica Vix**](https://github.com/renissonsouza-crypto/PMV--MATEUS-/raw/refs/heads/main/docs/apresentacao-qualifica-vix.zip) — 30 slides principais + 4 de consulta, animações, telas reais, notas de fala e artes na paleta do site. Extraia o ZIP e abra **APRESENTACAO.html** no navegador; funciona sem internet e sem instalação. O pacote inclui PDF e roteiro do apresentador.
+
+Use **F** para tela cheia, **← →** para navegar, **I** para o índice e **P** para o painel separado do apresentador. [Instruções e verificações](docs/apresentacao/README.md). Após a implantação, a página também fica disponível em `/apresentacao/`.
+
 ## Arquitetura MVC
 
 ```text
