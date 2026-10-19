@@ -8,6 +8,7 @@ PARA COMEÇAR
 4. Pressione F para tela cheia. Use as setas para avançar e voltar.
 
 DURAÇÃO
+Edição guiada pela Tortuguita Vix, com falas curtas em todos os slides.
 30 slides principais + 4 slides de consulta. Cerca de 23 minutos.
 O slide 29 propõe uma pequena atividade com cronômetro de 1 minuto.
 O PDF é uma cópia estática para leitura ou impressão. As animações estão no HTML.
@@ -20,7 +21,8 @@ F: tela cheia, quando suportada pelo navegador.
 I: índice com busca e filtros.
 N: notas do slide na tela atual (o público também as vê se esta tela for projetada).
 P: painel separado do apresentador, com notas e próximo slide.
-M: pausar ou retomar os efeitos contínuos.
+M: pausar ou retomar todas as animações.
+R ou botão Rever animações: repetir a cena atual.
 B: pausar a projeção. B ou Esc: retomar.
 L: apontador luminoso. Esc desativa.
 ?: ajuda com os atalhos.

@@ -12,6 +12,155 @@
   let practiceDeadline = 0;
   const started = Date.now();
   const formatTime = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  let sceneAnimations = [];
+  function cancelScene() {
+    sceneAnimations.forEach(animation => animation.cancel());
+    sceneAnimations = [];
+    $$('.scene-pointer').forEach(pointer => pointer.remove());
+  }
+  function animateScene(element, frames, options = {}) {
+    if (!element || reduced.matches || effectsPaused) return;
+    const animation = element.animate(frames, { duration: 1000, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'none', ...options });
+    sceneAnimations.push(animation);
+    return animation;
+  }
+  function highlight(element, delay = 1400, color = '#ff8500') {
+    animateScene(element, [
+      { boxShadow: `0 0 0 0 ${color}00`, offset: 0 },
+      { boxShadow: `0 0 0 7px ${color}99, 0 8px 30px ${color}30`, offset: .45 },
+      { boxShadow: `0 0 0 0 ${color}00`, offset: 1 },
+    ], { duration: 1450, delay });
+  }
+  function sequence(root, selector, delay = 1400, interval = 1050) {
+    $$(selector, root).forEach((element, index) => highlight(element, delay + index * interval));
+  }
+  function guidePointer(root, targets) {
+    if (reduced.matches || effectsPaused || !targets.length) return;
+    const pointer = document.createElement('div');
+    pointer.className = 'scene-pointer'; pointer.setAttribute('aria-hidden', 'true'); root.append(pointer);
+    const slideRect = root.getBoundingClientRect(), scale = slideRect.width / 1600;
+    const frames = [{ opacity: 0, transform: 'translate(0,0) scale(.3)', offset: 0 }];
+    targets.slice(0, 4).forEach((target, index, all) => {
+      const rect = target.getBoundingClientRect();
+      const x = Math.min(1490, Math.max(60, (rect.right - slideRect.left) / scale - 34));
+      const y = Math.min(655, Math.max(190, (rect.top - slideRect.top) / scale + rect.height / scale * .5 - 27));
+      const at = .08 + index * (.75 / all.length);
+      frames.push({ opacity: .9, transform: `translate(${x}px,${y}px) scale(1)`, offset: at });
+      frames.push({ opacity: .65, transform: `translate(${x}px,${y}px) scale(1.3)`, offset: at + .10 });
+    });
+    frames.push({ opacity: 0, offset: 1 });
+    animateScene(pointer, frames, { duration: 6200, delay: 1100 });
+  }
+  function playScene(index) {
+    cancelScene();
+    if (reduced.matches || effectsPaused) return;
+    const root = slides[index];
+    // The drawings highlight explanatory content; screenshots remain static.
+    $$('.text-point', root).forEach((element, n) => animateScene(element,
+      [{ opacity: .2, translate: '-22px 0' }, { opacity: 1, translate: '0 0' }],
+      { duration: 900, delay: 650 + n * 200, fill: 'backwards' }));
+    $$('.photo-card', root).forEach((element, n) => animateScene(element,
+      [{ opacity: .3, transform: 'perspective(1000px) rotateY(-10deg) translateY(30px)' }, { opacity: 1, transform: 'perspective(1000px) rotateY(0) translateY(0)' }],
+      { duration: 1600, delay: 450 + n * 250, fill: 'backwards' }));
+    let targets = [];
+    switch (index) {
+      case 0:
+      case 29:
+        animateScene($('.cover-photo,.closing-art', root), [{ scale: '1.06', translate: '20px 0' }, { scale: '1', translate: '0 0' }], { duration: 6500 });
+        break;
+      case 1:
+      case 11:
+        sequence(root, '.steps article', 1400, 1100);
+        $$('.step-progress span', root).forEach((bar, n) => animateScene(bar, [{ scale: '0 1' }, { scale: '1 1' }], { duration: 900, delay: 1200 + n * 1050, fill: 'backwards' }));
+        targets = $$('.steps article', root);
+        break;
+      case 3:
+        sequence(root, '.navigation-list .text-point', 1500, 1150);
+        targets = $$('.navigation-list .text-point', root);
+        break;
+      case 4:
+        $$('.phone', root).forEach((phone, n) => animateScene(phone, [{ opacity: .15, translate: '0 50px' }, { opacity: 1, translate: '0 0' }], { duration: 1400, delay: 400 + n * 450, fill: 'backwards' }));
+        sequence(root, '.mobile-copy .text-point', 2100, 1200);
+        targets = $$('.mobile-copy .text-point', root);
+        break;
+      case 5:
+        animateScene($('.search-sample', root), [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 1700, delay: 900, easing: 'steps(5,end)', fill: 'backwards' });
+        sequence(root, '.filter-tags .tag', 2700, 900);
+        highlight($('.browser', root), 5200);
+        targets = [$('.mock-search', root), ...$$('.filter-tags .tag', root).slice(0, 2)];
+        break;
+      case 6:
+        animateScene($('.heart-disc', root), [{ scale: '1' }, { scale: '1.24', offset: .4 }, { scale: '.94', offset: .7 }, { scale: '1' }], { duration: 1900, delay: 1600 });
+        sequence(root, '.float-label', 3500, 1200);
+        break;
+      case 8:
+        sequence(root, '.six-tabs>div', 1300, 700);
+        highlight($('.six-tabs>div:nth-child(2)', root), 5600);
+        targets = [$('.six-tabs>div:nth-child(2)', root), $('.browser', root)];
+        break;
+      case 10:
+        sequence(root, '.identity-outcomes article', 2300, 1800);
+        animateScene($('.fork-line', root), [{ opacity: .1, clipPath: 'inset(0 100% 0 0)' }, { opacity: 1, clipPath: 'inset(0)' }], { duration: 1900, delay: 900 });
+        break;
+      case 13:
+        sequence(root, '.address-path>div', 1400, 1100);
+        targets = $$('.address-path>div:not(.mini-alert)', root);
+        break;
+      case 15:
+        sequence(root, '.consent', 1600, 1900);
+        targets = $$('.consent', root);
+        break;
+      case 16:
+        sequence(root, '.validation-grid article', 1200, 800);
+        sequence(root, '.validation-flow>span,.validation-flow>b', 4100, 950);
+        break;
+      case 17:
+        animateScene($('.success-seal', root), [{ scale: '.4', rotate: '-35deg', opacity: .1 }, { scale: '1.12', rotate: '5deg', opacity: 1, offset: .7 }, { scale: '1', rotate: '0deg', opacity: 1 }], { duration: 1500, delay: 900 });
+        sequence(root, '.success-messages article', 2500, 1800);
+        targets = $$('.success-messages article', root);
+        break;
+      case 18:
+        sequence(root, '.numbered-list>div', 1400, 1450);
+        targets = $$('.numbered-list>div', root);
+        break;
+      case 19:
+        $$('.ticket', root).forEach((ticket, n) => animateScene(ticket, [{ opacity: .2, translate: '0 28px', rotate: '-7deg' }, { opacity: 1, translate: '0 0', rotate: '0deg' }], { duration: 1300, delay: 1200 + n * 900, fill: 'backwards' }));
+        highlight($('.limit-detail .callout', root), 4500);
+        break;
+      case 20:
+        animateScene($('.clock-orbit', root), [{ rotate: '-25deg' }, { rotate: '300deg' }], { duration: 6000 });
+        animateScene($('.timeline-line', root), [{ scale: '0 1' }, { scale: '1 1' }], { duration: 3000, delay: 1300, fill: 'backwards' });
+        sequence(root, '.clean-list li', 2300, 1100);
+        break;
+      case 21:
+        sequence(root, '.profile-label', 1500, 1600);
+        targets = $$('.profile-label', root);
+        break;
+      case 22:
+        sequence(root, '.storage-grid article', 1700, 1900);
+        animateScene($('.storage-link .icon', root), [{ translate: '-15px 0', opacity: .2 }, { translate: '15px 0', opacity: 1 }], { duration: 2600, delay: 1600, iterations: 2 });
+        break;
+      case 23:
+        $$('.chat-bubble', root).forEach((bubble, n) => animateScene(bubble, [{ scale: '.45', opacity: 0, translate: '0 20px' }, { scale: '1.06', opacity: 1, translate: '0 -5px', offset: .7 }, { scale: '1', opacity: 1, translate: '0 0' }], { duration: 1400, delay: 1400 + n * 1800, fill: 'backwards' }));
+        highlight($('.assistant-demo', root), 5300);
+        break;
+      case 24:
+        sequence(root, '.memory-steps article', 1400, 1500);
+        break;
+      case 26:
+        sequence(root, '.document-cards article', 1500, 1300);
+        break;
+      case 28:
+        sequence(root, '.practice-path article', 1400, 1200);
+        break;
+      default:
+        sequence(root, '.facts-grid .stat,.reference-grid article,.document-reference .text-point,.support-grid article', 1500, 750);
+        if (root.dataset.guideTarget === 'form') targets = $$('.text-point', root).slice(0, 3);
+        break;
+    }
+    guidePointer(root, targets.filter(Boolean));
+  }
+
   const readSetting = () => { try { return localStorage.getItem('qualifica-vix-presentation-motion') === 'paused'; } catch { return false; } };
   effectsPaused = readSetting();
   const applyMotion = () => {
@@ -19,10 +168,11 @@
     document.body.classList.toggle('reduced-motion', reduced.matches);
     const button = $('[data-action="motion"]');
     button.setAttribute('aria-pressed', String(effectsPaused));
-    button.title = effectsPaused ? 'Retomar efeitos contínuos (M)' : 'Pausar efeitos contínuos (M)';
+    button.title = effectsPaused ? 'Retomar animações (M)' : 'Pausar animações (M)';
     button.setAttribute('aria-label', button.title);
+    sceneAnimations.forEach(animation => effectsPaused ? animation.pause() : animation.play());
   };
-  reduced.addEventListener('change', applyMotion);
+  reduced.addEventListener('change', () => { applyMotion(); if (reduced.matches) cancelScene(); else playScene(current); });
   applyMotion();
   function fit() {
     const style = getComputedStyle(stage);
@@ -84,7 +234,7 @@
     $('#announcement').textContent = `Slide ${current + 1} de ${slides.length}. ${data.slides[current].title}`;
     document.title = `${current + 1}. ${data.slides[current].title} | Qualifica Vix`;
     if (hash) { try { history.replaceState(null, '', `#slide-${data.slides[current].id}`); } catch { location.hash = `slide-${data.slides[current].id}`; } }
-    updateNotes(); updatePresenter();
+    updateNotes(); updatePresenter(); playScene(current);
     if (focus) $('h1,h2', slides[current])?.focus({ preventScroll: true });
   }
   function closeDialogs() { dialogIds.forEach(id => { const d = document.getElementById(id); if (d.open) d.close(); }); }
@@ -112,7 +262,7 @@
     $$('#slide-index [data-goto]').forEach(button => {
       const s = data.slides[Number(button.dataset.goto)];
       const typeMatches = indexFilter === 'all' || (indexFilter === 'appendix' ? s.appendix : !s.appendix);
-      const textMatches = normalize([s.title, s.chapter, s.kicker, ...s.bullets].join(' ')).includes(query);
+      const textMatches = normalize([s.title, s.chapter, s.kicker, s.subtitle, s.guideLine, ...s.bullets].join(' ')).includes(query);
       button.hidden = !typeMatches || !textMatches;
       if (!button.hidden) visible++;
     });
@@ -161,7 +311,13 @@
       case 'fullscreen': fullscreen(); break;
       case 'blackout': blackout(); break;
       case 'presenter': openPresenter(); break;
-      case 'motion': effectsPaused = !effectsPaused; applyMotion(); try { localStorage.setItem('qualifica-vix-presentation-motion', effectsPaused ? 'paused' : 'running'); } catch {} break;
+      case 'replay':
+        if (effectsPaused || reduced.matches) { $('#announcement').textContent = effectsPaused ? 'As animações estão pausadas. Use M para retomar.' : 'A preferência por movimento reduzido está ativa.'; break; }
+        playScene(current);
+        slides[current].getAnimations({ subtree: true }).filter(animation => animation instanceof CSSAnimation).forEach(animation => { animation.currentTime = 0; animation.play(); });
+        $('#announcement').textContent = 'Animações deste slide reiniciadas.';
+        break;
+      case 'motion': effectsPaused = !effectsPaused; applyMotion(); if (!effectsPaused && !sceneAnimations.length) playScene(current); try { localStorage.setItem('qualifica-vix-presentation-motion', effectsPaused ? 'paused' : 'running'); } catch {} break;
     }
   }
   $$('[data-action]').forEach(button => button.addEventListener('click', () => action(button.dataset.action)));
@@ -174,7 +330,7 @@
     if (openDialog && openDialog.id !== 'notes-dialog') return;
     if (event.target.closest('button,a') && [' ', 'Enter'].includes(event.key)) return;
     const key = event.key.toLowerCase();
-    const shortcuts = { arrowright:'next', pagedown:'next', ' ':'next', arrowleft:'previous', pageup:'previous', i:'index', n:'notes', p:'presenter', f:'fullscreen', m:'motion', b:'blackout', '?':'help', h:'help' };
+    const shortcuts = { arrowright:'next', pagedown:'next', ' ':'next', arrowleft:'previous', pageup:'previous', i:'index', n:'notes', p:'presenter', f:'fullscreen', m:'motion', r:'replay', b:'blackout', '?':'help', h:'help' };
     if (key === 'escape') { closeDialogs(); laserEnabled = false; document.body.classList.remove('laser-enabled'); return; }
     if (key === 'home' || key === 'end') { event.preventDefault(); goTo(key === 'home' ? 0 : slides.length - 1); return; }
     if (key === 'l') { event.preventDefault(); laserEnabled = !laserEnabled; document.body.classList.toggle('laser-enabled', laserEnabled); return; }
@@ -211,6 +367,10 @@
   }, 250);
   function fromHash() { const index = data.slides.findIndex(s => location.hash === `#slide-${s.id}`); goTo(index < 0 ? 0 : index, { hash: false }); }
   window.addEventListener('hashchange', fromHash);
+  const printMedia = matchMedia('print');
+  printMedia.addEventListener('change', event => { if (event.matches) cancelScene(); else playScene(current); });
+  window.addEventListener('beforeprint', cancelScene);
+  window.addEventListener('afterprint', () => playScene(current));
   window.addEventListener('pagehide', () => { if (presenter && !presenter.closed) presenter.close(); });
   fromHash(); fit();
   document.fonts.ready.then(fit);

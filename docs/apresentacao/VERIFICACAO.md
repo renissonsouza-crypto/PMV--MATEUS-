@@ -47,6 +47,22 @@ O conteúdo apresenta a versão analisada em 19/10/2026. Disponibilidade de curs
 
 Os 34 slides foram capturados e revisados em 1920 × 1200, com verificação de enquadramento e carregamento das imagens. Nenhum elemento de conteúdo ultrapassou o rodapé ou as laterais na verificação executada. A diagramação usa uma área de apresentação 16:9, ajustada ao espaço disponível.
 
-O PDF final possui **34 páginas, 34 marcadores e texto selecionável**. As imagens foram comprimidas para reduzir o arquivo para aproximadamente 4,1 MB, mantendo o conteúdo textual. A cópia estática foi conferida separadamente dos testes do HTML.
+O PDF final possui **34 páginas, 34 marcadores e texto selecionável**. As imagens foram comprimidas para reduzir o arquivo para aproximadamente 4,5 MB, mantendo o conteúdo textual. A cópia estática foi conferida separadamente dos testes do HTML.
 
 `npm run build` concluiu com sucesso. A página produzida em `dist/apresentacao/` foi servida com os mesmos cabeçalhos de segurança de `vercel.json`: scripts externos, imagens, fontes, navegação e painel do apresentador funcionaram sem erros de política de conteúdo. Isso verifica o artefato de implantação localmente; não comprova uma implantação na Vercel. O build mantém o aviso já existente sobre o tamanho do pacote principal da aplicação.
+
+## Edição guiada pela Tortuguita
+
+A revisão acrescenta a Tortuguita com uma orientação específica nos **34 slides**, preservando o slide 24 dedicado à apresentação da assistente. A paleta usa azul `#0057d9`, laranja `#ff8500` e branco. Texto marinho sobre laranja mantém contraste adequado. As descrições agora explicam as ações de cada menu ou recurso com frases curtas.
+
+A suíte adicional **`npm run test:presentation:guided` passou 10 verificações**, totalizando **26 verificações funcionais sem falhas** junto da suíte original. Ela verificou:
+
+- Falas distintas, personagem e controle de repetição em todos os slides.
+- Preservação da apresentação dedicada à assistente e cores renderizadas.
+- 68 enquadramentos em 1366 × 768 e 1920 × 1080, sem a faixa da guia cobrir imagens ou textos principais.
+- Mudanças visuais reais nas cenas de menu, busca, cadastro, confirmação, inscrição e chat.
+- Pausa e retomada de animações CSS e de cenas programadas, repetição com R e com o botão visível.
+- Cancelamento da cena anterior ao navegar e respeito ao movimento reduzido.
+- Impressão durante uma animação: os 34 slides e suas guias ficam visíveis em estado estável.
+
+As animações incluem digitação ilustrativa da busca, percursos de destaque, telas em perspectiva, passos em sequência, confirmação visual, balões e acenos/piscadas da personagem. R repete a cena atual; M pausa todas as animações. A impressão cancela os efeitos em andamento para preservar o conteúdo. Não há avanço automático dos slides.

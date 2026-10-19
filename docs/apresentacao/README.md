@@ -1,6 +1,6 @@
 # Uma jornada de possibilidades · Qualifica Vix
 
-Apresentação visual de uso da plataforma para um público sem conhecimento em programação. São **30 slides principais e 4 de consulta**, com duração sugerida de **23 minutos**, telas reais com dados fictícios e artes na paleta azul e laranja do site. Conteúdo referente à versão de **19/10/2026**.
+Apresentação visual de uso da plataforma para um público sem conhecimento em programação. Nesta edição, a **Tortuguita Vix guia os 34 slides**, com uma orientação curta para cada funcionalidade e sua apresentação própria preservada. Laranja, azul e branco conduzem a identidade visual. São **30 slides principais e 4 de consulta**, com duração sugerida de **23 minutos**, telas reais com dados fictícios e artes na paleta azul e laranja do site. Conteúdo referente à versão de **19/10/2026**.
 
 ![Capa da apresentação](capa.jpg)
 
@@ -19,13 +19,13 @@ No site publicado, a página também é disponibilizada em **`/apresentacao/`**,
 
 ## Recursos da apresentação
 
-- Transições suaves, entradas em sequência e efeitos contínuos que podem ser pausados.
+- Transições, telas em perspectiva, busca digitada, destaques que percorrem menus e filtros, etapas do cadastro, confirmação de inscrição e balões de conversa. As cenas duram vários segundos e depois estabilizam.
 - Ilustração vetorial de Vitória, fotografias locais, capturas da plataforma e mascote oficial.
 - Busca por assunto, índice filtrável e links diretos para cada slide.
 - Notas de fala, mensagem principal, tempo sugerido e páginas do guia por slide.
 - Painel separado com notas, próximo slide, cronômetro e controles sincronizados. Mova-o para outra tela antes de projetar.
 - Apontador luminoso (**L**), pausa da projeção (**B**), atividade com cronômetro e navegação por gestos.
-- Preferência de movimento reduzido respeitada; botão **M** pausa os efeitos contínuos.
+- Tortuguita animada: aceno, piscadas e entrada do balão. **M** pausa todas as animações; **R** ou **Rever animações** reinicia a cena atual. A preferência por movimento reduzido é respeitada.
 - PDF com 34 páginas, texto selecionável e 34 marcadores de navegação.
 
 ## Atualização e validação
@@ -35,6 +35,7 @@ As fontes do roteiro ficam em `roteiro.json`, os estilos e controles em `public/
 ```bash
 npm run presentation:build
 npm run test:presentation
+npm run test:presentation:guided
 npm run presentation:pdf
 npm run build
 ```

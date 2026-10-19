@@ -29,7 +29,8 @@
     "test:mobile": "node tests/mobile.mjs",
     "test:presentation": "node tests/presentation.mjs",
     "presentation:build": "node scripts/build-presentation.mjs",
-    "presentation:pdf": "node scripts/export-presentation.mjs"
+    "presentation:pdf": "node scripts/export-presentation.mjs",
+    "test:presentation:guided": "node tests/presentation-guided.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
