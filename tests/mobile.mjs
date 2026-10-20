@@ -212,7 +212,7 @@ try {
       await runCase(browser, engine, 'Expanded chat memory leaves input accessible with keyboard space reduced', { width: 390, height: 844 }, async (page, sequence) => {
         const profile = { id: 15000 + sequence, nome: 'Pessoa Mobile Memória', email: `mobile-memory${sequence}@example.test`, telefone: '27999999999', cep: '29050-945', bairro: 'Bento Ferreira', rua: 'Rua de teste', numero: '', escolaridade: 'Ensino médio completo', enrolledCourseIds: [], enrollments: [] };
         environment.seedRegistration(profile); await page.evaluate(({ profile, key }) => localStorage.setItem(key, JSON.stringify(profile)), { profile, key: PROFILE_KEY }); await page.reload({ waitUntil: 'domcontentloaded' });
-        const chat = await openChat(page); await chat.getByText('Sua memória com a Tortuguita', { exact: true }).click();
+        const chat = await openChat(page); await chat.getByRole('button', { name: 'Opções do chat', exact: true }).click(); await chat.getByText('Sua memória com a Tortuguita', { exact: true }).click();
         await page.setViewportSize({ width: 390, height: 320 }); const input = chat.getByRole('textbox', { name: 'Sua dúvida ou busca', exact: true }); await input.fill('Quero saber sobre Excel');
         await page.waitForFunction(() => document.querySelector('.tortuguita-panel')?.getAttribute('data-compact') === 'true');
         await withinScreen(page, input, { vertical: true }); await withinScreen(page, chat.getByRole('button', { name: 'Enviar mensagem', exact: true }), { vertical: true, touch: true });

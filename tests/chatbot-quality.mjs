@@ -123,6 +123,7 @@ try {
         uiTimings.push({ width: viewport.width, prompt, durationMs: performance.now() - start });
         if (prompt.startsWith('Como você pode')) await page.screenshot({ path: join(artifacts, `platform-help-${viewport.width}.png`) });
       }
+      await chat.locator('summary', { hasText: 'Avaliar resposta' }).click();
       await chat.getByRole('button', { name: 'Ajudou, obrigado', exact: true }).click(); await chat.getByRole('status').filter({ hasText: 'Que bom que ajudou' }).waitFor();
       await input.fill('Qual a duração de Excel?'); await input.press('Enter');
       // The explicit course query opens its actual page, retaining the conversation.

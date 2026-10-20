@@ -33,11 +33,14 @@ async function run(name, viewport, action) {
       const answer = log.locator(':scope > div').last();
       await answer.locator('p').first().filter({ hasText: expected }).waitFor();
       timings.push({ name, durationMs: performance.now() - started });
+      await answer.locator('summary', { hasText: 'Avaliar resposta' }).click();
       return answer;
     }
     async function enable() {
+      await chat.getByRole('button', { name: 'Opções do chat', exact: true }).click();
       if (!await settings.evaluate(el => el.open)) await settings.locator('summary').click();
       await consent.check(); await settings.locator('summary').click();
+      await chat.getByRole('button', { name: 'Opções do chat', exact: true }).click();
     }
     const apiResponse = action => page.waitForResponse(response => response.url().endsWith('/api/chat-learning') && response.request().postDataJSON()?.action === action);
     await action({ context, page, chat, log, input, consent, settings, requests, ask, enable, apiResponse });
@@ -86,6 +89,7 @@ try {
     await chat.getByRole('status').filter({ hasText: 'sinalizado para revisão' }).waitFor();
     assert.equal(ratings().length, before + 4);
     assert(requests.every(body => Object.keys(body).every(key => ['action', 'topic', 'token', 'reason'].includes(key))), 'No raw question, answer or profile may leave the browser');
+    await chat.getByRole('button', { name: 'Opções do chat', exact: true }).click();
     await settings.locator('summary').click(); await consent.uncheck();
     const calls = requests.length; await ask('Como entro na minha conta?', 'Google'); assert.equal(requests.length, calls);
     // Failed deletion is not reported as success; a retry removes this browser's votes only.
@@ -121,15 +125,17 @@ try {
     await log.getByText(/Os cursos e o cadastro são apresentados como gratuitos/).waitFor();
     assert.doesNotMatch(await log.innerText(), /Buscar cursos, áreas|Como uso a busca/);
   });
-  await run('Retirar a permissão sincroniza outra aba antes da próxima pergunta', { width: 390, height: 844 }, async ({ context, consent, settings, enable }) => {
+  await run('Retirar a permissão sincroniza outra aba antes da próxima pergunta', { width: 390, height: 844 }, async ({ context, chat, consent, settings, enable }) => {
     await enable();
     const other = await context.newPage(); const requests = [];
     other.on('request', request => { if (request.url().endsWith('/api/chat-learning')) requests.push(request.url()); });
     try {
       await other.goto(environment.baseURL); await other.getByRole('button', { name: 'Abrir assistente virtual', exact: true }).click();
       const otherChat = other.getByRole('dialog', { name: 'Tortuguita', exact: true });
+      await otherChat.getByRole('button', { name: 'Opções do chat', exact: true }).click();
       await otherChat.locator('summary', { hasText: 'Melhorar a Tortuguita' }).click();
       assert(await otherChat.getByRole('checkbox', { name: 'Permitir aprendizado com minhas avaliações', exact: true }).isChecked());
+      await chat.getByRole('button', { name: 'Opções do chat', exact: true }).click();
       await settings.locator('summary').click(); await consent.uncheck();
       await other.waitForFunction(() => { const input = document.querySelector('.tortuguita-panel input[type="checkbox"]'); return input && !input.checked; });
       const input = otherChat.getByRole('textbox', { name: 'Sua dúvida ou busca', exact: true }); await input.fill('Como uso a busca?'); await input.press('Enter');

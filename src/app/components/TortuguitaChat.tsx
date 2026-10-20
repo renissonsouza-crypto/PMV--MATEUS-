@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowUpRight, RotateCcw, Send, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowUpRight, Maximize2, Minimize2, MoveDiagonal2, RotateCcw, Send, Settings2, ShieldCheck, Sparkles, Trash2, X } from "lucide-react";
 import { ASSISTANT_CAPABILITIES, QUICK_QUESTIONS } from "../data/tortuguitaKnowledge";
 import type { Course } from "../models/Course";
 import type { Page } from "../models/navigation";
@@ -16,6 +16,7 @@ import {
   mostSoughtCourses, rememberCourse, rememberReply, saveAssistantMemory,
   type AssistantMemory, type ChatMessage,
 } from "../services/tortuguitaMemory";
+import { useChatWindow } from "../hooks/useChatWindow";
 import { TurtleMascot } from "./TurtleMascot";
 import { adaptChatReply, forgetChatFeedback, learningConsentKey, readLearningConsent, sendChatFeedback, storeLearningConsent, type FeedbackReason, type LearningTicket } from '../services/chatLearning';
 
@@ -53,7 +54,9 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const [persistent, setPersistent] = useState(restored.persistent);
   const [memoryNotice, setMemoryNotice] = useState("");
   const [open, setOpen] = useState(false);
-  const [viewport, setViewport] = useState({ height: 0, inset: 0 });
+  const { size, viewport, expanded, toggleExpanded, resetSize, resizeHandle } = useChatWindow(open);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(restored.memory.messages.length ? restored.memory.messages : [WELCOME]);
   const [followUps, setFollowUps] = useState<string[]>([]);
@@ -75,6 +78,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const nextIdRef = useRef(Math.max(0, ...restored.memory.messages.map(item => item.id)) + 1);
   const lastSubmissionRef = useRef({ text: "", time: 0 });
   const launcherRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -117,22 +121,6 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
     }
   }, [activeCourseId, courses, profile?.id]);
 
-  useEffect(() => {
-    if (!open || !window.visualViewport) return;
-    const visual = window.visualViewport;
-    const updateViewport = () => setViewport({
-      height: visual.height,
-      inset: Math.max(0, window.innerHeight - visual.height - visual.offsetTop),
-    });
-    updateViewport();
-    visual.addEventListener("resize", updateViewport);
-    visual.addEventListener("scroll", updateViewport);
-    return () => {
-      visual.removeEventListener("resize", updateViewport);
-      visual.removeEventListener("scroll", updateViewport);
-    };
-  }, [open]);
-
   const resetConversation = () => {
     operation.current++; sendingRef.current = false; setSending(false);
     lastAnswerId.current = 0; setLearningTicket(null); setFeedbackMessage(''); setFeedbackError(''); setNegativeFeedback(false);
@@ -169,7 +157,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
     const now = Date.now();
     if (lastSubmissionRef.current.text === text && now - lastSubmissionRef.current.time < 750) return;
     const requestId = ++operation.current;
-    setHelpful(false); setDraft('');
+    setHelpful(false); setDraft(''); setSuggestionsOpen(false);
     lastSubmissionRef.current = { text, time: now };
     setFeedbackMessage(''); setFeedbackError(''); setNegativeFeedback(false); setLearningTicket(null);
     lastAnswerId.current = 0;
@@ -310,41 +298,64 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-slate-950/25" />
         <Dialog.Content
-          data-compact={viewport.height > 0 && viewport.height < 480 ? "true" : undefined}
-          className="tortuguita-panel fixed bottom-4 right-4 z-[70] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[390px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:bottom-24 sm:max-h-[calc(100dvh-7rem)]"
+          data-compact={Math.min(viewport.height, expanded ? viewport.height : size.height) < 480 ? "true" : undefined}
+          data-expanded={expanded ? "true" : undefined}
+          className="tortuguita-panel fixed z-[70] flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
           style={{
-            height: "min(580px, calc(var(--chat-viewport-height, 100dvh) - 2rem))",
+            "--chat-width": `${size.width}px`, "--chat-height": `${size.height}px`,
+            "--chat-viewport-width": `${viewport.width}px`,
             ...(viewport.height > 0 ? { "--chat-viewport-height": `${viewport.height}px`, "--chat-keyboard-inset": `${viewport.inset}px` } : {}),
           } as CSSProperties}
-          onOpenAutoFocus={event => { event.preventDefault(); inputRef.current?.focus(); }}
+          onOpenAutoFocus={event => {
+            event.preventDefault();
+            // Leave the introduction visible until the person chooses to type on a phone.
+            if (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 640) titleRef.current?.focus();
+            else inputRef.current?.focus();
+          }}
           onCloseAutoFocus={event => { event.preventDefault(); launcherRef.current?.focus(); }}
           aria-describedby="tortuguita-description"
         >
-          <div className="chat-header flex shrink-0 items-center gap-3 bg-gradient-to-r from-blue-900 to-blue-700 px-4 py-3 text-white">
+          <button type="button" {...resizeHandle} aria-label="Redimensionar janela do chat"
+            aria-describedby="chat-resize-help" title="Arraste para ajustar o tamanho ou use as setas do teclado"
+            className="chat-resize-handle absolute left-0 top-0 z-10 flex h-7 w-7 items-center justify-center rounded-tl-3xl text-blue-100 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-white">
+            <MoveDiagonal2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <span id="chat-resize-help" className="sr-only">Arraste o canto superior esquerdo. Setas para esquerda ou cima aumentam; direita ou baixo diminuem. Shift aumenta o passo.</span>
+          <div className="chat-header flex shrink-0 items-center gap-1 bg-gradient-to-r from-blue-900 to-blue-700 px-4 py-3 text-white">
             <span aria-hidden="true" className="chat-avatar shrink-0 rounded-2xl bg-white/15 p-1"><TurtleMascot size={38} /></span>
             <div className="min-w-0 flex-1">
-              <Dialog.Title className="text-base font-extrabold text-white">Tortuguita</Dialog.Title>
+              <Dialog.Title ref={titleRef} tabIndex={-1} className="truncate text-base font-extrabold text-white">Tortuguita</Dialog.Title>
               <Dialog.Description id="tortuguita-description" className="mt-0.5 text-xs text-blue-100">Sua assistente sobre o Qualifica Vix</Dialog.Description>
             </div>
+            <button type="button" aria-label="Opções do chat" title="Opções do chat" aria-expanded={optionsOpen} aria-controls="chat-options" onClick={() => setOptionsOpen(value => !value)} className="chat-toolbar-button rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
+              <Settings2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button type="button" aria-label={expanded ? "Restaurar tamanho do chat" : "Ampliar chat"} title={expanded ? "Restaurar tamanho do chat" : "Ampliar chat"} onClick={toggleExpanded} className="chat-toolbar-button rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
+              {expanded ? <Minimize2 className="h-4 w-4" aria-hidden="true" /> : <Maximize2 className="h-4 w-4" aria-hidden="true" />}
+            </button>
             <button type="button" aria-label="Reiniciar conversa" title="Reiniciar conversa" onClick={resetConversation}
-              className="rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
+              className="chat-toolbar-button rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
             </button>
             <Dialog.Close asChild>
-              <button type="button" aria-label="Fechar assistente virtual" className="rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
+              <button type="button" aria-label="Fechar assistente virtual" className="chat-toolbar-button rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white">
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </Dialog.Close>
           </div>
 
-          <div className="chat-context min-h-0 shrink-0 overflow-y-auto overscroll-contain">
+          <div id="chat-options" hidden={!optionsOpen} className="chat-context min-h-0 shrink-0 overflow-y-auto overscroll-contain">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 text-xs">
+              <span className="font-semibold text-slate-700">Preferências do chat</span>
+              <button type="button" onClick={resetSize} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 font-semibold text-slate-700">Restaurar tamanho padrão</button>
+            </div>
+            <p className="px-4 py-2 text-xs text-slate-600">{profile ? "Sua memória fica neste navegador, separada por perfil." : "Sem perfil, a conversa fica apenas nesta página."}</p>
             <details className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
               <summary className="min-h-11 cursor-pointer py-3 font-semibold">Melhorar a Tortuguita</summary>
               <p className="mt-2">Com sua permissão, suas avaliações ajudam a escolher entre explicações revisadas em texto ou por etapas. Enviamos apenas tema, formato e avaliação, sem perguntas, respostas ou dados do perfil. Você pode desativar e apagar suas avaliações.</p>
               <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2"><input type="checkbox" checked={learningEnabled} onChange={event => changeLearningConsent(event.target.checked)} />Permitir aprendizado com minhas avaliações</label>
               <button type="button" disabled={forgetBusy || sending} onClick={forgetFeedback} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold">{forgetBusy ? 'Apagando avaliações…' : 'Apagar minhas avaliações'}</button>
             </details>
-            {learningNotice && <p role="status" className="px-4 py-2 text-xs text-slate-600">{learningNotice}</p>}
             {profile && <details className="chat-memory border-b border-slate-200 bg-blue-50 px-4 py-2 text-xs text-slate-700">
               <summary className="cursor-pointer font-semibold">Sua memória com a Tortuguita</summary>
               <div className="mt-2 space-y-2">
@@ -357,11 +368,12 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                 <button type="button" onClick={forgetMemory} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-2 font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700"><Trash2 className="h-3 w-3" aria-hidden="true" />Apagar minha memória</button>
               </div>
             </details>}
-            {memoryNotice && <div role="status" className="shrink-0 px-4 py-2 text-xs text-slate-700">{memoryNotice}</div>}
-            {profile && !persistent && <div role="status" className="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-900">O navegador não permitiu salvar sua memória. Ela fica disponível somente enquanto esta página estiver aberta.</div>}
           </div>
 
           <div ref={logRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-slate-50 px-4 py-4">
+            {learningNotice && <p role="status" className="text-xs text-slate-600">{learningNotice}</p>}
+            {memoryNotice && <p role="status" className="text-xs text-slate-700">{memoryNotice}</p>}
+            {profile && !persistent && <p role="status" className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900">O navegador não permitiu salvar sua memória. Ela fica disponível somente enquanto esta página estiver aberta.</p>}
             <div role="log" aria-label="Conversa com a Tortuguita" aria-live="polite" aria-relevant="additions text" className="space-y-3">
               {messages.map(message => (
                 <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -379,8 +391,9 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                       </div>
                     )}
                     {message.role === "assistant" && message.id !== 0 && message === messages[messages.length - 1] && (
-                      <div className="mt-3 border-t border-slate-100 pt-2">
-                        {!feedbackMessage && <p className="mb-2 text-xs text-slate-500">Esta orientação ajudou a localizar a informação correta?</p>}
+                      <div className="chat-feedback mt-3 flex flex-wrap items-start gap-x-2 border-t border-slate-100 pt-2">
+                        <details key={message.id} className="chat-rating text-xs">
+                          <summary className="min-h-11 cursor-pointer py-3 font-semibold text-slate-600">Avaliar resposta</summary>
                         {learningEnabled && learningTicket?.messageId === message.id && learningTicket.token === null && <p className="mb-2 text-xs text-slate-500">Já recebemos sua avaliação deste tema hoje. Você ainda pode pedir outra explicação.</p>}
                         {feedbackMessage ? <p role="status" className="text-xs text-blue-700">{feedbackMessage}</p> : <div className="flex flex-wrap gap-2" aria-label="Avaliar esta resposta">
                           <button type="button" disabled={feedbackBusy} onClick={() => evaluateResponse('found')} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Ajudou, obrigado</button>
@@ -390,7 +403,8 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                           {([['not_found', 'Não localizei a informação'], ['confusing', 'Resposta confusa'], ['incorrect', 'Informação incorreta']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={feedbackBusy} onClick={() => evaluateResponse(reason)} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-semibold">{label}</button>)}
                         </div>}
                         {feedbackError && <p role="alert" className="mt-2 text-xs text-red-700">{feedbackError}</p>}
-                        {!helpful && <button type="button" disabled={feedbackBusy} onClick={() => sendMessage("Explique melhor")} className="mt-2 min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Explicar melhor</button>}
+                        </details>
+                        {!helpful && <button type="button" disabled={feedbackBusy} onClick={() => sendMessage("Explique melhor")} className="min-h-11 rounded-lg px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Explicar melhor</button>}
                       </div>
                     )}
                   </div>
@@ -406,11 +420,11 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
               </details>
             )}
             <div className="pt-1">
-              <div className="mb-2 flex items-center gap-1 text-[11px] font-semibold text-slate-500">
-                <Sparkles className="h-3 w-3" aria-hidden="true" />{querySuggestions.length > 0 ? "Sugestões para sua pergunta" : messages.length === 1 ? "Comece por aqui" : "Continue a conversa"}
-              </div>
-              <div className="grid gap-2" aria-label="Perguntas sugeridas">
-                {suggestions.map(suggestion => (
+              <button type="button" onClick={() => setSuggestionsOpen(value => !value)} aria-expanded={suggestionsOpen} aria-controls="chat-suggestions" className="mb-2 flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-blue-50">
+                <Sparkles className="h-3 w-3" aria-hidden="true" />{suggestionsOpen ? "Recolher sugestões" : "Ver sugestões de perguntas"}
+              </button>
+              <div id="chat-suggestions" className="grid gap-2 sm:grid-cols-2" aria-label="Perguntas sugeridas">
+                {(suggestionsOpen ? suggestions : messages.length === 1 ? suggestions.slice(0, 2) : []).map(suggestion => (
                   <button key={suggestion} type="button" onClick={() => sendMessage(suggestion)} disabled={sending}
                     className="max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs leading-snug text-slate-700 hover:border-blue-400 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50">
                     {suggestion}
@@ -423,7 +437,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-3 pt-3">
             {sending && <p role="status" className="mb-1 text-xs text-slate-500">Preparando sua orientação…</p>}
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
-              <textarea ref={inputRef} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={handleInputKeyDown}
+              <textarea ref={inputRef} value={draft} onChange={event => { setDraft(event.target.value); setSuggestionsOpen(event.target.value.trim().length >= 2); }} onKeyDown={handleInputKeyDown}
                 aria-label="Sua dúvida ou busca" aria-describedby="tortuguita-input-help" maxLength={MAX_INPUT_LENGTH} rows={1}
                 placeholder="Escreva sua dúvida…" className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-600 focus:outline-2 focus:outline-blue-600" />
               <button type="submit" disabled={!draft.trim() || sending} aria-label="Enviar mensagem"
@@ -434,7 +448,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
             <div id="tortuguita-input-help" className="chat-input-help mt-2 flex justify-between gap-2 text-[10px] text-slate-500">
               <span>Enter envia · Shift + Enter quebra a linha</span><span aria-live="off">{draft.length}/{MAX_INPUT_LENGTH}</span>
             </div>
-            <p className="chat-privacy mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-500"><ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />Não envie CPF, senhas ou documentos. {profile ? "Sua memória fica neste navegador, separada por perfil. Você pode apagá-la acima." : "Sem perfil, a conversa fica apenas nesta página."}</p>
+            <p className="chat-privacy mt-2 flex items-center gap-1.5 text-[11px] text-slate-500"><ShieldCheck className="h-3 w-3 shrink-0" aria-hidden="true" />Não envie CPF, senhas ou documentos.</p>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

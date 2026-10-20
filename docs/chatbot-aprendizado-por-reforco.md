@@ -6,10 +6,10 @@ O aprendizado automático usa uma política de escolha por recompensas (**contex
 
 ## Uso na plataforma
 
-1. Abra a Tortuguita e expanda **Melhorar a Tortuguita**.
+1. Abra a Tortuguita, entre em **Opções do chat** e expanda **Melhorar a Tortuguita**.
 2. Marque **Permitir aprendizado com minhas avaliações**. A permissão é opcional e vale para as próximas respostas.
 3. Faça uma pergunta. Em temas elegíveis, o servidor seleciona o formato usando as avaliações recebidas.
-4. Responda se a orientação ajudou a localizar a informação correta. **Ajudou, obrigado** registra recompensa positiva. Em **Não ajudou**, escolha **Não localizei a informação**, **Resposta confusa** ou **Informação incorreta**.
+4. Abra **Avaliar resposta** e responda se a orientação ajudou a localizar a informação correta. **Ajudou, obrigado** registra recompensa positiva. Em **Não ajudou**, escolha **Não localizei a informação**, **Resposta confusa** ou **Informação incorreta**.
 5. Use **Explicar melhor** para continuar a conversa. Para encerrar novas contribuições, desmarque a permissão. **Apagar minhas avaliações** retira os votos enviados por este navegador.
 
 Sem permissão, a conversa e os botões de ajuda continuam funcionando, com avaliação apenas local. Sem banco ou conexão, o chatbot entrega a resposta revisada; uma avaliação que falhe não aparece como registrada. A exclusão que falhe informa o erro e permite nova tentativa.

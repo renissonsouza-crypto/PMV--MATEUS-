@@ -79,7 +79,11 @@ O limite é de três inscrições realizadas no mês, incluindo inscrições can
 
 ## Assistente Tortuguita
 
-A Tortuguita usa uma base local de 50 temas e 400 exemplos de perguntas, junto com o catálogo compartilhado pelas telas. Ela orienta cadastro, perfil, favoritos, consentimentos, inscrições, cancelamentos, suporte e escolha de cursos. A conversa permite continuar um assunto, comparar cursos e refinar preferências sem repetir toda a pergunta.
+O chat abre em uma janela de até 480 × 680 pixels, ajustada ao espaço da tela. Use **Ampliar chat** para aumentar a área e o mesmo controle para restaurar o tamanho anterior. Em telas maiores, arraste o canto superior esquerdo ou foque esse controle e use as setas (Shift ajusta em passos maiores). O tamanho escolhido fica salvo neste navegador; **Opções do chat → Restaurar tamanho padrão** desfaz a preferência. Em celulares, a janela acompanha a rotação e o espaço do teclado; abrir o chat não aciona o teclado antes de tocar no campo.
+
+Memória e aprendizado ficam em **Opções do chat**. **Avaliar resposta** abre os botões de avaliação; **Ver sugestões de perguntas** revela outras sugestões, que também aparecem durante a digitação. As sugestões são recolhidas depois de enviar uma pergunta para dar espaço à resposta. Veja [a validação do tamanho e organização do chat](docs/chat-janela-responsiva.md).
+
+A Tortuguita usa uma base local de 51 temas e 440 exemplos de perguntas, junto com o catálogo compartilhado pelas telas. Ela orienta cadastro, perfil, favoritos, consentimentos, inscrições, cancelamentos, suporte e escolha de cursos. A conversa permite continuar um assunto, comparar cursos e refinar preferências sem repetir toda a pergunta.
 
 Esse funcionamento combina regras de interpretação de texto, exemplos e contexto da conversa; não envolve treinamento de pesos de um modelo de linguagem nem chamadas a uma API de IA. As respostas não inventam datas, docentes, critérios de certificação ou garantias de emprego ausentes do catálogo. Quando faltam informações, indicam como confirmá-las.
 
@@ -87,7 +91,7 @@ Pedidos claros, como “quero me cadastrar”, “quero informações sobre o cu
 
 Com perfil cadastrado, a Tortuguita salva as conversas recentes, o assunto atual, as preferências e os cursos consultados em uma memória separada por identificador do perfil neste navegador. Fechar a aba ou reabrir a plataforma no mesmo endereço mantém esse histórico. Experimente “continuar de onde paramos”, “quais cursos mais procurei?” e “recomende um curso para mim”. O ranking é pessoal, baseado nas perguntas e visitas às fichas; não representa a procura de todos os alunos. As recomendações consideram as preferências e interesses salvos e deixam de fora cursos inscritos, conclusões informadas e ofertas em breve.
 
-Para registrar uma conclusão, diga “já concluí Excel”, por exemplo; “ainda não concluí Excel” corrige o registro. Inscrição não significa conclusão, e essa memória não comprova certificação. O painel “Sua memória com a Tortuguita” mostra os interesses e conclusões e permite apagar a memória desse perfil sem remover suas inscrições. “Reiniciar conversa” limpa as mensagens e o assunto atual, preservando interesses, preferências e conclusões. São mantidas até 81 mensagens recentes; os interesses e conclusões continuam salvos além dessa janela.
+Para registrar uma conclusão, diga “já concluí Excel”, por exemplo; “ainda não concluí Excel” corrige o registro. Inscrição não significa conclusão, e essa memória não comprova certificação. Em “Opções do chat”, o painel “Sua memória com a Tortuguita” mostra os interesses e conclusões e permite apagar a memória desse perfil sem remover suas inscrições. “Reiniciar conversa” limpa as mensagens e o assunto atual, preservando interesses, preferências e conclusões. São mantidas até 81 mensagens recentes; os interesses e conclusões continuam salvos além dessa janela.
 
 Sem perfil, o chat dura apenas enquanto a página estiver aberta. Se o navegador bloquear a gravação, o chat continua funcionando e avisa que a memória está disponível somente nesta página. A memória do chat não é sincronizada entre dispositivos: limpar os dados do site ou encerrar uma sessão privada pode removê-la, mesmo quando uma inscrição continua registrada no servidor. Sair oculta a memória ao remover o perfil local, mas não apaga seu histórico salvo; use “Apagar minha memória” antes de sair se desejar removê-lo. O assistente não precisa receber documentos, senhas ou informações bancárias.
 
@@ -104,13 +108,14 @@ npm run test:e2e
 npm run test:mobile
 npm run test:chatbot
 npm run test:chatbot-learning
+npm run test:chat-window
 ```
 
 No PowerShell, substitua `npm` por `npm.cmd`. `npm test` inclui testes de regras, armazenamento, cliente HTTP, validações, segurança, inicialização em portas alternativas, SQLite e rotas serverless.
 
 `npm run test:chatbot` verifica conversa guiada, continuidade, correção de preferências, explicação simplificada, feedback e próximos passos em desktop e telefone, medindo o tempo de processamento e de exibição da resposta. Consulte [o relatório da Tortuguita](docs/validacao-chatbot-2026-10-20.md). Os critérios de qualidade são tarefas verificáveis; satisfação real depende da avaliação dos usuários.
 
-O [aprendizado por recompensas da Tortuguita](docs/chatbot-aprendizado-por-reforco.md) usa avaliações opcionais para escolher entre formatos revisados de orientação. Ative em **Melhorar a Tortuguita → Permitir aprendizado com minhas avaliações**; vale para as próximas respostas. O texto das conversas e os dados do perfil não são enviados nesse recurso. `npm run test:chatbot-learning` testa consentimento, votos, falhas, exclusão e recuperação em telefone e desktop; `npm test` também verifica a política e o SQL SQLite/PostgreSQL. `npm run chatbot:report` gera um relatório agregado de leitura. O servidor usa o banco já configurado; `CHAT_LEARNING_ENABLED=false` pausa a seleção adaptativa. A rota cria suas tabelas quando necessário; `npm run db:migrate` também as prepara antes de uma implantação PostgreSQL.
+O [aprendizado por recompensas da Tortuguita](docs/chatbot-aprendizado-por-reforco.md) usa avaliações opcionais para escolher entre formatos revisados de orientação. Ative em **Opções do chat → Melhorar a Tortuguita → Permitir aprendizado com minhas avaliações**; vale para as próximas respostas. O texto das conversas e os dados do perfil não são enviados nesse recurso. `npm run test:chatbot-learning` testa consentimento, votos, falhas, exclusão e recuperação em telefone e desktop; `npm test` também verifica a política e o SQL SQLite/PostgreSQL. `npm run chatbot:report` gera um relatório agregado de leitura. O servidor usa o banco já configurado; `CHAT_LEARNING_ENABLED=false` pausa a seleção adaptativa. A rota cria suas tabelas quando necessário; `npm run db:migrate` também as prepara antes de uma implantação PostgreSQL.
 
 Os testes usam bancos SQLite temporários e um serviço ViaCEP local controlado; preservam o banco de desenvolvimento. O teste serverless exercita controllers, models e SQL com transporte Neon isolado, sem credenciais de produção.
 

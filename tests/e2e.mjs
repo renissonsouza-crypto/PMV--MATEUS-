@@ -646,6 +646,7 @@ test("assistente: reiniciar mantém interesses e apagar memória remove somente 
   assert.equal(await page.getByRole("log").locator("[data-chat-message-text]").count(), 1);
   assert.match(await askAssistant(page, "Quais cursos já concluí?"), /Excel/);
   assert.match(await askAssistant(page, "Quais cursos mais procurei?"), /Excel/);
+  await page.getByRole("button", { name: "Opções do chat", exact: true }).click();
   await page.getByText("Sua memória com a Tortuguita", { exact: true }).click();
   page.once("dialog", dialog => dialog.dismiss());
   await page.getByRole("button", { name: "Apagar minha memória", exact: true }).click();
@@ -678,6 +679,7 @@ test("assistente: memória corrompida recupera e gravação bloqueada avisa sem 
   await page.getByRole("status").filter({ hasText: /não permitiu salvar sua memória/ }).waitFor();
   assert.match(await askAssistant(page, "Quais cursos já concluí?"), /Excel/);
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Opções do chat", exact: true }).click();
   await page.getByText("Sua memória com a Tortuguita", { exact: true }).click();
   assert(await page.getByRole("textbox", { name: "Sua dúvida ou busca" }).isVisible());
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
