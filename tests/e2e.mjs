@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright-core";
 import { findBrowserExecutable, startTestEnvironment } from "./e2e-support.mjs";
+import { POLICY_VERSION } from '../shared/policies.mjs';
 
 const tests = [];
 const optionalResources = new Set();
@@ -89,7 +90,7 @@ async function openAssistant(page) {
 }
 async function askAssistant(page, message) {
   const log = page.getByRole("log", { name: "Conversa com a Tortuguita", exact: true });
-  const previousCount = await log.locator("p").count();
+  const previousCount = await log.locator("[data-chat-message-text]").count();
   const input = page.getByRole("textbox", { name: "Sua dúvida ou busca", exact: true });
   await input.fill(message);
   await input.press("Enter");
@@ -100,7 +101,7 @@ async function askAssistant(page, message) {
     return !log || log.querySelectorAll("p").length >= previous + 2;
   }, previousCount);
   if (!await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible()) await openAssistant(page);
-  const response = log.locator("p").nth(previousCount + 1);
+  const response = log.locator("[data-chat-message-text]").nth(previousCount + 1);
   await response.waitFor();
   return response.innerText();
 }
@@ -318,7 +319,7 @@ test("cadastro completo: formulário, API real, SQLite e perfil persistido", asy
   assert.equal(persisted.email, "registration-browser@example.test");
   const payload = JSON.parse(persisted.payload);
   assert.equal(payload.dataNascimento, '1990-08-25');
-  assert.equal(payload.policyReceipt.version, '2026-10-17.3');
+  assert.equal(payload.policyReceipt.version, POLICY_VERSION);
   assert(payload.policyReceipt.policies.privacy.paragraphs.length > 0);
   assert.equal(payload.numero, '');
   assert.equal(payload.autorizaDados, true);
@@ -546,7 +547,7 @@ test("assistente: pedidos abrem cadastro e ficha de Excel sem cliques adicionais
   assert(await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible(), "Follow-up on the current course stays open");
   await input.fill("Quero informações sobre Excel");
   await input.press("Enter");
-  await page.getByRole("log").locator("p").last().filter({ hasText: /Excel do Básico ao Avançado/ }).waitFor();
+  await page.getByRole("log").locator("[data-chat-message-text]").last().filter({ hasText: /Excel do Básico ao Avançado/ }).waitFor();
   assert(await page.getByRole("dialog", { name: "Tortuguita", exact: true }).isVisible(), "Requesting the already open course keeps the chat open");
 });
 
@@ -642,7 +643,7 @@ test("assistente: reiniciar mantém interesses e apagar memória remove somente 
   await askAssistant(page, "Já concluí Excel");
   await askAssistant(page, "Me conte sobre Excel");
   await page.getByRole("button", { name: "Reiniciar conversa", exact: true }).click();
-  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.equal(await page.getByRole("log").locator("[data-chat-message-text]").count(), 1);
   assert.match(await askAssistant(page, "Quais cursos já concluí?"), /Excel/);
   assert.match(await askAssistant(page, "Quais cursos mais procurei?"), /Excel/);
   await page.getByText("Sua memória com a Tortuguita", { exact: true }).click();
@@ -656,7 +657,7 @@ test("assistente: reiniciar mantém interesses e apagar memória remove somente 
   assert.deepEqual((await storedProfile(page)).enrolledCourseIds, [1]);
   await page.reload({ waitUntil: "domcontentloaded" });
   await openAssistant(page);
-  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.equal(await page.getByRole("log").locator("[data-chat-message-text]").count(), 1);
   assert.match(await askAssistant(page, "Quais cursos já concluí?"), /ainda não informou/);
 });
 
@@ -665,7 +666,7 @@ test("assistente: memória corrompida recupera e gravação bloqueada avisa sem 
   await page.evaluate(key => localStorage.setItem(key, '{invalid'), `${MEMORY_KEY}${profile.id}`);
   await seedProfile(page, profile);
   await openAssistant(page);
-  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.equal(await page.getByRole("log").locator("[data-chat-message-text]").count(), 1);
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
@@ -688,7 +689,7 @@ test("assistente: visitantes não guardam conversas entre recarregamentos", asyn
   assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("qualificavix-tortuguita-memory:")).length), 0);
   await page.reload({ waitUntil: "domcontentloaded" });
   await openAssistant(page);
-  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.equal(await page.getByRole("log").locator("[data-chat-message-text]").count(), 1);
   assert.match(await askAssistant(page, "Quais cursos mais procurei?"), /crie um perfil/);
 });
 
@@ -780,7 +781,7 @@ test("assistente: reinicia contexto, limita texto e trata HTML como texto", asyn
   await openAssistant(page);
   await page.getByRole("button", { name: "Reiniciar conversa", exact: true }).click();
   const log = page.getByRole("log", { name: "Conversa com a Tortuguita" });
-  assert.equal(await log.locator("p").count(), 1);
+  assert.equal(await log.locator("[data-chat-message-text]").count(), 1);
   const reply = await askAssistant(page, "Quanto tempo dura?");
   assert.match(reply, /qual|nome|escolh/i);
   assert.doesNotMatch(reply, /Excel do Básico ao Avançado/);
@@ -800,7 +801,7 @@ test("assistente no celular: teclado, sugestões, foco e largura", async page =>
   await input.fill("Quero cursos");
   await input.press("Shift+Enter");
   assert.match(await input.inputValue(), /\n/);
-  assert.equal(await page.getByRole("log").locator("p").count(), 1);
+  assert.equal(await page.getByRole("log").locator("[data-chat-message-text]").count(), 1);
   await input.fill("exc");
   await page.getByLabel("Perguntas sugeridas", { exact: true }).getByRole("button", { name: /Excel/i }).first().click();
   await page.getByRole("dialog", { name: "Tortuguita", exact: true }).waitFor({ state: "hidden" });

@@ -1,4 +1,4 @@
-export const POLICY_VERSION = "2026-10-17.3";
+export const POLICY_VERSION = "2026-10-20.1";
 
 export const PLATFORM_POLICIES = {
   "terms": {
@@ -22,6 +22,7 @@ export const PLATFORM_POLICIES = {
       "Quando disponível, Continuar com Google usa a identidade e o e-mail verificado da sua conta Google para iniciar um novo cadastro ou recuperar o perfil existente e as inscrições registradas no servidor. No primeiro cadastro, nome e e-mail são pré-preenchidos e você completa os demais dados e consentimentos; a confirmação Google de cadastro é temporária e válida por 30 minutos. A plataforma não recebe sua senha Google. Guardamos o identificador da conta Google e uma sessão de acesso; fotos, favoritos e conversas locais não são transferidos.",
       "O perfil, a foto, os favoritos e as inscrições em cursos também ficam salvos no navegador utilizado. Em um navegador que bloqueie esse armazenamento, a plataforma informa quando os dados estarão disponíveis somente enquanto a página estiver aberta.",
       "Com um perfil cadastrado, as conversas recentes com a Tortuguita, os interesses, as preferências e as conclusões de cursos informadas por você são guardados neste navegador, separados por perfil, para retomar o atendimento. Essa memória não é enviada a um serviço de IA nem sincronizada entre dispositivos. Você pode consultá-la e apagá-la em Sua memória com a Tortuguita, sem alterar suas inscrições.",
+      "O aprendizado com avaliações da Tortuguita é opcional e pode ser ativado em Melhorar a Tortuguita. Nesse caso, o servidor recebe somente o tema da orientação, o formato revisado exibido e sua avaliação de utilidade, associados a um identificador aleatório deste navegador em cookie HttpOnly. Não enviamos o texto das perguntas ou respostas, CPF, e-mail ou dados do perfil nesse recurso. Os registros participam do aprendizado por até 30 dias. Você pode desativar novas contribuições e usar Apagar minhas avaliações para retirar seus votos do aprendizado; contadores técnicos de limite de requisições expiram em até 30 dias. Avaliações não alteram fatos do catálogo nem regras de inscrição.",
       "O CEP informado é consultado no ViaCEP para verificar se o endereço pertence a Vitória-ES. As imagens externas do catálogo são carregadas do Unsplash.",
       "Depoimentos enviados são armazenados pelo serviço e podem ser exibidos publicamente com nome, curso, avaliação e texto.",
       "O botão Sair limpa o perfil e os favoritos deste navegador e solicita a revogação da sessão atual no servidor. Sem conexão, a revogação remota pode não ser concluída. Essa ação não exclui automaticamente o cadastro ou os depoimentos enviados ao serviço.",

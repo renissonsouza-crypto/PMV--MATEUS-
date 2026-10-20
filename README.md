@@ -103,11 +103,14 @@ npm run build
 npm run test:e2e
 npm run test:mobile
 npm run test:chatbot
+npm run test:chatbot-learning
 ```
 
 No PowerShell, substitua `npm` por `npm.cmd`. `npm test` inclui testes de regras, armazenamento, cliente HTTP, validações, segurança, inicialização em portas alternativas, SQLite e rotas serverless.
 
 `npm run test:chatbot` verifica conversa guiada, continuidade, correção de preferências, explicação simplificada, feedback e próximos passos em desktop e telefone, medindo o tempo de processamento e de exibição da resposta. Consulte [o relatório da Tortuguita](docs/validacao-chatbot-2026-10-20.md). Os critérios de qualidade são tarefas verificáveis; satisfação real depende da avaliação dos usuários.
+
+O [aprendizado por recompensas da Tortuguita](docs/chatbot-aprendizado-por-reforco.md) usa avaliações opcionais para escolher entre formatos revisados de orientação. Ative em **Melhorar a Tortuguita → Permitir aprendizado com minhas avaliações**; vale para as próximas respostas. O texto das conversas e os dados do perfil não são enviados nesse recurso. `npm run test:chatbot-learning` testa consentimento, votos, falhas, exclusão e recuperação em telefone e desktop; `npm test` também verifica a política e o SQL SQLite/PostgreSQL. `npm run chatbot:report` gera um relatório agregado de leitura. O servidor usa o banco já configurado; `CHAT_LEARNING_ENABLED=false` pausa a seleção adaptativa. A rota cria suas tabelas quando necessário; `npm run db:migrate` também as prepara antes de uma implantação PostgreSQL.
 
 Os testes usam bancos SQLite temporários e um serviço ViaCEP local controlado; preservam o banco de desenvolvimento. O teste serverless exercita controllers, models e SQL com transporte Neon isolado, sem credenciais de produção.
 

@@ -4,7 +4,7 @@ A Tortuguita orienta o uso do Qualifica Vix com regras verificáveis do projeto 
 
 ## Base editorial
 
-`src/app/data/tortuguitaKnowledge.ts` contém 50 temas, 400 perguntas de referência, palavras e expressões de reconhecimento, respostas, sugestões de continuidade e destinos de navegação. Também exporta 12 perguntas rápidas e 8 descrições de capacidades. As perguntas servem para reconhecimento de formulações diferentes; a cobertura não se limita às frases exatas.
+`src/app/data/tortuguitaKnowledge.ts` contém 51 temas, 440 perguntas de referência, palavras e expressões de reconhecimento, respostas, sugestões de continuidade e destinos de navegação. Também exporta 12 perguntas rápidas e 8 descrições de capacidades. As perguntas servem para reconhecimento de formulações diferentes; a cobertura não se limita às frases exatas.
 
 A base cobre exploração e escolha de cursos, filtros, modalidades, status, gratuidade, conteúdo, calendário, local, instituição, docentes, certificação, requisitos e limites dos resultados profissionais. Inclui cadastro em quatro passos, documentos, telefone com DDD, e-mail, endereço de Vitória-ES, consulta de CEP, responsável por menor de idade, acessibilidade, renda, consentimentos e notificações. Explica perfil, foto, armazenamento por navegador, recuperação com Google quando habilitada, saída, privacidade, solicitações ao responsável, favoritos, inscrições no servidor, limite mensal, duplicidade e cancelamento. Há orientação para depoimentos, histórias ilustrativas, contatos, preferências visuais e erros comuns de execução e envio.
 
@@ -16,7 +16,7 @@ Perguntas sobre usar a plataforma são classificadas antes de consumir respostas
 
 As preferências continuam após uma pergunta intermediária: “Quero cursos online” → “Os cursos são gratuitos?” → “De noite” mantém a modalidade online. Correções como “Na verdade prefiro de manhã” substituem o turno. “Qualquer modalidade” remove somente o filtro de modalidade, preservando a área. “Mostrar todos os cursos” limpa os filtros.
 
-“Não entendi”, “Explique melhor” e “Não era isso” preservam o assunto e oferecem uma explicação menor ou opções para esclarecer a dúvida. Após consultar um curso, “Como faço agora?” orienta os passos de inscrição direta e a conferência no perfil. A última resposta tem os botões “Ajudou, obrigado” e “Explicar melhor”. O feedback é apenas da conversa atual, sem envio de avaliações a um servidor nem treinamento automático de modelo.
+“Não entendi”, “Explique melhor” e “Não era isso” preservam o assunto e oferecem uma explicação menor ou opções para esclarecer a dúvida. Após consultar um curso, “Como faço agora?” orienta os passos de inscrição direta e a conferência no perfil. A última resposta pergunta se a orientação ajudou a localizar a informação correta e oferece “Ajudou, obrigado”, “Não ajudou” e “Explicar melhor”. Sem permissão de aprendizado, o feedback permanece apenas na conversa. Com permissão, avaliações de temas elegíveis alimentam a política por recompensas descrita em [Aprendizado da Tortuguita](chatbot-aprendizado-por-reforco.md).
 
 `npm run test:chatbot` avalia tarefas de várias mensagens, fatos do catálogo, próximos passos, informações ausentes, privacidade, memória e dois fluxos reais no navegador, incluindo feedback e tela baixa. O relatório mede processamento e tempo até a resposta aparecer. A aprovação desses critérios é um indicador automatizado de utilidade; não mede satisfação humana nem estabelece um SLA de produção.
 

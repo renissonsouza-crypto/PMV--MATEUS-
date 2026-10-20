@@ -95,7 +95,7 @@ export async function startTestEnvironment({ google = false } = {}) {
     const apiArguments = google ? ['--import', pathToFileURL(join(root, 'tests/fixtures/google-jwks.mjs')).href, join(root, 'server/server.mjs')] : [join(root, 'server/server.mjs')];
     api = spawn(process.execPath, apiArguments, {
       cwd: root,
-      env: { ...process.env, NODE_ENV: "test", RESEND_API_KEY: "", MAIL_FROM: "", GOOGLE_CLIENT_ID: google ? googleClientId : '', GOOGLE_CLIENT_SECRET: google ? 'isolated-google-server-secret' : '', APP_BASE_URL: google ? `http://127.0.0.1:${frontendPort}` : '', QV_TEST_GOOGLE_JWKS: google ? jwksPath : '', MAIL_TEST_URL: `http://127.0.0.1:${mailPort}/emails`, API_PORT: String(apiPort), DB_PATH: dbPath, VIA_CEP_BASE_URL: `http://127.0.0.1:${cepPort}/ws` },
+      env: { ...process.env, NODE_ENV: "test", CHAT_LEARNING_ENABLED: 'true', RESEND_API_KEY: "", MAIL_FROM: "", GOOGLE_CLIENT_ID: google ? googleClientId : '', GOOGLE_CLIENT_SECRET: google ? 'isolated-google-server-secret' : '', APP_BASE_URL: google ? `http://127.0.0.1:${frontendPort}` : '', QV_TEST_GOOGLE_JWKS: google ? jwksPath : '', MAIL_TEST_URL: `http://127.0.0.1:${mailPort}/emails`, API_PORT: String(apiPort), DB_PATH: dbPath, VIA_CEP_BASE_URL: `http://127.0.0.1:${cepPort}/ws` },
       stdio: ["ignore", "pipe", "pipe"],
     });
     api.stdout.on("data", data => { output += data.toString(); });
@@ -123,6 +123,13 @@ export async function startTestEnvironment({ google = false } = {}) {
     }
     return {
       baseURL, apiURL, cleanup, emails,
+      chatLearningRows() {
+        const database = new DatabaseSync(dbPath, { readOnly: true });
+        try {
+          if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'chat_learning_events'").get()) return [];
+          return database.prepare('SELECT topic, variant, reward, reason FROM chat_learning_events').all();
+        } finally { database.close(); }
+      },
       signGoogleCredential(identity, nonce, overrides = {}) {
         if (!googleKeys) throw new Error('Google fixtures were not enabled.');
         return new SignJWT({ email: identity.email, email_verified: true, name: identity.nome, nonce, ...overrides })

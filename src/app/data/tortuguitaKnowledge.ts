@@ -15,6 +15,13 @@ export type KnowledgeIntent = {
 // Novas perguntas não autorizam inventar turmas, instituições, certificados ou dados pessoais.
 export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   {
+    id: 'chat_learning', title: 'Aprendizado com avaliações do chat',
+    questions: ['Como o chatbot aprende com minhas avaliações?', 'As avaliações do chat usam meu CPF?', 'Minhas perguntas são enviadas para treinar o chatbot?', 'Como ativo o aprendizado da Tortuguita?', 'Posso apagar minhas avaliações do chat?', 'O botão Não ajudou muda as informações do curso?', 'Como informar uma resposta incorreta do assistente?', 'O aprendizado é obrigatório para usar o chat?'],
+    keywords: ['aprendizado do chat', 'avaliacoes do chatbot', 'avaliar tortuguita', 'feedback do assistente', 'apagar minhas avaliacoes'],
+    answer: 'O aprendizado é opcional. No chat, abra Melhorar a Tortuguita e marque Permitir aprendizado com minhas avaliações. Ajudou, obrigado indica que a orientação foi útil; Não ajudou permite informar que faltou localizar a informação, que a explicação foi confusa ou que há informação incorreta. O servidor usa somente tema, formato e avaliação, sem texto das perguntas, respostas, CPF, e-mail ou perfil, para escolher entre explicações revisadas em texto ou por etapas. Os votos participam por até 30 dias, com um voto por tema por dia neste navegador. Eles não alteram fatos do catálogo nem treinam uma IA externa. Você pode desativar o recurso e usar Apagar minhas avaliações; informações incorretas são sinalizadas para revisão.',
+    followUps: ['Como meus dados são armazenados?', 'Quero ajuda para escolher um curso', 'Como entro em contato?'],
+  },
+  {
     id: "platform", title: "O que é a plataforma",
     questions: ["O que é o Qualifica Vix?", "Para que serve essa plataforma?", "Como funciona o site?", "Qual é a proposta do QualificaVix?", "O que posso fazer aqui?", "Sou novo no site, por onde começo?", "Que plataforma é essa?", "Me explique o Qualifica Vix"],
     keywords: ["qualifica vix", "qualificavix", "proposta da plataforma", "para que serve", "como funciona o site", "sou novo no site"],
@@ -23,7 +30,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "catalog_search", title: "Pesquisar no catálogo",
-    questions: ["Como encontro um curso?", "Como pesquisar uma formação?", "Onde faço a busca de cursos?", "Posso buscar pelo que quero aprender?", "Como procurar cursos pelo nome?", "Quero pesquisar por uma palavra-chave", "A busca aceita nomes sem acento?", "Onde vejo o catálogo completo?"],
+    questions: ["Como encontro um curso?", "Como pesquisar uma formação?", "Onde faço a busca de cursos?", "Posso buscar pelo que quero aprender?", "Como procurar cursos pelo nome?", "Quero pesquisar por uma palavra-chave", "A busca aceita nomes sem acento?", "Onde vejo o catálogo completo?", "Preciso achar as formações disponíveis", "Qual é o caminho até a lista de cursos?", "Onde está o campo para pesquisar?", "Me ensine a localizar uma formação"],
     keywords: ["pesquisar curso", "buscar curso", "encontrar curso", "procurar curso", "busca de cursos", "pesquisar formacao", "palavra chave", "catalogo completo"],
     answer: "Abra Cursos e use Buscar cursos, áreas ou palavras-chave. A pesquisa considera o título, a categoria, a descrição e os conteúdos cadastrados, sem exigir maiúsculas ou acentos. Você também pode combinar a busca com Categoria e Modalidade. Se me disser o que deseja aprender, posso procurar opções no catálogo atual.",
     followUps: ["Quais categorias existem?", "Como usar os filtros?", "Nenhum curso apareceu na busca"], actionPages: ["cursos"],
@@ -37,14 +44,14 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "catalog_filters", title: "Filtrar e limpar resultados",
-    questions: ["Como usar os filtros?", "Como limpar os filtros?", "Quero ver todas as categorias", "Como combinar categoria e modalidade?", "Como filtrar só presencial?", "Onde está Limpar filtros?", "Como tirar uma seleção da busca?", "Como voltar a ver todos os cursos?"],
+    questions: ["Como usar os filtros?", "Como limpar os filtros?", "Quero ver todas as categorias", "Como combinar categoria e modalidade?", "Como filtrar só presencial?", "Onde está Limpar filtros?", "Como tirar uma seleção da busca?", "Como voltar a ver todos os cursos?", "Quero entender os seletores de cursos", "O que muda quando seleciono uma modalidade?", "A categoria limita minha pesquisa?", "Como retiro os critérios que escolhi?"],
     keywords: ["limpar filtros", "usar filtros", "combinar filtros", "todas as categorias", "categoria e modalidade", "filtrar por modalidade", "remover filtro", "ver todos os cursos"],
     answer: "Em Cursos, selecione Categoria e Modalidade e, se quiser, digite uma palavra na busca. Os critérios são combinados: o resultado precisa atender a todos. Limpar filtros apaga a pesquisa e volta ambos os seletores para Todas. A opção Limpar busca apaga somente o texto; os outros filtros continuam ativos.",
     followUps: ["Nenhum curso apareceu na busca", "Quais cursos são online ou presenciais?"], actionPages: ["cursos"],
   },
   {
     id: "catalog_empty", title: "Busca sem resultados",
-    questions: ["Nenhum curso apareceu na busca", "Por que não encontro resultados?", "Minha pesquisa não encontrou nada", "A lista de cursos está vazia", "O filtro mostra zero cursos", "Procurei uma formação e ela não existe", "Não encontrei minha área", "Como resolver Nenhum curso encontrado?"],
+    questions: ["Nenhum curso apareceu na busca", "Por que não encontro resultados?", "Minha pesquisa não encontrou nada", "A lista de cursos está vazia", "O filtro mostra zero cursos", "Procurei uma formação e ela não existe", "Não encontrei minha área", "Como resolver Nenhum curso encontrado?", "Zerei os resultados sem querer", "Minha área não apareceu na lista", "O catálogo ficou sem opções depois da seleção", "Como desfazer uma pesquisa que não deu certo?"],
     keywords: ["nenhum curso encontrado", "nenhum resultado", "zero cursos", "lista vazia", "nao encontro resultados", "nao encontrei minha area", "pesquisa sem resultado"],
     answer: "Primeiro use Limpar filtros em Cursos. Tente uma palavra mais curta ou uma área próxima; busca, categoria e modalidade podem estar restringindo os resultados ao mesmo tempo. Se ainda não aparecer uma opção, ela não consta no catálogo atual. Não consigo criar uma turma nem garantir uma previsão; consulte Contato para confirmar futuras ofertas.",
     followUps: ["Como limpar os filtros?", "Quero ajuda para escolher um curso", "Como entro em contato?"], actionPages: ["cursos", "contato"],
@@ -156,7 +163,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "registration_steps", title: "Quatro etapas do formulário",
-    questions: ["Quais são as etapas do cadastro?", "Por que o formulário tem quatro passos?", "Como avançar no cadastro?", "Como voltar à etapa anterior?", "Não consigo clicar em Próximo", "O cadastro está parado em uma etapa", "Preciso preencher Acessibilidade para continuar?", "Como concluir o formulário?"],
+    questions: ["Quais são as etapas do cadastro?", "Por que o formulário tem quatro passos?", "Como avançar no cadastro?", "Como voltar à etapa anterior?", "Não consigo clicar em Próximo", "O cadastro está parado em uma etapa", "Preciso preencher Acessibilidade para continuar?", "Como concluir o formulário?", "Quero um roteiro para criar meu perfil", "O que acontece em cada tela do cadastro?", "Em qual etapa informo meu endereço?", "Como chego à conclusão do cadastro?"],
     keywords: ["etapas do cadastro", "quatro passos", "proximo", "etapa anterior", "avancar no cadastro", "formulario parado", "concluir formulario"],
     answer: "O formulário tem Dados Pessoais, Endereço, Acessibilidade e Privacidade. Próximo valida os campos obrigatórios da etapa e, no endereço, aguarda a consulta de CEP; corrija os avisos próximos aos campos. Anterior permite revisar. Acessibilidade e renda são opcionais. No último passo, leia os textos, marque os consentimentos obrigatórios e clique em Concluir cadastro; aguarde a confirmação de sucesso.",
     followUps: ["Quais dados são obrigatórios?", "Meu CEP não foi aceito", "Quais consentimentos são obrigatórios?"], actionPages: ["register"],
@@ -247,7 +254,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "profile_local", title: "Perfil e entrada com Google",
-    questions: ["Meu perfil fica salvo em outro dispositivo?", "Como fazer login com senha?", "Esqueci minha senha", "Como recuperar a conta pelo e-mail?", "Posso entrar no celular com meu cadastro do computador?", "O site sincroniza meus dados?", "Onde está o botão de login?", "Existe conta compartilhada entre navegadores?"],
+    questions: ["Meu perfil fica salvo em outro dispositivo?", "Como fazer login com senha?", "Esqueci minha senha", "Como recuperar a conta pelo e-mail?", "Posso entrar no celular com meu cadastro do computador?", "O site sincroniza meus dados?", "Onde está o botão de login?", "Existe conta compartilhada entre navegadores?", "Já tenho cadastro, como volto a entrar?", "Como entro usando a conta Google que cadastrei?", "Troquei de aparelho e quero acessar minha conta", "Preciso criar outra conta ao trocar de navegador?"],
     keywords: ["outro dispositivo", "login", "senha", "recuperar conta", "sincroniza", "entre navegadores", "cadastro do computador", "entrar no celular"],
     answer: "O perfil, a foto e os favoritos ficam no navegador usado. As inscrições são confirmadas diretamente na plataforma e registradas no servidor, sem validação por e-mail. Quando disponível, use Entrar / Cadastrar → Continuar com Google para iniciar seu cadastro ou recuperar o perfil e as inscrições do servidor. No primeiro acesso, complete os dados obrigatórios e os consentimentos após escolher a conta Google. Fotos, favoritos e memória do chat não são transferidos. Não há login por senha nem recuperação pelo chatbot. Sessões antigas ou expiradas precisam de nova entrada.",
     followUps: ["Meu perfil desapareceu", "Como meus dados são armazenados?", "Como entro em contato?"], actionPages: ["profile", "contato"],
@@ -268,9 +275,9 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "privacy", title: "Dados, privacidade e limites do assistente",
-    questions: ["Como meus dados são armazenados?", "O chatbot acessa meus documentos?", "Onde ficam meus dados pessoais?", "Posso enviar CPF aqui no chat?", "A plataforma envia meus dados a serviços externos?", "O assistente consulta outros usuários?", "Posso enviar senha ou dados bancários?", "O chatbot aprende com minhas informações pessoais?"],
+    questions: ["Como meus dados são armazenados?", "O chatbot acessa meus documentos?", "Onde ficam meus dados pessoais?", "Posso enviar CPF aqui no chat?", "A plataforma envia meus dados a serviços externos?", "O assistente consulta outros usuários?", "Posso enviar senha ou dados bancários?", "O chatbot aprende com minhas informações pessoais?", "Minhas perguntas vão treinar uma IA externa?", "As conversas são enviadas para outra empresa?", "Quais dados o assistente pode consultar?", "Posso passar meu documento na conversa?"],
     keywords: ["dados pessoais", "privacidade", "dados armazenados", "cpf no chat", "documentos no chat", "dados bancarios", "outros usuarios", "informacoes pessoais", "onde ficam meus dados"],
-    answer: "O cadastro e os depoimentos são enviados ao serviço da instalação; perfil, foto, favoritos e inscrições ficam no navegador. Com perfil cadastrado, conversas, interesses, preferências e conclusões informadas à Tortuguita ficam neste navegador, separados por perfil, e podem ser removidos em Sua memória com a Tortuguita → Apagar minha memória. Sem perfil ou com armazenamento bloqueado, a conversa dura somente nesta página. O CEP é consultado no ViaCEP e imagens externas usam Unsplash. O assistente orienta pelas regras e pelo contexto local disponibilizado, sem pesquisar cadastros privados de terceiros ou treinar um modelo com seus dados. Não envie CPF, endereço completo, laudos, senhas, códigos, cartão ou dados bancários na conversa. Leia a Política de Privacidade no rodapé.",
+    answer: "O cadastro e os depoimentos são enviados ao serviço da instalação; perfil, foto, favoritos e inscrições ficam no navegador. Com perfil cadastrado, conversas, interesses, preferências e conclusões informadas à Tortuguita ficam neste navegador, separados por perfil, e podem ser removidos em Sua memória com a Tortuguita → Apagar minha memória. Sem perfil ou com armazenamento bloqueado, a conversa dura somente nesta página. O CEP é consultado no ViaCEP e imagens externas usam Unsplash. O assistente orienta pelas regras e pelo contexto local disponibilizado, sem pesquisar cadastros privados de terceiros ou enviar sua conversa a um modelo externo. O aprendizado opcional usa somente tema, formato e avaliação por até 30 dias; você pode apagar os votos em Melhorar a Tortuguita. Não envie CPF, endereço completo, laudos, senhas, códigos, cartão ou dados bancários na conversa. Leia a Política de Privacidade no rodapé.",
     followUps: ["Como solicitar exclusão dos meus dados?", "O que acontece quando clico em Sair?", "Quais consentimentos são obrigatórios?"],
   },
   {
@@ -289,7 +296,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "enrollments", title: "Consultar inscrições locais",
-    questions: ["Onde vejo meus cursos inscritos?", "Como consultar minhas inscrições?", "Como acompanhar os cursos cadastrados?", "Como confirmar que me inscrevi?", "Minha matrícula foi enviada à instituição?", "A lista do perfil é comprovante oficial?", "Tenho inscrição nesse curso?", "Como abrir um curso do meu perfil?"],
+    questions: ["Onde vejo meus cursos inscritos?", "Como consultar minhas inscrições?", "Como acompanhar os cursos cadastrados?", "Como confirmar que me inscrevi?", "Minha matrícula foi enviada à instituição?", "A lista do perfil é comprovante oficial?", "Tenho inscrição nesse curso?", "Como abrir um curso do meu perfil?", "Quero conferir se minha escolha foi registrada", "Em que parte do perfil vejo as inscrições?", "Onde acompanho as formações que escolhi?", "A confirmação precisa aparecer no meu perfil?"],
     keywords: ["meus cursos", "cursos cadastrados", "minhas inscricoes", "cursos inscritos", "comprovante oficial", "confirmar inscricao", "matricula enviada", "inscricoes ativas"],
     answer: "Abra Meu perfil → Cursos cadastrados para ver as inscrições confirmadas e seus prazos de cancelamento. Pedidos antigos ainda não concluídos aparecem no perfil; confirme-os diretamente na plataforma. Não é preciso abrir e-mail. A confirmação registra sua inscrição no servidor, mas não comprova seleção oficial, frequência ou conclusão pela instituição. Ver curso abre a ficha.",
     followUps: ["Quantos cursos posso fazer por mês?", "Como cancelar minha inscrição?", "Meu perfil fica salvo em outro dispositivo?"], actionPages: ["profile"],
@@ -303,7 +310,7 @@ export const PLATFORM_KNOWLEDGE: KnowledgeIntent[] = [
   },
   {
     id: "cancellation", title: "Cancelamento em até 72 horas",
-    questions: ["Como cancelar minha inscrição?", "Posso desistir do curso?", "Qual é o prazo para desinscrever?", "O cancelamento está bloqueado", "Posso cancelar depois de três dias?", "São três dias úteis para desistir?", "Como sair de um curso sem sair da plataforma?", "Onde aparece Desinscrever-se?"],
+    questions: ["Como cancelar minha inscrição?", "Posso desistir do curso?", "Qual é o prazo para desinscrever?", "O cancelamento está bloqueado", "Posso cancelar depois de três dias?", "São três dias úteis para desistir?", "Como sair de um curso sem sair da plataforma?", "Onde aparece Desinscrever-se?", "Escolhi um curso e preciso desistir", "Quero entender o prazo para sair de um curso", "Desistir remove o curso das minhas escolhas?", "Posso cancelar depois que o prazo terminou?"],
     keywords: ["cancelar inscricao", "cancelamento", "desistir", "desinscrever", "desinscricao", "72 horas", "tres dias uteis", "sair de um curso"],
     answer: "Abra Meu perfil → Cursos cadastrados, escolha Ver curso e use Desinscrever-se dentro de três dias corridos (72 horas) da confirmação. Confirme a pergunta da interface. Depois do prazo, o botão fica bloqueado. O cancelamento é registrado no servidor e exige uma sessão válida na plataforma. Cancelar não libera a contagem mensal nem comprova cancelamento de uma matrícula externa.",
     followUps: ["Cancelar libera meu limite mensal?", "Onde vejo meus cursos inscritos?", "Como entro em contato?"], actionPages: ["profile", "contato"],

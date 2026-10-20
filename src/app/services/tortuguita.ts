@@ -104,6 +104,11 @@ function rankedKnowledge(text: string): { item: KnowledgeIntent; score: number }
 }
 function semanticIntent(text: string): string | undefined {
   const has = (...phrases: string[]) => hasAny(text, phrases);
+  if (has('chat', 'chatbot', 'tortuguita', 'assistente') && has('aprendizado', 'aprender', 'aprende', 'treinamento', 'avaliacao', 'avaliacoes', 'avaliar', 'feedback')) return 'chat_learning';
+  if (has('ja tenho cadastro', 'ja tenho conta', 'ja fiz cadastro', 'voltar a acessar', 'voltar a entrar')) return 'profile_local';
+  if (has('etapa', 'etapas', 'passo a passo', 'roteiro') && has('cadastro', 'criar meu perfil')) return 'registration_steps';
+  if (has('onde', 'qual parte', 'em que lugar') && has('cursos', 'formacoes') && has('inscritos', 'entrei', 'escolhi', 'cadastrados')) return 'enrollments';
+  if (has('desistir', 'cancelar', 'desistencia') && has('limite', 'escolha mensal', 'devolve uma escolha')) return 'enrollment_limit';
   if (has("revogar", "excluir", "apague", "apagar", "deletar", "eliminar") && has("dados", "conta", "cadastro", "banco", "consentimento", "imagem") && !has("sair", "logout", "cancelar", "desinscrever")) return "data_deletion";
   if ((has("treinar", "treinam", "aprende", "modelo", "lgpd", "privacidade") && has("cadastro", "dados", "informacoes", "modelo")) || (has("senha", "cartao", "bancarios") && has("chat", "aqui", "enviar", "passar"))) return "privacy";
   if (has("senha", "login", "outro dispositivo", "outro celular", "outro computador", "outro navegador", "outra conta")) return "profile_local";
@@ -308,7 +313,7 @@ function knowledgeReply(items: KnowledgeIntent[], options: AssistantOptions, con
 // Questions about using the interface are not catalogue queries. Resolve them
 // before a pending guided choice or a remembered course can consume the words.
 function platformUsageReply(text: string, options: AssistantOptions, context: AssistantContext): AssistantReply | undefined {
-  const question = /^(?:(?:oi|ola) )?(?:como|onde|de que forma|de que maneira|para que|pra que|o que|explique|me explique|ensine|me ensine)\b/.test(text);
+  const question = /^(?:(?:oi|ola) )?(?:como|onde|de que forma|de que maneira|para que|pra que|o que|explique|me explique|ensine|me ensine|me ajude)\b/.test(text);
   const assistantHelp = /\b(?:voce|voces|tortuguita|assistente)\b/.test(text) && /\b(?:ajudar|auxiliar|ajuda)\b/.test(text);
   const search = /\b(?:buscar|busco|encontrar|encontro|procurar|procuro|pesquisar|pesquiso|busca|pesquisa)\b/.test(text);
   const searchControl = /\b(?:busca|pesquisa|barra de busca|campo de busca|lupa)\b/.test(text);
@@ -335,15 +340,18 @@ function guidedConversation(text: string, options: AssistantOptions, context: As
   }
   if (hasAny(text, ["cancelar ajuda", "sair da escolha", "parar orientacao"]) || (/\b(?:nao quero|pare|parar|cancele|cancelar|encerrar|sair)\b/.test(text) && /\b(?:escolha|orientacao|ajuda guiada)\b/.test(text))) return reply("Tudo bem, encerramos a escolha guiada. Pode perguntar sobre um curso, cadastro ou outra função da plataforma.", "guidance-cancelled", { ...context, dialogue: undefined });
   if (hasAny(text, ["nao entendi", "explique melhor", "explicar melhor", "mais simples", "nao ajudou", "nao era isso", "preciso de mais ajuda"])) {
-    const selected = options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
-    if (selected) return reply(`Vamos por partes. ${courseLine(selected)}\n\nVocê pode consultar o conteúdo, conferir as condições ou abrir a ficha. A inscrição só é concluída na plataforma após sua confirmação. Qual dessas partes você quer entender melhor?`, "conversation-repair", context, courseActions([selected]), [`O que vou aprender em ${selected.title}?`, `Como me inscrevo em ${selected.title}?`, "Quero ajuda para escolher um curso"]);
     const topic = PLATFORM_KNOWLEDGE.find(item => item.id === context.lastIntent);
+    const selected = !topic && options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
+    if (selected) return reply(`Vamos por partes. ${courseLine(selected)}\n\nVocê pode consultar o conteúdo, conferir as condições ou abrir a ficha. A inscrição só é concluída na plataforma após sua confirmação. Qual dessas partes você quer entender melhor?`, "conversation-repair", context, courseActions([selected]), [`O que vou aprender em ${selected.title}?`, `Como me inscrevo em ${selected.title}?`, "Quero ajuda para escolher um curso"]);
     const explanation = topic ? topic.answer.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ") + "\n\n" : "";
     return reply(`${explanation}Vamos por partes: você precisa escolher um curso, preencher o cadastro ou consultar uma inscrição? Escolha uma opção ou diga onde ficou a dúvida.`, "conversation-repair", context, [], ["Quero ajuda para escolher um curso", "Quais são as etapas do cadastro?", "Onde vejo meus cursos inscritos?", "Como entro em contato?"]);
   }
   if (!start && !context.dialogue) return undefined;
+  if (!start && semanticIntent(text)) return undefined;
   const next = start ? { ...context, courseIds: [], candidateCourseIds: [], preferences: { onlyAvailable: true } as AssistantPreferences, dialogue: "area" as const } : context;
   const extracted = extractPreferences(text, next.preferences);
+  // A pending area question must not swallow a separate, recognizable FAQ.
+  if (!start && !extracted.explicit && (rankedKnowledge(text)[0]?.score ?? 0) >= 7.5) return undefined;
   if (!start && next.dialogue === "area" && hasAny(text, ["ainda nao sei", "sem ideia", "estou em duvida"])) return reply("Podemos começar pelo que você gosta de fazer: Tecnologia para explorar computadores e programação; Administração para planilhas e organização; Gastronomia para cozinha. São exemplos de temas do catálogo, sem promessa de emprego. Qual dessas áreas você gostaria de explorar?", "guided-choice", next, [], ["Tecnologia", "Administração", "Gastronomia", "Cancelar ajuda"]);
   if (start || (next.dialogue === "area" && !extracted.preferences.category)) return reply("Vamos encontrar uma opção que combine com você 🐢 Qual área desperta seu interesse? Há Tecnologia, Administração, Design, Marketing, Educação, Gastronomia, Técnico e Saúde; a oferta depende do catálogo. Se ainda não sabe, posso dar exemplos.", "guided-choice", { ...next, preferences: extracted.preferences, dialogue: "area" }, [], ["Tecnologia", "Administração", "Gastronomia", "Ainda não sei"]);
   if (next.dialogue === "area" && !extracted.preferences.modality) return reply(`Certo, vamos olhar ${extracted.preferences.category}. Você prefere estudar online, presencialmente ou aceita as duas modalidades? Vou considerar as inscrições disponíveis.`, "guided-choice", { ...next, preferences: extracted.preferences, dialogue: "modality" }, [], ["Online", "Presencial", "Qualquer modalidade", "Cancelar ajuda"]);
@@ -373,7 +381,7 @@ function answerSingleTortuguita(message: string, options: AssistantOptions): Ass
   const relevantCourses = mentions.length ? mentions : conversationalCourses.length ? conversationalCourses : activeCourse;
   const knowledge = rankedKnowledge(text);
   const top = knowledge[0];
-  if (top && ["favorites", "logout", "privacy", "data_deletion", "notifications", "registration_documents", "minors", "accessibility_registration", "profile_local"].includes(top.item.id) && top.score >= 10) return knowledgeReply([top.item], options, context);
+  if (top && ["favorites", "logout", "privacy", "data_deletion", "notifications", "registration_documents", "minors", "accessibility_registration", "profile_local", "chat_learning"].includes(top.item.id) && top.score >= 10) return knowledgeReply([top.item], options, context);
   const personal = personalReply(text, options, context, relevantCourses);
   if (personal) return personal;
   const preferences = extractPreferences(text, context.preferences);
@@ -487,7 +495,7 @@ function memoryReply(message: string, options: AssistantOptions): AssistantReply
 export function answerTortuguita(message: string, options: AssistantOptions): AssistantReply {
   const result = answerConversation(message, options);
   const text = normalizeTortuguitaText(message);
-  if (String(message).length <= 1000 && result.intent !== "privacy" && !result.intent.includes("+")) {
+  if (String(message).length <= 1000 && !["privacy", "profile_local", "chat_learning"].includes(result.intent) && !result.intent.includes("+")) {
     const remembered = memoryReply(message, options);
     if (remembered) return remembered;
   }

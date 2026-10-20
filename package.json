@@ -32,7 +32,9 @@
     "presentation:pdf": "node scripts/export-presentation.mjs",
     "test:presentation:guided": "node tests/presentation-guided.mjs",
     "test:enrollments": "node tests/enrollment-integrity.e2e.mjs",
-    "test:chatbot": "node tests/chatbot-quality.mjs"
+    "test:chatbot": "node tests/chatbot-quality.mjs",
+    "test:chatbot-learning": "node tests/chat-learning.e2e.mjs",
+    "chatbot:report": "node scripts/report-chat-learning.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

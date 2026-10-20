@@ -1,0 +1,220 @@
+{
+  "sourceBase": "9bebde4",
+  "recordedAt": "2026-10-20T23:08:05.272Z",
+  "unitAndIntegration": {
+    "passed": 378,
+    "total": 378,
+    "includes": [
+      "20 original policy/repository/controller checks plus 2 topic isolation checks",
+      "1 read-only operational report check",
+      "22 curriculum/continuation checks",
+      "333 prior checks"
+    ]
+  },
+  "learningBrowser": {
+    "date": "2026-10-20T23:06:38.509Z",
+    "checks": [
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "status": "passed",
+        "screenshot": "1.png"
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "status": "passed",
+        "screenshot": "2.png"
+      },
+      {
+        "name": "API indisponível e prazo de rede não bloqueiam a resposta revisada",
+        "status": "passed",
+        "screenshot": "3.png"
+      },
+      {
+        "name": "Reiniciar durante uma seleção pendente não restaura a resposta antiga",
+        "status": "passed",
+        "screenshot": "4.png"
+      },
+      {
+        "name": "Retirar a permissão sincroniza outra aba antes da próxima pergunta",
+        "status": "passed",
+        "screenshot": "5.png"
+      }
+    ],
+    "passed": 5,
+    "total": 5,
+    "timings": [
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "durationMs": 167.42603099999997
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "durationMs": 194.94819500000085
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "durationMs": 110.04979699999967
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "durationMs": 142.57032699999945
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "durationMs": 114.82248900000013
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 390px",
+        "durationMs": 91.09357199999977
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "durationMs": 202.78198200000043
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "durationMs": 114.6074639999988
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "durationMs": 105.98054799999954
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "durationMs": 110.10648500000025
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "durationMs": 113.81770200000028
+      },
+      {
+        "name": "Consentimento, votos reais, repetição, retirada e exclusão em 1440px",
+        "durationMs": 75.45898399999896
+      },
+      {
+        "name": "API indisponível e prazo de rede não bloqueiam a resposta revisada",
+        "durationMs": 108.52647199999956
+      },
+      {
+        "name": "API indisponível e prazo de rede não bloqueiam a resposta revisada",
+        "durationMs": 3063.9763590000002
+      }
+    ],
+    "limitations": [
+      "Chromium with viewport/touch emulation, not physical Android or Safari.",
+      "SQLite test database; PostgreSQL SQL has separate PGlite tests.",
+      "No real-user satisfaction or production latency claim."
+    ]
+  },
+  "chatbotQuality": {
+    "passed": 18,
+    "total": 18,
+    "serviceLatencyMs": {
+      "samples": 32,
+      "median": 21.957848000000013,
+      "p95": 56.14301999999998,
+      "max": 71.27519399999983
+    },
+    "browserResponseTimes": [
+      {
+        "width": 390,
+        "prompt": "Quero ajuda para escolher um curso",
+        "durationMs": 89.11950500000057
+      },
+      {
+        "width": 390,
+        "prompt": "Tecnologia",
+        "durationMs": 66.02758300000096
+      },
+      {
+        "width": 390,
+        "prompt": "Como você pode me ajudar a encontrar cursos na plataforma?",
+        "durationMs": 64.68286499999886
+      },
+      {
+        "width": 390,
+        "prompt": "Como funcionam os filtros?",
+        "durationMs": 67.87387800000033
+      },
+      {
+        "width": 390,
+        "prompt": "Como entro na minha conta?",
+        "durationMs": 66.975547
+      },
+      {
+        "width": 390,
+        "prompt": "O que você pode fazer por mim?",
+        "durationMs": 52.32769199999893
+      },
+      {
+        "width": 390,
+        "prompt": "Online",
+        "durationMs": 62.66623299999992
+      },
+      {
+        "width": 1440,
+        "prompt": "Quero ajuda para escolher um curso",
+        "durationMs": 77.7112100000013
+      },
+      {
+        "width": 1440,
+        "prompt": "Tecnologia",
+        "durationMs": 50.135331999999835
+      },
+      {
+        "width": 1440,
+        "prompt": "Como você pode me ajudar a encontrar cursos na plataforma?",
+        "durationMs": 52.51676699999916
+      },
+      {
+        "width": 1440,
+        "prompt": "Como funcionam os filtros?",
+        "durationMs": 62.25360700000056
+      },
+      {
+        "width": 1440,
+        "prompt": "Como entro na minha conta?",
+        "durationMs": 51.89503199999854
+      },
+      {
+        "width": 1440,
+        "prompt": "O que você pode fazer por mim?",
+        "durationMs": 48.25381600000037
+      },
+      {
+        "width": 1440,
+        "prompt": "Online",
+        "durationMs": 51.76542700000027
+      }
+    ]
+  },
+  "mobile": {
+    "passed": 18,
+    "total": 18,
+    "viewports": 32,
+    "engines": [
+      {
+        "engine": "chromium",
+        "version": "154.0.8037.57"
+      }
+    ]
+  },
+  "generalBrowser": {
+    "passed": 52,
+    "total": 52
+  },
+  "build": "passed",
+  "simulation": {
+    "selections": 100,
+    "baselinePreferredFormat": 50,
+    "trainedPreferredFormat": 95,
+    "positiveSteps": 20,
+    "negativeDirect": 20,
+    "interpretation": "Synthetic deterministic rewards; not real user satisfaction."
+  },
+  "limitations": [
+    "No production database, physical device or live Google account tested.",
+    "PGlite executes PostgreSQL SQL locally; deployment connectivity and multiworker infrastructure need live validation.",
+    "Feedback is voluntary, pseudonymous by browser, and does not certify factual correctness."
+  ]
+}

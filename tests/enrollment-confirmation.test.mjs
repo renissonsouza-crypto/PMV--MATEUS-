@@ -189,6 +189,7 @@ test('cross-user sessions, expired sessions, tampered tokens and status credenti
 test('email includes the archived accepted policies with one button, safe HTML and truthful legacy notice', async () => {
   const { policyReceipt } = await import('../shared/policies.mjs');
   const receipt = policyReceipt(new Date('2026-10-15T12:00:00.000Z'));
+  receipt.version = '2026-10-17.3'; // Archived consent must survive a later policy revision.
   receipt.policies.privacy.paragraphs[0] = 'Texto aceito anteriormente <script>invalid</script>';
   const content = { name: 'Pessoa', course: COURSES[0], token: 'a'.repeat(64), origin: 'https://example.test' };
   const email = buildCourseEmail({ ...content, consent: { receipt, dataAuthorized: true, termsAccepted: true } });

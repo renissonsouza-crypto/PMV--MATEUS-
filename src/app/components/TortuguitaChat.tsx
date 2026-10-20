@@ -17,6 +17,7 @@ import {
   type AssistantMemory, type ChatMessage,
 } from "../services/tortuguitaMemory";
 import { TurtleMascot } from "./TurtleMascot";
+import { adaptChatReply, forgetChatFeedback, learningConsentKey, readLearningConsent, sendChatFeedback, storeLearningConsent, type FeedbackReason, type LearningTicket } from '../services/chatLearning';
 
 type TortuguitaChatProps = {
   courses: Course[];
@@ -58,6 +59,18 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [helpful, setHelpful] = useState(false);
+  const [learningEnabled, setLearningEnabled] = useState(() => readLearningConsent(profile?.id ?? null));
+  const learningEnabledRef = useRef(learningEnabled);
+  const [learningNotice, setLearningNotice] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackError, setFeedbackError] = useState('');
+  const [negativeFeedback, setNegativeFeedback] = useState(false);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [learningTicket, setLearningTicket] = useState<(LearningTicket & { messageId: number }) | null>(null);
+  const [forgetBusy, setForgetBusy] = useState(false);
+  const feedbackLock = useRef(false);
+  const lastAnswerId = useRef(0);
+  const operation = useRef(0);
   const sendingRef = useRef(false);
   const nextIdRef = useRef(Math.max(0, ...restored.memory.messages.map(item => item.id)) + 1);
   const lastSubmissionRef = useRef({ text: "", time: 0 });
@@ -81,6 +94,20 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   useEffect(() => {
     if (open && logRef.current) logRef.current.scrollTop = messages.length === 1 ? 0 : logRef.current.scrollHeight;
   }, [open, messages]);
+  useEffect(() => () => { operation.current++; }, []);
+  useEffect(() => {
+    const syncConsent = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== learningConsentKey(profile?.id ?? null)) return;
+      const enabled = readLearningConsent(profile?.id ?? null);
+      learningEnabledRef.current = enabled; setLearningEnabled(enabled); setLearningTicket(null);
+      setLearningNotice(enabled ? 'Aprendizado ativado em outra aba para as próximas respostas.' : 'Aprendizado desativado em outra aba.');
+    };
+    window.addEventListener('storage', syncConsent);
+    return () => window.removeEventListener('storage', syncConsent);
+  }, [profile?.id]);
+  useEffect(() => {
+    if (sendingRef.current) { operation.current++; sendingRef.current = false; setSending(false); }
+  }, [page, activeCourseId]);
 
   useEffect(() => {
     // A course opened manually becomes the subject and contributes to interests.
@@ -107,6 +134,8 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   }, [open]);
 
   const resetConversation = () => {
+    operation.current++; sendingRef.current = false; setSending(false);
+    lastAnswerId.current = 0; setLearningTicket(null); setFeedbackMessage(''); setFeedbackError(''); setNegativeFeedback(false);
     setHelpful(false);
     commitMemory({ ...memoryRef.current, context: { preferences: memoryRef.current.context.preferences }, messages: [] });
     setMessages([WELCOME]);
@@ -119,6 +148,8 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const forgetMemory = () => {
     if (!profile || !window.confirm("Apagar as conversas, interesses e conclusões informadas à Tortuguita para este perfil neste navegador? Suas inscrições serão mantidas.")) return;
     const removed = clearAssistantMemory(profile.id);
+    operation.current++; sendingRef.current = false; setSending(false);
+    lastAnswerId.current = 0; setLearningTicket(null); setFeedbackMessage(''); setFeedbackError(''); setNegativeFeedback(false);
     const empty = emptyAssistantMemory(profile.id);
     memoryRef.current = empty;
     setMemory(empty);
@@ -132,19 +163,22 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
     inputRef.current?.focus();
   };
 
-  const sendMessage = (value: string) => {
+  const sendMessage = async (value: string) => {
     const text = value.trim().slice(0, MAX_INPUT_LENGTH);
     if (!text || sendingRef.current) return;
-    setHelpful(false);
     const now = Date.now();
     if (lastSubmissionRef.current.text === text && now - lastSubmissionRef.current.time < 750) return;
+    const requestId = ++operation.current;
+    setHelpful(false); setDraft('');
     lastSubmissionRef.current = { text, time: now };
+    setFeedbackMessage(''); setFeedbackError(''); setNegativeFeedback(false); setLearningTicket(null);
+    lastAnswerId.current = 0;
     sendingRef.current = true;
     setSending(true);
     const userMessage: ChatMessage = { id: nextIdRef.current++, role: "user", text };
 
     try {
-      const reply = answerTortuguita(text, {
+      let reply = answerTortuguita(text, {
         courses,
         contacts,
         context: memoryRef.current.context,
@@ -158,7 +192,18 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           enrollmentHistory: profile.enrollmentHistory,
         } : null,
       });
+      let ticket: LearningTicket | null = null;
+      if (learningEnabledRef.current) {
+        const adapted = await adaptChatReply(reply);
+        if (requestId !== operation.current) return;
+        if (learningEnabledRef.current) {
+          reply = adapted.reply; ticket = adapted.ticket;
+          setLearningNotice(adapted.unavailable ? 'O aprendizado está indisponível agora. A resposta revisada continua disponível.' : '');
+        }
+      }
       const response: ChatMessage = { id: nextIdRef.current++, role: "assistant", text: reply.text, actions: reply.actions };
+      lastAnswerId.current = response.id;
+      if (ticket && learningEnabledRef.current) setLearningTicket({ ...ticket, messageId: response.id });
       const nextMessages = [...messages, userMessage, response].slice(-MAX_CHAT_MESSAGES);
       commitMemory({ ...rememberReply(memoryRef.current, reply), messages: nextMessages });
       setMessages(nextMessages);
@@ -171,6 +216,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
         if (!alreadyThere) followAction(reply.navigation);
       }
     } catch {
+      if (requestId !== operation.current) return;
       const nextMessages: ChatMessage[] = [...messages, userMessage, {
         id: nextIdRef.current++,
         role: "assistant" as const,
@@ -181,11 +227,45 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       setMessages(nextMessages);
       setFollowUps(["Como entro em contato?", "Quero ajuda para escolher um curso"]);
     } finally {
-      setDraft("");
-      sendingRef.current = false;
-      setSending(false);
-      inputRef.current?.focus();
+      if (requestId === operation.current) {
+        sendingRef.current = false;
+        setSending(false);
+        inputRef.current?.focus();
+      }
     }
+  };
+
+  const evaluateResponse = async (reason: FeedbackReason) => {
+    if (feedbackLock.current) return;
+    const messageId = lastAnswerId.current;
+    feedbackLock.current = true; setFeedbackBusy(true); setFeedbackError('');
+    try {
+      let saved = false;
+      if (learningEnabledRef.current && learningTicket?.token && learningTicket.messageId === messageId) {
+        await sendChatFeedback(learningTicket, reason); saved = true;
+      }
+      if (lastAnswerId.current !== messageId) return;
+      setHelpful(reason === 'found'); setNegativeFeedback(false);
+      setFeedbackMessage(reason === 'found'
+        ? `Que bom que ajudou! Pode continuar a conversa.${saved ? ' Sua avaliação foi registrada para melhorar as orientações.' : ''}`
+        : `${saved ? 'Avaliação registrada.' : 'Obrigado por avisar.'} ${reason === 'incorrect' ? (saved ? 'O tema foi sinalizado para revisão. Avaliações não alteram informações da plataforma.' : 'Podemos buscar a informação na tela ou no atendimento.') : 'Podemos tentar uma explicação diferente.'}`);
+    } catch (error) {
+      if (lastAnswerId.current === messageId) setFeedbackError(error instanceof Error ? error.message : 'Não foi possível salvar. Tente novamente.');
+    } finally { feedbackLock.current = false; setFeedbackBusy(false); }
+  };
+
+  const changeLearningConsent = (enabled: boolean) => {
+    learningEnabledRef.current = enabled; setLearningEnabled(enabled);
+    storeLearningConsent(profile?.id ?? null, enabled); setLearningTicket(null); setLearningNotice('');
+    setLearningNotice(enabled ? 'Ativado para as próximas respostas. Faça uma nova pergunta e avalie se encontrou a informação.' : 'Aprendizado desativado. Você pode apagar as avaliações já enviadas abaixo.');
+  };
+  const forgetFeedback = async () => {
+    if (forgetBusy) return;
+    lastAnswerId.current = 0; setFeedbackMessage(''); setFeedbackError('');
+    changeLearningConsent(false); setForgetBusy(true);
+    try { await forgetChatFeedback(); setLearningNotice('Avaliações deste navegador apagadas do aprendizado.'); }
+    catch { setLearningNotice('Não foi possível apagar as avaliações agora. Tente novamente.'); }
+    finally { setForgetBusy(false); }
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -258,6 +338,13 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           </div>
 
           <div className="chat-context min-h-0 shrink-0 overflow-y-auto overscroll-contain">
+            <details className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+              <summary className="min-h-11 cursor-pointer py-3 font-semibold">Melhorar a Tortuguita</summary>
+              <p className="mt-2">Com sua permissão, suas avaliações ajudam a escolher entre explicações revisadas em texto ou por etapas. Enviamos apenas tema, formato e avaliação, sem perguntas, respostas ou dados do perfil. Você pode desativar e apagar suas avaliações.</p>
+              <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2"><input type="checkbox" checked={learningEnabled} onChange={event => changeLearningConsent(event.target.checked)} />Permitir aprendizado com minhas avaliações</label>
+              <button type="button" disabled={forgetBusy || sending} onClick={forgetFeedback} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold">{forgetBusy ? 'Apagando avaliações…' : 'Apagar minhas avaliações'}</button>
+            </details>
+            {learningNotice && <p role="status" className="px-4 py-2 text-xs text-slate-600">{learningNotice}</p>}
             {profile && <details className="chat-memory border-b border-slate-200 bg-blue-50 px-4 py-2 text-xs text-slate-700">
               <summary className="cursor-pointer font-semibold">Sua memória com a Tortuguita</summary>
               <div className="mt-2 space-y-2">
@@ -280,7 +367,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                 <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[94%] min-w-0 rounded-2xl px-4 py-3 ${message.role === "user" ? "rounded-br-md bg-blue-700 text-white" : "rounded-bl-md border border-slate-200 bg-white text-slate-700"}`}>
                     <span className="sr-only">{message.role === "user" ? "Você: " : "Tortuguita: "}</span>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ overflowWrap: "anywhere" }}>{message.text}</p>
+                    <p data-chat-message-text className="whitespace-pre-wrap break-words text-sm leading-relaxed" style={{ overflowWrap: "anywhere" }}>{message.text}</p>
                     {message.actions && message.actions.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {message.actions.map((action, index) => (
@@ -293,10 +380,17 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                     )}
                     {message.role === "assistant" && message.id !== 0 && message === messages[messages.length - 1] && (
                       <div className="mt-3 border-t border-slate-100 pt-2">
-                        {helpful ? <p role="status" className="text-xs text-blue-700">Que bom que ajudou! Pode continuar a conversa.</p> : <div className="flex flex-wrap gap-2" aria-label="Avaliar esta resposta">
-                          <button type="button" onClick={() => setHelpful(true)} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Ajudou, obrigado</button>
-                          <button type="button" onClick={() => sendMessage("Explique melhor")} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Explicar melhor</button>
+                        {!feedbackMessage && <p className="mb-2 text-xs text-slate-500">Esta orientação ajudou a localizar a informação correta?</p>}
+                        {learningEnabled && learningTicket?.messageId === message.id && learningTicket.token === null && <p className="mb-2 text-xs text-slate-500">Já recebemos sua avaliação deste tema hoje. Você ainda pode pedir outra explicação.</p>}
+                        {feedbackMessage ? <p role="status" className="text-xs text-blue-700">{feedbackMessage}</p> : <div className="flex flex-wrap gap-2" aria-label="Avaliar esta resposta">
+                          <button type="button" disabled={feedbackBusy} onClick={() => evaluateResponse('found')} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Ajudou, obrigado</button>
+                          <button type="button" disabled={feedbackBusy} onClick={() => setNegativeFeedback(value => !value)} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Não ajudou</button>
                         </div>}
+                        {negativeFeedback && !feedbackMessage && <div className="mt-2 flex flex-wrap gap-2" aria-label="O que faltou na resposta?">
+                          {([['not_found', 'Não localizei a informação'], ['confusing', 'Resposta confusa'], ['incorrect', 'Informação incorreta']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={feedbackBusy} onClick={() => evaluateResponse(reason)} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-semibold">{label}</button>)}
+                        </div>}
+                        {feedbackError && <p role="alert" className="mt-2 text-xs text-red-700">{feedbackError}</p>}
+                        {!helpful && <button type="button" disabled={feedbackBusy} onClick={() => sendMessage("Explique melhor")} className="mt-2 min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Explicar melhor</button>}
                       </div>
                     )}
                   </div>
@@ -327,6 +421,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
           </div>
 
           <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-3 pt-3">
+            {sending && <p role="status" className="mb-1 text-xs text-slate-500">Preparando sua orientação…</p>}
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <textarea ref={inputRef} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={handleInputKeyDown}
                 aria-label="Sua dúvida ou busca" aria-describedby="tortuguita-input-help" maxLength={MAX_INPUT_LENGTH} rows={1}
