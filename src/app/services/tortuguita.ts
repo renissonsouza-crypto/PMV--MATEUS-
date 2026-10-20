@@ -226,7 +226,7 @@ function searchCourses(text: string, options: AssistantOptions, context: Assista
   );
   if (mentioned.length && !preferences.category) candidates = candidates.filter(course => mentioned.some(item => item.id === course.id));
   const filterWords = new Set(meaningfulWords(Object.values(CATEGORY_ALIASES).flat().concat(Object.values(MODALITY_ALIASES).flat(), Object.values(PERIOD_ALIASES).flat()).join(" ")));
-  const instructionWords = new Set(meaningfulWords("todos todas qualquer nenhum mostrar mostre liste listar opções opcao opcoes formação formacao formações formacoes área area ensina ensinem ensine ensinem aprender estudar busco buscar procura procuro recomende recomendar indicar indique sugira sugestões sugestoes ajuda escolher combina comigo disponível aberto apenas so excluindo exceto quero preciso tem existe existem alguma algum vocês me oferece oferecem primeiros emprego empreendedor atualização profissional inicial do zero iniciante intermediario avancado curto rapido pouco tempo menor maior no máximo maximo maxima até horas h meses mes duração dure dura carga flexível livre turno período preferencia ver com vagas últimas ultimas primeiro segundo terceiro pois aí mais menos exatamente trabalhar nao pessoalmente categoria categorias escola curso cursos chamada saber rotina estou atras encontro encontrar achei inscrições matriculas seja sejam for forem nem sou verdade prefiro prefere gostaria agora então entao"));
+  const instructionWords = new Set(meaningfulWords("todos todas qualquer nenhum mostrar mostre liste listar opções opcao opcoes formação formacao formações formacoes área area ensina ensinem ensine ensinem aprender estudar busco buscar procura procuro recomende recomendar indicar indique sugira sugestões sugestoes ajuda escolher combina comigo disponível aberto apenas so excluindo exceto quero preciso tem existe existem alguma algum vocês me oferece oferecem primeiros emprego empreendedor atualização profissional inicial do zero iniciante intermediario avancado curto rapido pouco tempo menor maior no máximo maximo maxima até horas h meses mes duração dure dura carga flexível livre turno período preferencia ver com vagas últimas ultimas primeiro segundo terceiro pois aí mais menos exatamente trabalhar nao pessoalmente categoria categorias escola curso cursos chamada saber rotina estou atras encontro encontrar achei inscrições matriculas seja sejam for forem nem sou verdade prefiro prefere gostaria agora então entao ajudar auxiliar encontrar procurar pesquisar descobrir consegue poderia"));
   const freeWords = meaningfulWords(text).filter(word => !filterWords.has(word) && !instructionWords.has(word) && !/^\d+$/.test(word));
   if (freeWords.length) candidates = candidates.filter(course => {
     const content = meaningfulWords(`${course.title} ${course.category} ${course.description} ${course.about} ${course.whatYouLearn.join(" ")} ${course.provider} ${course.location} ${course.targetAudience.join(" ")}`);
@@ -305,13 +305,35 @@ function knowledgeReply(items: KnowledgeIntent[], options: AssistantOptions, con
   return reply(blocks.join("\n\n"), items.map(item => item.id).join("+"), context, actions, items.flatMap(item => item.followUps));
 }
 
+// Questions about using the interface are not catalogue queries. Resolve them
+// before a pending guided choice or a remembered course can consume the words.
+function platformUsageReply(text: string, options: AssistantOptions, context: AssistantContext): AssistantReply | undefined {
+  const question = /^(?:(?:oi|ola) )?(?:como|onde|de que forma|de que maneira|para que|pra que|o que|explique|me explique|ensine|me ensine)\b/.test(text);
+  const assistantHelp = /\b(?:voce|voces|tortuguita|assistente)\b/.test(text) && /\b(?:ajudar|auxiliar|ajuda)\b/.test(text);
+  const search = /\b(?:buscar|busco|encontrar|encontro|procurar|procuro|pesquisar|pesquiso|busca|pesquisa)\b/.test(text);
+  const searchControl = /\b(?:busca|pesquisa|barra de busca|campo de busca|lupa)\b/.test(text);
+  const courseSubject = /\b(?:curso|cursos|formacao|formacoes) (?:de|sobre|em|para)\b/.test(text);
+  const explain = (id: string) => knowledgeReply([PLATFORM_KNOWLEDGE.find(item => item.id === id)!], options, context);
+
+  if (question && /\b(?:filtro|filtros|filtrar)\b/.test(text)) return explain("catalog_filters");
+  if (question && search && (searchControl || assistantHelp || (!courseSubject && !extractPreferences(text).explicit && !findCourseMentions(text, options.courses).length))) {
+    const result = explain("catalog_search");
+    return { ...result, suggestions: ["Quero ajuda para escolher um curso", "Como usar os filtros?", "Quais categorias existem?"] };
+  }
+  if (question && /\b(?:entrar|entro|acessar|acesso|recuperar|recupero|login)\b/.test(text) && /\b(?:conta|perfil|google|login)\b/.test(text)) return explain("profile_local");
+  if (/^(?:(?:oi|ola) )?(?:o que voce (?:pode fazer|faz)(?: por mim| aqui| na plataforma| no site)?|como voce (?:pode|consegue) me ajudar|em que voce pode me ajudar|com o que voce pode me ajudar|(?:voce )?(?:pode|consegue|poderia) me ajudar|preciso de ajuda|me ajude|(?:quais|quais sao) (?:as )?suas (?:funcoes|funcionalidades|habilidades))(?: por favor)?$/.test(text)) {
+    return reply("Posso ajudar você a encontrar e comparar cursos do catálogo, explicar como usar a busca e os filtros e orientar sobre cadastro, acesso com Google, perfil, favoritos e inscrições. Você pode me dizer o que deseja aprender ou escolher uma opção abaixo. Não faço inscrições nem altero seus dados pelo chat.", "assistant-capabilities", context, [], ["Quero ajuda para escolher um curso", "Como uso a busca?", "Como faço meu cadastro?", "Como entro na minha conta?"]);
+  }
+  return undefined;
+}
+
 function guidedConversation(text: string, options: AssistantOptions, context: AssistantContext): AssistantReply | undefined {
   const start = hasAny(text, ["quero ajuda para escolher um curso", "me ajude a escolher", "nao sei qual curso", "me ajude a descobrir", "nao sei por onde comecar"]);
   if (hasAny(text, ["como faco agora", "qual o proximo passo", "e agora"])) {
     const selected = options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
     if (selected) return reply(selected.status === "coming-soon" ? `${selected.title} ainda não aceita inscrição. Você pode consultar sua ficha ou procurar outro curso disponível.` : `Para seguir com ${selected.title}:\n1. Abra a ficha e confira conteúdo e requisitos.\n2. Toque em Inscrever-se. Se necessário, complete seu cadastro.\n3. Confirme diretamente na plataforma e aguarde o aviso de sucesso. Depois, confira Meu perfil → Cursos cadastrados. Não precisa de confirmação por e-mail.`, "next-step", context, courseActions([selected]), ["Quais são os requisitos para inscrição?", "Onde vejo meus cursos inscritos?", "Quero ajuda para escolher um curso"]);
   }
-  if (hasAny(text, ["cancelar ajuda", "sair da escolha", "parar orientacao"])) return reply("Tudo bem, encerramos a escolha guiada. Pode perguntar sobre um curso, cadastro ou outra função da plataforma.", "guidance-cancelled", { ...context, dialogue: undefined });
+  if (hasAny(text, ["cancelar ajuda", "sair da escolha", "parar orientacao"]) || (/\b(?:nao quero|pare|parar|cancele|cancelar|encerrar|sair)\b/.test(text) && /\b(?:escolha|orientacao|ajuda guiada)\b/.test(text))) return reply("Tudo bem, encerramos a escolha guiada. Pode perguntar sobre um curso, cadastro ou outra função da plataforma.", "guidance-cancelled", { ...context, dialogue: undefined });
   if (hasAny(text, ["nao entendi", "explique melhor", "explicar melhor", "mais simples", "nao ajudou", "nao era isso", "preciso de mais ajuda"])) {
     const selected = options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
     if (selected) return reply(`Vamos por partes. ${courseLine(selected)}\n\nVocê pode consultar o conteúdo, conferir as condições ou abrir a ficha. A inscrição só é concluída na plataforma após sua confirmação. Qual dessas partes você quer entender melhor?`, "conversation-repair", context, courseActions([selected]), [`O que vou aprender em ${selected.title}?`, `Como me inscrevo em ${selected.title}?`, "Quero ajuda para escolher um curso"]);
@@ -341,6 +363,8 @@ function answerSingleTortuguita(message: string, options: AssistantOptions): Ass
   if (hasAny(text, ["obrigado", "obrigada", "valeu", "agradeco"]) && meaningfulWords(text).length <= 3) return reply("Por nada! 🐢 Quando precisar, posso ajudar com cursos e dúvidas sobre a plataforma.", "thanks", context, [], QUICK_QUESTIONS.slice(0, 3));
   if (hasAny(text, ["ignore instrucoes", "ignore as instrucoes", "prompt do sistema", "system prompt", "chave api", "api key", "seu token", "senha do banco", "dados de outros usuarios", "cpf dos usuarios", "hackear"])) return reply("Posso orientar sobre a plataforma e os dados públicos do catálogo. Não acesso segredos, credenciais nem dados de outros usuários, e não altero inscrições ou apago registros pelo chat. Para tratar dados pessoais, use os canais de atendimento.", "privacy", context, [{ label: "Canais de atendimento", page: "contato" }], ["Como meus dados são armazenados?", "Como solicitar exclusão dos meus dados?"]);
   if (hasAny(text, ["seu nome", "quem e voce", "voce e uma ia", "voce usa ia", "como voce funciona", "voce e um robo", "assistente virtual"])) return reply("Sou a Tortuguita Vix, assistente local do Qualifica Vix. Respondo com informações revisadas da plataforma, dados do catálogo e contexto desta conversa. Não consulto uma IA externa nem acesso dados de outros usuários. Posso orientar, mas inscrições e alterações exigem sua ação nas telas.", "assistant-capabilities", context, [], QUICK_QUESTIONS.slice(0, 5));
+  const usage = platformUsageReply(text, options, context);
+  if (usage) return usage;
   const guided = guidedConversation(text, options, context);
   if (guided) return guided;
   const mentions = findCourseMentions(text, options.courses);
@@ -504,6 +528,9 @@ export function answerTortuguita(message: string, options: AssistantOptions): As
     const matches = destinations.filter(([pattern]) => pattern.test(text));
     if (matches.length === 1) {
       const page = matches[0][1];
+      // “Mostre cursos online” asks for matching options, not an unfiltered page.
+      if (page === "cursos" && result.intent === "course-search" &&
+        (extractPreferences(text).explicit || /\b(?:curso|cursos|formacao|formacoes) (?:de|sobre)\b/.test(text))) return result;
       const action = { label: PAGE_LABELS[page] ?? "Abrir página", page };
       return { ...reply(`Vou abrir ${action.label} para você.`, "navigation", result.context, [action]), navigation: action };
     }

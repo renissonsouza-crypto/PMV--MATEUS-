@@ -106,9 +106,22 @@ try {
       await page.goto(environment.baseURL); await page.getByRole('button', { name: 'Abrir assistente virtual', exact: true }).click();
       const chat = page.getByRole('dialog', { name: 'Tortuguita', exact: true }), log = chat.getByRole('log');
       const input = chat.getByRole('textbox', { name: 'Sua dúvida ou busca', exact: true });
-      for (const [prompt, expected] of [['Quero ajuda para escolher um curso', 'Qual área'], ['Tecnologia', 'Você prefere'], ['Online', 'Encontrei 2 opções']]) {
-        await input.fill(prompt); const start = performance.now(); await input.press('Enter'); await log.getByText(expected, { exact: false }).last().waitFor();
+      for (const [prompt, expected] of [
+        ['Quero ajuda para escolher um curso', 'Qual área'], ['Tecnologia', 'Você prefere'],
+        ['Como você pode me ajudar a encontrar cursos na plataforma?', 'Buscar cursos, áreas ou palavras-chave'],
+        ['Como funcionam os filtros?', 'Limpar filtros'],
+        ['Como entro na minha conta?', 'Continuar com Google'],
+        ['O que você pode fazer por mim?', 'encontrar e comparar cursos'],
+        ['Online', 'Encontrei 2 opções'],
+      ]) {
+        const count = await log.locator(':scope > div').count();
+        await input.fill(prompt); const start = performance.now(); await input.press('Enter');
+        await page.waitForFunction(count => document.querySelector('[role="log"]')?.children.length === count + 2, count);
+        const response = log.locator(':scope > div').last();
+        await response.getByText(expected, { exact: false }).waitFor();
+        assert.doesNotMatch(await response.locator('p').first().innerText(), /Não encontrei cursos/);
         uiTimings.push({ width: viewport.width, prompt, durationMs: performance.now() - start });
+        if (prompt.startsWith('Como você pode')) await page.screenshot({ path: join(artifacts, `platform-help-${viewport.width}.png`) });
       }
       await chat.getByRole('button', { name: 'Ajudou, obrigado', exact: true }).click(); await chat.getByRole('status').filter({ hasText: 'Que bom que ajudou' }).waitFor();
       await input.fill('Qual a duração de Excel?'); await input.press('Enter');
