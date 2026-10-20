@@ -1,0 +1,965 @@
+{
+  "executedAt": "2026-10-20T12:59:30.788316+00:00",
+  "applicationRevision": "8c3250a8efcfebc270e500998d7b4ef80e034acf",
+  "scope": "Isolated test environments only. No production user or database was modified.",
+  "checks": {
+    "unit": {
+      "passed": 269,
+      "failed": 0,
+      "postgresProductionSqlCasesIncluded": 13
+    },
+    "generalBrowser": {
+      "passed": 52,
+      "failed": 0
+    },
+    "googleBrowser": {
+      "passed": 14,
+      "failed": 0
+    },
+    "enrollmentIntegrity": {
+      "passed": 9,
+      "failed": 0,
+      "readOnlySqlQueries": 46,
+      "consistencyAssertions": 271,
+      "emailsSent": 0
+    },
+    "mobileViewports": {
+      "passed": 6,
+      "failed": 0
+    },
+    "validation": "passed",
+    "security": "passed",
+    "sqlitePersistence": "passed",
+    "serverlessContracts": "passed",
+    "build": "passed"
+  },
+  "countedChecksPassed": 350,
+  "countedChecksFailed": 0,
+  "availableCourses": [
+    {
+      "id": 1,
+      "title": "Introdução à Programação",
+      "modality": "Online"
+    },
+    {
+      "id": 2,
+      "title": "Excel do Básico ao Avançado",
+      "modality": "Online"
+    },
+    {
+      "id": 3,
+      "title": "Design Gráfico para Iniciantes",
+      "modality": "Presencial"
+    },
+    {
+      "id": 4,
+      "title": "Marketing Digital na Prática",
+      "modality": "Online"
+    },
+    {
+      "id": 5,
+      "title": "Desenvolvimento Web Completo",
+      "modality": "Online"
+    },
+    {
+      "id": 7,
+      "title": "Informática para o Mercado",
+      "modality": "Presencial"
+    },
+    {
+      "id": 8,
+      "title": "Atendimento ao Cliente",
+      "modality": "Online"
+    },
+    {
+      "id": 9,
+      "title": "Gastronomia Brasileira",
+      "modality": "Presencial"
+    },
+    {
+      "id": 10,
+      "title": "Eletricista Predial",
+      "modality": "Presencial"
+    }
+  ],
+  "googleEvidence": [
+    {
+      "name": "conta existente: primeiro acesso Google recupera o mesmo perfil e histórico sem novo cadastro",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "celular: sair e entrar outra vez mantém perfil e cursos e revoga a sessão anterior",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "outra conta Google: recupera somente o próprio perfil, substituindo dados locais de outra pessoa",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "identidade já vinculada: mudança no e-mail Google não transfere acesso para outro cadastro",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "identidade diferente com e-mail de uma conta já vinculada não consegue acessar esse perfil",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "conta Google nova inicia cadastro sem acessar perfis existentes nem criar perfil incompleto",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "credencial Google com e-mail não verificado não recupera o perfil",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "credencial Google com nonce de outro navegador não recupera o perfil",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "activeProfileCourses": [
+          1
+        ],
+        "otherProfileCourses": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "sugestão Google: callback do provedor recupera perfil sem clique no botão da conta",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "providerPromptCallbacks": 1,
+        "renderedAccountButtonClicks": 0,
+        "confirmedCourses": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "sessão Google: recarregar preserva o perfil e cookie retoma os cursos sem nova credencial",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "normalReloadPreservesProfile": true,
+        "cookieRecoveryWithoutGoogleSDK": true,
+        "activeCourses": [
+          1
+        ],
+        "cancelledCourseInHistoryOnly": 2
+      }
+    },
+    {
+      "name": "outro navegador: mesmo Google recupera o cadastro e somente inscrições ativas do servidor",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "independentBrowser": true,
+        "activeCourses": [
+          1
+        ],
+        "otherUserCoursesUntouched": [
+          3
+        ]
+      }
+    },
+    {
+      "name": "após entrar com Google: inscrição na tela coincide com perfil, sessão e linha do curso no SQLite",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "registeredProfileId": 8210,
+        "courseId": 4,
+        "activeCourses": [
+          1,
+          4
+        ],
+        "databaseConfirmed": true,
+        "sameEnrollmentAfterRecovery": true
+      }
+    },
+    {
+      "name": "falha na inscrição após Google: aviso visível sem curso falso no perfil ou banco; repetição conclui",
+      "status": "passed",
+      "registrationPosts": 0,
+      "evidence": {
+        "simulatedFailureStatus": 503,
+        "noFalseSuccess": true,
+        "retryPersisted": true
+      }
+    },
+    {
+      "name": "conta Google Workspace nova: completar cadastro de um curso cria um perfil único e inscrição vinculada no banco",
+      "status": "passed",
+      "registrationPosts": 1,
+      "evidence": {
+        "createdRegistrationId": 8232,
+        "uniqueProfile": true,
+        "courseId": 7,
+        "databaseConfirmed": true,
+        "googleIdentityBound": true
+      }
+    }
+  ],
+  "enrollmentEvidence": [
+    {
+      "name": "Desktop: cadastro iniciado por curso cria usuário e inscrição nas mesmas referências do perfil e SQLite",
+      "status": "passed",
+      "durationMs": 3490,
+      "databaseChecks": [
+        {
+          "registrationId": 1,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 1,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "01.png"
+    },
+    {
+      "name": "Telefone: cadastro iniciado por curso cria usuário e inscrição nas mesmas referências do perfil e SQLite",
+      "status": "passed",
+      "durationMs": 3379,
+      "databaseChecks": [
+        {
+          "registrationId": 2,
+          "rows": [
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 2,
+          "rows": [
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "02.png"
+    },
+    {
+      "name": "Conta existente: escolha específica, recarregamento e repetições simultâneas não duplicam o registro",
+      "status": "passed",
+      "durationMs": 2530,
+      "databaseChecks": [
+        {
+          "registrationId": 9210,
+          "rows": [
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9210,
+          "rows": [
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9210,
+          "rows": [
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9210,
+          "rows": [
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "03.png"
+    },
+    {
+      "name": "Cancelamento: remove somente a escolha cancelada e mantém o registro auditável no banco",
+      "status": "passed",
+      "durationMs": 3327,
+      "databaseChecks": [
+        {
+          "registrationId": 9220,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9220,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9220,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9220,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9220,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "04.png"
+    },
+    {
+      "name": "Limite mensal: quarto curso é rejeitado pela tela e API, inclusive depois de cancelar um dos três",
+      "status": "passed",
+      "durationMs": 3481,
+      "databaseChecks": [
+        {
+          "registrationId": 9230,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9230,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9230,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9230,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9230,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": true,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "05.png"
+    },
+    {
+      "name": "Oferta em breve: controle desativado e tentativa direta não criam escolha nem inscrição SQL",
+      "status": "passed",
+      "durationMs": 1834,
+      "databaseChecks": [
+        {
+          "registrationId": 9240,
+          "rows": []
+        },
+        {
+          "registrationId": 9240,
+          "rows": []
+        }
+      ],
+      "screenshot": "06.png"
+    },
+    {
+      "name": "Isolamento: sessão de B não altera inscrições de A; o mesmo curso fica associado a cada dono correto",
+      "status": "passed",
+      "durationMs": 4232,
+      "databaseChecks": [
+        {
+          "registrationId": 9250,
+          "rows": [
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9251,
+          "rows": []
+        },
+        {
+          "registrationId": 9250,
+          "rows": [
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9251,
+          "rows": []
+        },
+        {
+          "registrationId": 9251,
+          "rows": [
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9250,
+          "rows": [
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9251,
+          "rows": [
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "07.png"
+    },
+    {
+      "name": "Falha transitória: nenhum sucesso local ou SQL antecipado; nova tentativa confirma uma única inscrição",
+      "status": "passed",
+      "durationMs": 2468,
+      "databaseChecks": [
+        {
+          "registrationId": 9260,
+          "rows": []
+        },
+        {
+          "registrationId": 9260,
+          "rows": [
+            {
+              "courseId": 7,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9260,
+          "rows": [
+            {
+              "courseId": 7,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "08.png"
+    },
+    {
+      "name": "Catálogo completo: cada oferta disponível gera a escolha correta e um vínculo SQL no usuário correto",
+      "status": "passed",
+      "durationMs": 8247,
+      "databaseChecks": [
+        {
+          "registrationId": 9270,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9270,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9270,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9270,
+          "rows": [
+            {
+              "courseId": 1,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 2,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 3,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9273,
+          "rows": [
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9273,
+          "rows": [
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9273,
+          "rows": [
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 7,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9273,
+          "rows": [
+            {
+              "courseId": 4,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 5,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 7,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9276,
+          "rows": [
+            {
+              "courseId": 8,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9276,
+          "rows": [
+            {
+              "courseId": 8,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 9,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9276,
+          "rows": [
+            {
+              "courseId": 8,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 9,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 10,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        },
+        {
+          "registrationId": 9276,
+          "rows": [
+            {
+              "courseId": 8,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 9,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            },
+            {
+              "courseId": 10,
+              "confirmed": true,
+              "cancelled": false,
+              "delivery": "direct"
+            }
+          ]
+        }
+      ],
+      "screenshot": "09.png"
+    }
+  ],
+  "exploratoryObservation": {
+    "checkedAt": "2026-10-20T12:56:53.175Z",
+    "scenario": "Valid application session cookie with a clean localStorage, then regular homepage entry",
+    "serverSessionStatus": 200,
+    "profileCachedOnHome": false,
+    "guestSignInButtonVisible": true,
+    "profileButtonVisible": false,
+    "scope": "Exploratory observation only; no expectation that the current missing home bootstrap is desired."
+  },
+  "limits": [
+    "Google SDK/account chooser and signing keys are simulated; signature checks, API, cookies and SQLite are real.",
+    "No real Google account, OAuth client configuration or production Neon connection was validated.",
+    "PostgreSQL queries and transactions were exercised locally with PGlite, replacing the Neon transport.",
+    "Google does not silently select an account on the homepage. Cookie-only profile recovery currently uses the Google return route.",
+    "Mobile coverage uses Chromium emulation; it does not constitute tests on physical Android/iOS or Safari.",
+    "Optional remote catalogue images failed certificate validation in managed Chromium; an independent HTTPS request with TLS verification succeeded. TLS was not disabled."
+  ]
+}

@@ -158,6 +158,11 @@ export async function startTestEnvironment({ google = false } = {}) {
         try { return database.prepare('SELECT registration_id FROM google_identities WHERE subject = ?').get(subject); }
         finally { database.close(); }
       },
+      enrollmentHistory(id) {
+        const database = new DatabaseSync(dbPath, { readOnly: true });
+        try { return database.prepare("SELECT * FROM course_enrollment_requests WHERE registration_id = ? ORDER BY created_at, id").all(id); }
+        finally { database.close(); }
+      },
       confirmedEnrollments(id) {
         const database = new DatabaseSync(dbPath, { readOnly: true });
         try { return database.prepare("SELECT * FROM course_enrollment_requests WHERE registration_id = ? AND confirmed_at IS NOT NULL AND cancelled_at IS NULL").all(id); }

@@ -95,6 +95,8 @@ O catálogo compartilhado está em `shared/courses.mjs` (reexportado em `src/app
 
 ## Testes e build
 
+[Relatório da regressão de 20/10/2026](docs/relatorio-regressao-2026-10-20.md): login Google simulado, inscrições no perfil e no banco, nove ofertas disponíveis e 350 verificações contabilizadas. Repetir os testes específicos: `npm run test:google` e `npm run test:enrollments`.
+
 ```bash
 npm test
 npm run build
