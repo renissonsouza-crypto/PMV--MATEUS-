@@ -6,7 +6,17 @@ A Tortuguita orienta o uso do Qualifica Vix com regras verificáveis do projeto 
 
 `src/app/data/tortuguitaKnowledge.ts` contém 50 temas, 400 perguntas de referência, palavras e expressões de reconhecimento, respostas, sugestões de continuidade e destinos de navegação. Também exporta 12 perguntas rápidas e 8 descrições de capacidades. As perguntas servem para reconhecimento de formulações diferentes; a cobertura não se limita às frases exatas.
 
-A base cobre exploração e escolha de cursos, filtros, modalidades, status, gratuidade, conteúdo, calendário, local, instituição, docentes, certificação, requisitos e limites dos resultados profissionais. Inclui cadastro em quatro passos, documentos, telefone com DDD, e-mail, endereço de Vitória-ES, consulta de CEP, responsável por menor de idade, acessibilidade, renda, consentimentos e notificações. Explica perfil, foto, armazenamento por navegador, recuperação indisponível, saída, privacidade, solicitações ao responsável, favoritos, inscrições locais, limite mensal, duplicidade e cancelamento. Há orientação para depoimentos, histórias ilustrativas, contatos, preferências visuais e erros comuns de execução e envio.
+A base cobre exploração e escolha de cursos, filtros, modalidades, status, gratuidade, conteúdo, calendário, local, instituição, docentes, certificação, requisitos e limites dos resultados profissionais. Inclui cadastro em quatro passos, documentos, telefone com DDD, e-mail, endereço de Vitória-ES, consulta de CEP, responsável por menor de idade, acessibilidade, renda, consentimentos e notificações. Explica perfil, foto, armazenamento por navegador, recuperação com Google quando habilitada, saída, privacidade, solicitações ao responsável, favoritos, inscrições no servidor, limite mensal, duplicidade e cancelamento. Há orientação para depoimentos, histórias ilustrativas, contatos, preferências visuais e erros comuns de execução e envio.
+
+## Conversa guiada e recuperação de dúvidas
+
+“Quero ajuda para escolher um curso” inicia perguntas sobre área e modalidade. “Ainda não sei” oferece exemplos; as respostas seguintes produzem opções disponíveis do catálogo, sem efetuar inscrição. “Cancelar ajuda” encerra a orientação. O estado `dialogue` aceita somente `area` ou `modality` e pode ser retomado na memória do perfil.
+
+As preferências continuam após uma pergunta intermediária: “Quero cursos online” → “Os cursos são gratuitos?” → “De noite” mantém a modalidade online. Correções como “Na verdade prefiro de manhã” substituem o turno. “Qualquer modalidade” remove somente o filtro de modalidade, preservando a área. “Mostrar todos os cursos” limpa os filtros.
+
+“Não entendi”, “Explique melhor” e “Não era isso” preservam o assunto e oferecem uma explicação menor ou opções para esclarecer a dúvida. Após consultar um curso, “Como faço agora?” orienta os passos de inscrição direta e a conferência no perfil. A última resposta tem os botões “Ajudou, obrigado” e “Explicar melhor”. O feedback é apenas da conversa atual, sem envio de avaliações a um servidor nem treinamento automático de modelo.
+
+`npm run test:chatbot` avalia tarefas de várias mensagens, fatos do catálogo, próximos passos, informações ausentes, privacidade, memória e dois fluxos reais no navegador, incluindo feedback e tela baixa. O relatório mede processamento e tempo até a resposta aparecer. A aprovação desses critérios é um indicador automatizado de utilidade; não mede satisfação humana nem estabelece um SLA de produção.
 
 ## Fontes e fatos que devem permanecer corretos
 

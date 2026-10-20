@@ -66,6 +66,7 @@ export function normalizeAssistantMemory(value: unknown, profileId: number | nul
   return { ...empty, messages, interests, completedCourseIds: ids(value.completedCourseIds, courses), context: {
     courseIds: ids(context.courseIds, courses), candidateCourseIds: ids(context.candidateCourseIds, courses),
     ...(typeof context.lastIntent === "string" ? { lastIntent: context.lastIntent.slice(0, 80) } : {}),
+    ...(context.dialogue === "area" || context.dialogue === "modality" ? { dialogue: context.dialogue } : {}),
     ...(Object.keys(preferences).length ? { preferences } : {}),
   } };
 }

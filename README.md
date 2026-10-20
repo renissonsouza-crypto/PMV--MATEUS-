@@ -102,9 +102,12 @@ npm test
 npm run build
 npm run test:e2e
 npm run test:mobile
+npm run test:chatbot
 ```
 
 No PowerShell, substitua `npm` por `npm.cmd`. `npm test` inclui testes de regras, armazenamento, cliente HTTP, validações, segurança, inicialização em portas alternativas, SQLite e rotas serverless.
+
+`npm run test:chatbot` verifica conversa guiada, continuidade, correção de preferências, explicação simplificada, feedback e próximos passos em desktop e telefone, medindo o tempo de processamento e de exibição da resposta. Consulte [o relatório da Tortuguita](docs/validacao-chatbot-2026-10-20.md). Os critérios de qualidade são tarefas verificáveis; satisfação real depende da avaliação dos usuários.
 
 Os testes usam bancos SQLite temporários e um serviço ViaCEP local controlado; preservam o banco de desenvolvimento. O teste serverless exercita controllers, models e SQL com transporte Neon isolado, sem credenciais de produção.
 

@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-20T21:05:23.337Z",
+  "checks": [
+    {
+      "name": "Escolha guiada produz opções reais de Tecnologia online",
+      "status": "passed"
+    },
+    {
+      "name": "Indecisão recebe exemplos em vez de horários ou resposta genérica",
+      "status": "passed"
+    },
+    {
+      "name": "Área sem oferta não inventa curso",
+      "status": "passed"
+    },
+    {
+      "name": "Modalidade indiferente preserva a área escolhida",
+      "status": "passed"
+    },
+    {
+      "name": "Cancelar orientação não inscreve nem abre tela",
+      "status": "passed"
+    },
+    {
+      "name": "Modalidade continua após pergunta intermediária de gratuidade",
+      "status": "passed"
+    },
+    {
+      "name": "Linguagem natural de iniciante mantém opções para primeiro emprego",
+      "status": "passed"
+    },
+    {
+      "name": "Correção de turno substitui preferência anterior",
+      "status": "passed"
+    },
+    {
+      "name": "Próximo passo após Excel é acionável e confirma diretamente",
+      "status": "passed"
+    },
+    {
+      "name": "Inscrição não solicita mensagem ou link de e-mail",
+      "status": "passed"
+    },
+    {
+      "name": "Visitante recebe recuperação Google sem link antigo",
+      "status": "passed"
+    },
+    {
+      "name": "Explicação melhor preserva curso e oferece próximos passos",
+      "status": "passed"
+    },
+    {
+      "name": "Recuperação sem assunto pede esclarecimento útil",
+      "status": "passed"
+    },
+    {
+      "name": "Informação ausente não vira promessa de certificado",
+      "status": "passed"
+    },
+    {
+      "name": "Orientação não permite pedir dados de terceiros",
+      "status": "passed"
+    },
+    {
+      "name": "Memória restaura somente estados guiados permitidos",
+      "status": "passed"
+    },
+    {
+      "name": "Conversa real, feedback e ficha no navegador 390px",
+      "status": "passed"
+    },
+    {
+      "name": "Conversa real, feedback e ficha no navegador 1440px",
+      "status": "passed"
+    }
+  ],
+  "passed": 18,
+  "total": 18,
+  "serviceLatencyMs": {
+    "samples": 32,
+    "median": 8.786993999999993,
+    "p95": 13.16042200000004,
+    "max": 14.39554899999996
+  },
+  "browserResponseTimes": [
+    {
+      "width": 390,
+      "prompt": "Quero ajuda para escolher um curso",
+      "durationMs": 39.12910099999999
+    },
+    {
+      "width": 390,
+      "prompt": "Tecnologia",
+      "durationMs": 28.89587500000016
+    },
+    {
+      "width": 390,
+      "prompt": "Online",
+      "durationMs": 30.250939000000017
+    },
+    {
+      "width": 1440,
+      "prompt": "Quero ajuda para escolher um curso",
+      "durationMs": 33.565027000000555
+    },
+    {
+      "width": 1440,
+      "prompt": "Tecnologia",
+      "durationMs": 22.872496999999385
+    },
+    {
+      "width": 1440,
+      "prompt": "Online",
+      "durationMs": 29.961849000000257
+    }
+  ],
+  "interpretation": "Quality/usefulness are acceptance criteria for these curated tasks, not a human satisfaction score. Timings are local processing/rendering measurements, not a production SLA. Feedback is per conversation and is not sent to a server."
+}

@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-20T13:37:53.714Z",
+  "startedAt": "2026-10-20T21:02:48.922Z",
   "checks": [
     {
       "engine": "chromium",
@@ -9,7 +9,7 @@
         "height": 658
       },
       "status": "passed",
-      "durationMs": 7232,
+      "durationMs": 12896,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -40,7 +40,7 @@
         "height": 740
       },
       "status": "passed",
-      "durationMs": 8259,
+      "durationMs": 9713,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -72,7 +72,7 @@
         "height": 839
       },
       "status": "passed",
-      "durationMs": 7114,
+      "durationMs": 6879,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -103,7 +103,7 @@
         "height": 568
       },
       "status": "passed",
-      "durationMs": 6316,
+      "durationMs": 5982,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -134,7 +134,7 @@
         "height": 664
       },
       "status": "passed",
-      "durationMs": 7657,
+      "durationMs": 7833,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -166,7 +166,7 @@
         "height": 932
       },
       "status": "passed",
-      "durationMs": 6339,
+      "durationMs": 6066,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -197,7 +197,7 @@
         "height": 320
       },
       "status": "passed",
-      "durationMs": 5891,
+      "durationMs": 5670,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -228,7 +228,7 @@
         "height": 390
       },
       "status": "passed",
-      "durationMs": 6107,
+      "durationMs": 6004,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -259,7 +259,7 @@
         "height": 412
       },
       "status": "passed",
-      "durationMs": 6210,
+      "durationMs": 5967,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -290,7 +290,7 @@
         "height": 1024
       },
       "status": "passed",
-      "durationMs": 7511,
+      "durationMs": 6597,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -322,7 +322,7 @@
         "height": 1194
       },
       "status": "passed",
-      "durationMs": 6380,
+      "durationMs": 6679,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -353,7 +353,7 @@
         "height": 768
       },
       "status": "passed",
-      "durationMs": 6585,
+      "durationMs": 8988,
       "evidence": {
         "phases": [
           "menu-focus-scroll-lock-and-125%-font",
@@ -384,7 +384,7 @@
         "height": 360
       },
       "status": "passed",
-      "durationMs": 2060,
+      "durationMs": 3397,
       "evidence": {
         "fontScale": "125%",
         "searchSubmitted": true
@@ -399,7 +399,7 @@
         "height": 844
       },
       "status": "passed",
-      "durationMs": 1964,
+      "durationMs": 1877,
       "evidence": {
         "browserHistory": "back-and-forward"
       },
@@ -413,7 +413,7 @@
         "height": 844
       },
       "status": "passed",
-      "durationMs": 2553,
+      "durationMs": 2498,
       "evidence": {
         "memoryExpanded": true,
         "compactViewport": {
@@ -432,7 +432,7 @@
         "height": 390
       },
       "status": "passed",
-      "durationMs": 1243,
+      "durationMs": 1256,
       "evidence": {
         "scrolledPolicy": true,
         "closeReachableWithoutScrollReset": true
@@ -447,7 +447,7 @@
         "height": 320
       },
       "status": "passed",
-      "durationMs": 1569,
+      "durationMs": 1444,
       "evidence": {
         "providerUI": "local visual fixture",
         "optionsScrolled": true,
@@ -463,7 +463,7 @@
         "height": 844
       },
       "status": "passed",
-      "durationMs": 1788,
+      "durationMs": 1723,
       "evidence": {
         "previousPage": "profile",
         "restoredPage": "registration",
@@ -684,7 +684,7 @@
     "Google account/provider availability is covered separately with fixtures, not a live Google account.",
     "Remote catalogue photos use local placeholders; external CDN/TLS availability is outside the mobile layout result."
   ],
-  "finishedAt": "2026-10-20T13:39:27.545Z",
+  "finishedAt": "2026-10-20T21:04:33.067Z",
   "passed": 18,
   "failed": 0,
   "total": 18

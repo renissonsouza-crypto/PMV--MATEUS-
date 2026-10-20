@@ -15,6 +15,7 @@ export type AssistantPreferences = {
 };
 export type AssistantContext = {
   lastIntent?: string; courseIds?: number[]; candidateCourseIds?: number[]; preferences?: AssistantPreferences;
+  dialogue?: "area" | "modality";
 };
 export type AssistantAction = { label: string; page?: Page; courseId?: number };
 export type AssistantReply = {
@@ -63,7 +64,7 @@ function cleanContext(context: AssistantContext | undefined, courses: Course[]):
     if (typeof source.onlyAvailable === "boolean") preferences.onlyAvailable = source.onlyAvailable;
     for (const key of ["excludedCategories", "excludedModalities", "excludedPeriods", "modalities", "levels"] as const) if (Array.isArray(source[key])) preferences[key] = source[key]!.filter(item => typeof item === "string").slice(0, 8).map(item => item.slice(0, 50));
   }
-  return { ...(typeof context?.lastIntent === "string" ? { lastIntent: context.lastIntent.slice(0, 80) } : {}), courseIds: validIds(context?.courseIds, courses), candidateCourseIds: validIds(context?.candidateCourseIds, courses), ...(Object.keys(preferences).length ? { preferences } : {}) };
+  return { ...(typeof context?.lastIntent === "string" ? { lastIntent: context.lastIntent.slice(0, 80) } : {}), ...(context?.dialogue === "area" || context?.dialogue === "modality" ? { dialogue: context.dialogue } : {}), courseIds: validIds(context?.courseIds, courses), candidateCourseIds: validIds(context?.candidateCourseIds, courses), ...(Object.keys(preferences).length ? { preferences } : {}) };
 }
 function reply(text: string, intent: string, context: AssistantContext, actions: AssistantAction[] = [], suggestions: string[] = [], confidence: AssistantReply["confidence"] = "high"): AssistantReply {
   return { text, intent, confidence, context: { ...context, lastIntent: intent }, actions: actions.slice(0, 6), suggestions: unique(suggestions).slice(0, 5) };
@@ -172,9 +173,13 @@ function negated(text: string, aliases: string[]): boolean {
   });
 }
 function extractPreferences(text: string, previous?: AssistantPreferences): { preferences: AssistantPreferences; explicit: boolean } {
-  const clear = hasAny(text, ["limpar filtros", "todas as categorias", "todos os cursos", "qualquer modalidade", "limpe preferencias", "recomecar"]);
+  const clear = hasAny(text, ["limpar filtros", "todas as categorias", "todos os cursos", "limpe preferencias", "recomecar"]);
   const preferences: AssistantPreferences = clear ? {} : { ...previous };
   let explicit = clear;
+  if (hasPhrase(text, "qualquer modalidade")) {
+    delete preferences.modality; delete preferences.modalities; delete preferences.excludedModalities;
+    explicit = true;
+  }
   for (const [field, aliasesMap] of [["category", CATEGORY_ALIASES], ["modality", MODALITY_ALIASES], ["period", PERIOD_ALIASES]] as const) {
     for (const [value, aliases] of Object.entries(aliasesMap)) {
       if (!hasAny(text, aliases)) continue;
@@ -211,7 +216,7 @@ function extractPreferences(text: string, previous?: AssistantPreferences): { pr
   return { preferences, explicit };
 }
 function searchCourses(text: string, options: AssistantOptions, context: AssistantContext, mentioned: Course[]): AssistantReply {
-  const { preferences } = extractPreferences(text, context.lastIntent === "course-search" ? context.preferences : undefined);
+  const { preferences } = extractPreferences(text, context.preferences);
   let candidates = options.courses.filter(course =>
     (!preferences.category || course.category === preferences.category) && (!preferences.modality || course.modality === preferences.modality) && (!preferences.modalities || preferences.modalities.includes(course.modality)) &&
     (!preferences.period || course.period === preferences.period) && (!preferences.level || course.level === preferences.level || course.level === "Todos os níveis") &&
@@ -221,7 +226,7 @@ function searchCourses(text: string, options: AssistantOptions, context: Assista
   );
   if (mentioned.length && !preferences.category) candidates = candidates.filter(course => mentioned.some(item => item.id === course.id));
   const filterWords = new Set(meaningfulWords(Object.values(CATEGORY_ALIASES).flat().concat(Object.values(MODALITY_ALIASES).flat(), Object.values(PERIOD_ALIASES).flat()).join(" ")));
-  const instructionWords = new Set(meaningfulWords("todos todas qualquer nenhum mostrar mostre liste listar opções opcao opcoes formação formacao formações formacoes área area ensina ensinem ensine ensinem aprender estudar busco buscar procura procuro recomende recomendar indicar indique sugira sugestões sugestoes ajuda escolher combina comigo disponível aberto apenas so excluindo exceto quero preciso tem existe existem alguma algum vocês me oferece oferecem primeiros emprego empreendedor atualização profissional inicial do zero iniciante intermediario avancado curto rapido pouco tempo menor maior no máximo maximo maxima até horas h meses mes duração dure dura carga flexível livre turno período preferencia ver com vagas últimas ultimas primeiro segundo terceiro pois aí mais menos exatamente trabalhar nao pessoalmente categoria categorias escola curso cursos chamada saber rotina estou atras encontro encontrar achei inscrições matriculas seja sejam for forem nem"));
+  const instructionWords = new Set(meaningfulWords("todos todas qualquer nenhum mostrar mostre liste listar opções opcao opcoes formação formacao formações formacoes área area ensina ensinem ensine ensinem aprender estudar busco buscar procura procuro recomende recomendar indicar indique sugira sugestões sugestoes ajuda escolher combina comigo disponível aberto apenas so excluindo exceto quero preciso tem existe existem alguma algum vocês me oferece oferecem primeiros emprego empreendedor atualização profissional inicial do zero iniciante intermediario avancado curto rapido pouco tempo menor maior no máximo maximo maxima até horas h meses mes duração dure dura carga flexível livre turno período preferencia ver com vagas últimas ultimas primeiro segundo terceiro pois aí mais menos exatamente trabalhar nao pessoalmente categoria categorias escola curso cursos chamada saber rotina estou atras encontro encontrar achei inscrições matriculas seja sejam for forem nem sou verdade prefiro prefere gostaria agora então entao"));
   const freeWords = meaningfulWords(text).filter(word => !filterWords.has(word) && !instructionWords.has(word) && !/^\d+$/.test(word));
   if (freeWords.length) candidates = candidates.filter(course => {
     const content = meaningfulWords(`${course.title} ${course.category} ${course.description} ${course.about} ${course.whatYouLearn.join(" ")} ${course.provider} ${course.location} ${course.targetAudience.join(" ")}`);
@@ -247,7 +252,7 @@ function dynamicCourse(text: string, course: Course, context: AssistantContext):
   if (hasAny(text, ["instituicao", "oferece", "ofertante", "provider", "professor", "instrutor", "senai", "senac", "quem vai dar", "quem da aulas"])) sections.push(`Instituição registrada: ${course.provider}. Nome do instrutor, contatos diretos, endereço completo e confirmação da parceria para esta edição não estão detalhados no catálogo.`);
   if (hasAny(text, ["requisitos", "prerequisitos", "pre requisitos", "escolaridade", "ensino medio", "idade", "preciso saber", "equipamentos", "material", "software"])) sections.push(`Nível de ${course.title}: ${course.level}. Público indicado: ${course.targetAudience.join(", ")}. A ficha não confirma idade mínima da turma, escolaridade, conhecimentos prévios, equipamentos ou software exigidos; confirme o edital. O cadastro aceita endereço de Vitória-ES e exige responsável legal para menores de 18 anos; isso não substitui os requisitos específicos da turma.`);
   if (hasAny(text, ["salario", "ganhar", "remuneracao", "emprego", "empregado", "trabalho", "contratacao"])) sections.push(`A ficha apresenta ${course.avgSalary} como referência de remuneração; a origem e o período dessa estimativa não estão informados. O curso não garante emprego, contratação ou esse salário. Conteúdo e público indicado: ${course.targetAudience.join(", ")}.`);
-  if (hasAny(text, ["vagas", "disponivel", "status", "abertas", "inscricao", "inscrever", "matricular", "matricula", "reserva", "fila de espera", "lista de espera"])) sections.push(`Status de ${course.title}: ${status(course)}. ${course.status === "coming-soon" ? "Este curso ainda não aceita inscrição no site, e não há data de abertura, reserva ou lista de espera implementada." : "Para se inscrever, abra os detalhes e clique em Inscrever-se; no primeiro acesso, complete o cadastro. Solicite o e-mail e clique em Confirmar minha inscrição no link recebido, válido por 24 horas; até esse clique, a inscrição fica pendente. O limite é de 3 inscrições no mês, incluindo canceladas. A confirmação no navegador não substitui a validação da matrícula pela instituição."} A contagem de inscritos é um dado do catálogo, sem confirmação de vagas em tempo real.`);
+  if (hasAny(text, ["vagas", "disponivel", "status", "abertas", "inscricao", "inscrever", "matricular", "matricula", "reserva", "fila de espera", "lista de espera"])) sections.push(`Status de ${course.title}: ${status(course)}. ${course.status === "coming-soon" ? "Este curso ainda não aceita inscrição no site, e não há data de abertura, reserva ou lista de espera implementada." : "Para se inscrever, abra os detalhes e clique em Inscrever-se; no primeiro acesso, complete o cadastro. Clique em Confirmar minha inscrição diretamente na plataforma e aguarde o aviso de sucesso do servidor. Não é necessário confirmar por e-mail; se houver erro, a inscrição não deve ser considerada concluída. O limite é de 3 inscrições no mês, incluindo canceladas. A confirmação no navegador não substitui a validação da matrícula pela instituição."} A contagem de inscritos é um dado do catálogo, sem confirmação de vagas em tempo real.`);
   if (hasAny(text, ["preco", "custo", "custa", "pago", "pagar", "gratuito", "mensalidade", "taxa"])) sections.push(`${course.title} é apresentado como gratuito; o site não cobra inscrição nem mensalidade. Materiais, transporte, alimentação, equipamentos e internet não têm cobertura confirmada.`);
   if (!sections.length) sections.push(`${courseLine(course)}\n\n${course.description}\n\nConteúdo:\n${course.whatYouLearn.map(item => `• ${item}`).join("\n")}\n\nInstituição registrada: ${course.provider}. ${course.location ? `Local cadastrado: ${course.location}. ` : ""}Datas exatas, acesso às aulas, endereço completo e critérios de certificado precisam ser confirmados no canal responsável.`);
   if (hasAny(text, ["baixar", "baixo", "download", "emitir"]) && hasAny(text, ["certificado", "diploma"])) sections.push("Não há emissão nem download de certificado implementados nesta plataforma; confirme o procedimento oficial com o ofertante.");
@@ -282,7 +287,7 @@ function personalReply(text: string, options: AssistantOptions, context: Assista
     return reply(explanation, "enrollment-quota", context, [{ label: "Meu perfil", page: "profile" }], ["Como vejo meus cursos inscritos?", "Como cancelar minha inscrição?"]);
   }
   if (hasAny(text, ["meus cursos", "minhas inscricoes", "meus inscritos", "cursos cadastrados", "meus cursos inscritos", "minhas matriculas"]) || ((hasAny(text, ["me matriculei", "me inscrevi"])) && !hasAny(text, ["nao me inscrevi", "nao me matriculei", "ainda nao"]))) {
-    if (!options.profile) return reply("Não há perfil local disponível nesta conversa. Após o cadastro, abra Meu perfil → Cursos cadastrados para consultar suas inscrições neste navegador. O link pessoal de confirmação de inscrição pode abrir o perfil em outro navegador enquanto estiver válido.", "my-enrollments", context, [{ label: "Meu perfil", page: "profile" }], ["Como faço meu cadastro?", "Meu perfil desapareceu"]);
+    if (!options.profile) return reply("Não há perfil local disponível nesta conversa. Após o cadastro, abra Meu perfil → Cursos cadastrados para consultar suas inscrições neste navegador. Para recuperar sua conta em outro navegador, use Continuar com Google quando disponível. Não é necessário confirmar a inscrição por e-mail.", "my-enrollments", context, [{ label: "Meu perfil", page: "profile" }], ["Como faço meu cadastro?", "Meu perfil desapareceu"]);
     const ids = validIds(options.profile.enrolledCourseIds, options.courses);
     const enrolled = options.courses.filter(course => ids.includes(course.id));
     const lines = enrolled.map(course => {
@@ -300,6 +305,33 @@ function knowledgeReply(items: KnowledgeIntent[], options: AssistantOptions, con
   return reply(blocks.join("\n\n"), items.map(item => item.id).join("+"), context, actions, items.flatMap(item => item.followUps));
 }
 
+function guidedConversation(text: string, options: AssistantOptions, context: AssistantContext): AssistantReply | undefined {
+  const start = hasAny(text, ["quero ajuda para escolher um curso", "me ajude a escolher", "nao sei qual curso", "me ajude a descobrir", "nao sei por onde comecar"]);
+  if (hasAny(text, ["como faco agora", "qual o proximo passo", "e agora"])) {
+    const selected = options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
+    if (selected) return reply(selected.status === "coming-soon" ? `${selected.title} ainda não aceita inscrição. Você pode consultar sua ficha ou procurar outro curso disponível.` : `Para seguir com ${selected.title}:\n1. Abra a ficha e confira conteúdo e requisitos.\n2. Toque em Inscrever-se. Se necessário, complete seu cadastro.\n3. Confirme diretamente na plataforma e aguarde o aviso de sucesso. Depois, confira Meu perfil → Cursos cadastrados. Não precisa de confirmação por e-mail.`, "next-step", context, courseActions([selected]), ["Quais são os requisitos para inscrição?", "Onde vejo meus cursos inscritos?", "Quero ajuda para escolher um curso"]);
+  }
+  if (hasAny(text, ["cancelar ajuda", "sair da escolha", "parar orientacao"])) return reply("Tudo bem, encerramos a escolha guiada. Pode perguntar sobre um curso, cadastro ou outra função da plataforma.", "guidance-cancelled", { ...context, dialogue: undefined });
+  if (hasAny(text, ["nao entendi", "explique melhor", "explicar melhor", "mais simples", "nao ajudou", "nao era isso", "preciso de mais ajuda"])) {
+    const selected = options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
+    if (selected) return reply(`Vamos por partes. ${courseLine(selected)}\n\nVocê pode consultar o conteúdo, conferir as condições ou abrir a ficha. A inscrição só é concluída na plataforma após sua confirmação. Qual dessas partes você quer entender melhor?`, "conversation-repair", context, courseActions([selected]), [`O que vou aprender em ${selected.title}?`, `Como me inscrevo em ${selected.title}?`, "Quero ajuda para escolher um curso"]);
+    const topic = PLATFORM_KNOWLEDGE.find(item => item.id === context.lastIntent);
+    const explanation = topic ? topic.answer.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ") + "\n\n" : "";
+    return reply(`${explanation}Vamos por partes: você precisa escolher um curso, preencher o cadastro ou consultar uma inscrição? Escolha uma opção ou diga onde ficou a dúvida.`, "conversation-repair", context, [], ["Quero ajuda para escolher um curso", "Quais são as etapas do cadastro?", "Onde vejo meus cursos inscritos?", "Como entro em contato?"]);
+  }
+  if (!start && !context.dialogue) return undefined;
+  const next = start ? { ...context, courseIds: [], candidateCourseIds: [], preferences: { onlyAvailable: true } as AssistantPreferences, dialogue: "area" as const } : context;
+  const extracted = extractPreferences(text, next.preferences);
+  if (!start && next.dialogue === "area" && hasAny(text, ["ainda nao sei", "sem ideia", "estou em duvida"])) return reply("Podemos começar pelo que você gosta de fazer: Tecnologia para explorar computadores e programação; Administração para planilhas e organização; Gastronomia para cozinha. São exemplos de temas do catálogo, sem promessa de emprego. Qual dessas áreas você gostaria de explorar?", "guided-choice", next, [], ["Tecnologia", "Administração", "Gastronomia", "Cancelar ajuda"]);
+  if (start || (next.dialogue === "area" && !extracted.preferences.category)) return reply("Vamos encontrar uma opção que combine com você 🐢 Qual área desperta seu interesse? Há Tecnologia, Administração, Design, Marketing, Educação, Gastronomia, Técnico e Saúde; a oferta depende do catálogo. Se ainda não sabe, posso dar exemplos.", "guided-choice", { ...next, preferences: extracted.preferences, dialogue: "area" }, [], ["Tecnologia", "Administração", "Gastronomia", "Ainda não sei"]);
+  if (next.dialogue === "area" && !extracted.preferences.modality) return reply(`Certo, vamos olhar ${extracted.preferences.category}. Você prefere estudar online, presencialmente ou aceita as duas modalidades? Vou considerar as inscrições disponíveis.`, "guided-choice", { ...next, preferences: extracted.preferences, dialogue: "modality" }, [], ["Online", "Presencial", "Qualquer modalidade", "Cancelar ajuda"]);
+  if (!extracted.explicit && !hasAny(text, ["as duas", "tanto faz", "qualquer modalidade"])) return undefined;
+  const preferences = { ...extracted.preferences, onlyAvailable: true };
+  if (hasAny(text, ["as duas", "tanto faz", "qualquer modalidade"])) { delete preferences.modality; delete preferences.modalities; }
+  const result = searchCourses("Quero cursos", options, { ...next, dialogue: undefined, lastIntent: "course-search", preferences }, []);
+  return { ...result, text: `Considerei suas preferências para esta escolha.\n\n${result.text}` };
+}
+
 function answerSingleTortuguita(message: string, options: AssistantOptions): AssistantReply {
   const text = normalizeTortuguitaText(message);
   const context = cleanContext(options.context, options.courses);
@@ -309,6 +341,8 @@ function answerSingleTortuguita(message: string, options: AssistantOptions): Ass
   if (hasAny(text, ["obrigado", "obrigada", "valeu", "agradeco"]) && meaningfulWords(text).length <= 3) return reply("Por nada! 🐢 Quando precisar, posso ajudar com cursos e dúvidas sobre a plataforma.", "thanks", context, [], QUICK_QUESTIONS.slice(0, 3));
   if (hasAny(text, ["ignore instrucoes", "ignore as instrucoes", "prompt do sistema", "system prompt", "chave api", "api key", "seu token", "senha do banco", "dados de outros usuarios", "cpf dos usuarios", "hackear"])) return reply("Posso orientar sobre a plataforma e os dados públicos do catálogo. Não acesso segredos, credenciais nem dados de outros usuários, e não altero inscrições ou apago registros pelo chat. Para tratar dados pessoais, use os canais de atendimento.", "privacy", context, [{ label: "Canais de atendimento", page: "contato" }], ["Como meus dados são armazenados?", "Como solicitar exclusão dos meus dados?"]);
   if (hasAny(text, ["seu nome", "quem e voce", "voce e uma ia", "voce usa ia", "como voce funciona", "voce e um robo", "assistente virtual"])) return reply("Sou a Tortuguita Vix, assistente local do Qualifica Vix. Respondo com informações revisadas da plataforma, dados do catálogo e contexto desta conversa. Não consulto uma IA externa nem acesso dados de outros usuários. Posso orientar, mas inscrições e alterações exigem sua ação nas telas.", "assistant-capabilities", context, [], QUICK_QUESTIONS.slice(0, 5));
+  const guided = guidedConversation(text, options, context);
+  if (guided) return guided;
   const mentions = findCourseMentions(text, options.courses);
   const conversationalCourses = contextualCourses(text, context, options.courses);
   const activeCourse = ["course-detail", "enrollment-confirmation"].includes(options.page ?? "") ? options.courses.filter(course => course.id === options.activeCourseId) : [];
@@ -318,7 +352,7 @@ function answerSingleTortuguita(message: string, options: AssistantOptions): Ass
   if (top && ["favorites", "logout", "privacy", "data_deletion", "notifications", "registration_documents", "minors", "accessibility_registration", "profile_local"].includes(top.item.id) && top.score >= 10) return knowledgeReply([top.item], options, context);
   const personal = personalReply(text, options, context, relevantCourses);
   if (personal) return personal;
-  const preferences = extractPreferences(text, context.lastIntent === "course-search" ? context.preferences : undefined);
+  const preferences = extractPreferences(text, context.preferences);
   if ((preferences.preferences.maxHours || preferences.preferences.maxMonths) && preferences.explicit && !relevantCourses.length) return searchCourses(text, options, context, mentions);
   if (top && top.score >= 12 && !relevantCourses.length && !["course_recommendation", "coming_soon", "course_availability"].includes(top.item.id)) return knowledgeReply([top.item], options, context);
   const importantPlatformIds = new Set(["cancellation", "enrollment_limit", "duplicate_enrollment", "registration", "registration_steps", "registration_documents", "registration_phone", "registration_email", "registration_address", "registration_cep", "minors", "accessibility_registration", "socioeconomic", "consents", "notifications", "profile_edit", "profile_photo", "profile_local", "profile_missing", "logout", "privacy", "data_deletion", "favorites", "enrollments", "testimonials", "illustrative_testimonials", "contact", "accessibility_interface", "troubleshooting_local", "troubleshooting_dependencies", "troubleshooting_api"]);

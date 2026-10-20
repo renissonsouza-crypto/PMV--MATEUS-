@@ -57,6 +57,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const [messages, setMessages] = useState<ChatMessage[]>(restored.memory.messages.length ? restored.memory.messages : [WELCOME]);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [helpful, setHelpful] = useState(false);
   const sendingRef = useRef(false);
   const nextIdRef = useRef(Math.max(0, ...restored.memory.messages.map(item => item.id)) + 1);
   const lastSubmissionRef = useRef({ text: "", time: 0 });
@@ -106,6 +107,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   }, [open]);
 
   const resetConversation = () => {
+    setHelpful(false);
     commitMemory({ ...memoryRef.current, context: { preferences: memoryRef.current.context.preferences }, messages: [] });
     setMessages([WELCOME]);
     setFollowUps([]);
@@ -133,6 +135,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const sendMessage = (value: string) => {
     const text = value.trim().slice(0, MAX_INPUT_LENGTH);
     if (!text || sendingRef.current) return;
+    setHelpful(false);
     const now = Date.now();
     if (lastSubmissionRef.current.text === text && now - lastSubmissionRef.current.time < 750) return;
     lastSubmissionRef.current = { text, time: now };
@@ -286,6 +289,14 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                             <span className="min-w-0 break-words">{action.label}</span><ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                           </button>
                         ))}
+                      </div>
+                    )}
+                    {message.role === "assistant" && message.id !== 0 && message === messages[messages.length - 1] && (
+                      <div className="mt-3 border-t border-slate-100 pt-2">
+                        {helpful ? <p role="status" className="text-xs text-blue-700">Que bom que ajudou! Pode continuar a conversa.</p> : <div className="flex flex-wrap gap-2" aria-label="Avaliar esta resposta">
+                          <button type="button" onClick={() => setHelpful(true)} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Ajudou, obrigado</button>
+                          <button type="button" onClick={() => sendMessage("Explique melhor")} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Explicar melhor</button>
+                        </div>}
                       </div>
                     )}
                   </div>
