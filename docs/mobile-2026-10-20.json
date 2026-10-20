@@ -1,0 +1,691 @@
+{
+  "startedAt": "2026-10-20T13:37:53.714Z",
+  "checks": [
+    {
+      "engine": "chromium",
+      "name": "Android compacto",
+      "viewport": {
+        "width": 320,
+        "height": 658
+      },
+      "status": "passed",
+      "durationMs": 7232,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 320,
+          "height": 658
+        },
+        "rotatedViewport": {
+          "width": 658,
+          "height": 320
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-01.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Android 360",
+      "viewport": {
+        "width": 360,
+        "height": 740
+      },
+      "status": "passed",
+      "durationMs": 8259,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "registration-profile-enrollment-sql:1",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 360,
+          "height": 740
+        },
+        "rotatedViewport": {
+          "width": 740,
+          "height": 360
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-02.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Pixel 7 viewport",
+      "viewport": {
+        "width": 412,
+        "height": 839
+      },
+      "status": "passed",
+      "durationMs": 7114,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 412,
+          "height": 839
+        },
+        "rotatedViewport": {
+          "width": 839,
+          "height": 412
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-03.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "iPhone SE viewport",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "status": "passed",
+      "durationMs": 6316,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 320,
+          "height": 568
+        },
+        "rotatedViewport": {
+          "width": 568,
+          "height": 320
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-04.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "iPhone 13 viewport",
+      "viewport": {
+        "width": 390,
+        "height": 664
+      },
+      "status": "passed",
+      "durationMs": 7657,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "registration-profile-enrollment-sql:2",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 390,
+          "height": 664
+        },
+        "rotatedViewport": {
+          "width": 664,
+          "height": 390
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-05.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "iPhone grande viewport",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "status": "passed",
+      "durationMs": 6339,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 430,
+          "height": 932
+        },
+        "rotatedViewport": {
+          "width": 932,
+          "height": 430
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-06.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Paisagem compacta",
+      "viewport": {
+        "width": 568,
+        "height": 320
+      },
+      "status": "passed",
+      "durationMs": 5891,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 568,
+          "height": 320
+        },
+        "rotatedViewport": {
+          "width": 320,
+          "height": 568
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-07.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "iPhone paisagem viewport",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "status": "passed",
+      "durationMs": 6107,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 844,
+          "height": 390
+        },
+        "rotatedViewport": {
+          "width": 390,
+          "height": 844
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-08.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Android paisagem viewport",
+      "viewport": {
+        "width": 915,
+        "height": 412
+      },
+      "status": "passed",
+      "durationMs": 6210,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 915,
+          "height": 412
+        },
+        "rotatedViewport": {
+          "width": 412,
+          "height": 915
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-09.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Tablet 768",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "status": "passed",
+      "durationMs": 7511,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send",
+          "tablet-desktop-breakpoint-releases-menu"
+        ],
+        "initialViewport": {
+          "width": 768,
+          "height": 1024
+        },
+        "rotatedViewport": {
+          "width": 1024,
+          "height": 768
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-10.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Tablet 834",
+      "viewport": {
+        "width": 834,
+        "height": 1194
+      },
+      "status": "passed",
+      "durationMs": 6380,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 834,
+          "height": 1194
+        },
+        "rotatedViewport": {
+          "width": 1194,
+          "height": 834
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-11.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Tablet paisagem",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "status": "passed",
+      "durationMs": 6585,
+      "evidence": {
+        "phases": [
+          "menu-focus-scroll-lock-and-125%-font",
+          "rotated-header-search-filter",
+          "favorites-persistence-six-course-tabs",
+          "navigation-policy-dialog",
+          "compact-chat-input-and-send"
+        ],
+        "initialViewport": {
+          "width": 1024,
+          "height": 768
+        },
+        "rotatedViewport": {
+          "width": 768,
+          "height": 1024
+        },
+        "appFontScale": "125%",
+        "darkMode": true,
+        "noEmailSent": true
+      },
+      "screenshot": "chromium-12.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Search 640×360 at 125% text remains usable",
+      "viewport": {
+        "width": 640,
+        "height": 360
+      },
+      "status": "passed",
+      "durationMs": 2060,
+      "evidence": {
+        "fontScale": "125%",
+        "searchSubmitted": true
+      },
+      "screenshot": "chromium-13.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Browser Back and Forward traverse platform pages",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "passed",
+      "durationMs": 1964,
+      "evidence": {
+        "browserHistory": "back-and-forward"
+      },
+      "screenshot": "chromium-14.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Expanded chat memory leaves input accessible with keyboard space reduced",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "passed",
+      "durationMs": 2553,
+      "evidence": {
+        "memoryExpanded": true,
+        "compactViewport": {
+          "width": 390,
+          "height": 320
+        },
+        "inputReachable": true
+      },
+      "screenshot": "chromium-15.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Policy close stays reachable after scrolling in landscape",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "status": "passed",
+      "durationMs": 1243,
+      "evidence": {
+        "scrolledPolicy": true,
+        "closeReachableWithoutScrollReset": true
+      },
+      "screenshot": "chromium-16.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Google chooser close stays reachable after scrolling with reduced keyboard space",
+      "viewport": {
+        "width": 390,
+        "height": 320
+      },
+      "status": "passed",
+      "durationMs": 1569,
+      "evidence": {
+        "providerUI": "local visual fixture",
+        "optionsScrolled": true,
+        "closeReachableWithoutScrollReset": true
+      },
+      "screenshot": "chromium-17.png"
+    },
+    {
+      "engine": "chromium",
+      "name": "Browser Back after logout cannot reopen the previous profile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "passed",
+      "durationMs": 1788,
+      "evidence": {
+        "previousPage": "profile",
+        "restoredPage": "registration",
+        "localProfileCleared": true,
+        "historyContainsOnlyPublicNavigation": true
+      },
+      "screenshot": "chromium-18.png"
+    }
+  ],
+  "requestedEngines": [
+    "chromium"
+  ],
+  "executedEngines": [
+    {
+      "engine": "chromium",
+      "version": "154.0.8037.57"
+    }
+  ],
+  "viewports": [
+    {
+      "engine": "chromium",
+      "width": 320,
+      "height": 658,
+      "phase": "Android compacto"
+    },
+    {
+      "engine": "chromium",
+      "width": 658,
+      "height": 320,
+      "phase": "Android compacto: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 320,
+      "height": 320,
+      "phase": "Android compacto: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 360,
+      "height": 740,
+      "phase": "Android 360"
+    },
+    {
+      "engine": "chromium",
+      "width": 740,
+      "height": 360,
+      "phase": "Android 360: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 360,
+      "height": 320,
+      "phase": "Android 360: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 412,
+      "height": 839,
+      "phase": "Pixel 7 viewport"
+    },
+    {
+      "engine": "chromium",
+      "width": 839,
+      "height": 412,
+      "phase": "Pixel 7 viewport: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 412,
+      "height": 320,
+      "phase": "Pixel 7 viewport: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 320,
+      "height": 568,
+      "phase": "iPhone SE viewport"
+    },
+    {
+      "engine": "chromium",
+      "width": 568,
+      "height": 320,
+      "phase": "iPhone SE viewport: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 664,
+      "phase": "iPhone 13 viewport"
+    },
+    {
+      "engine": "chromium",
+      "width": 664,
+      "height": 390,
+      "phase": "iPhone 13 viewport: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 320,
+      "phase": "iPhone 13 viewport: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 430,
+      "height": 932,
+      "phase": "iPhone grande viewport"
+    },
+    {
+      "engine": "chromium",
+      "width": 932,
+      "height": 430,
+      "phase": "iPhone grande viewport: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 430,
+      "height": 320,
+      "phase": "iPhone grande viewport: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 844,
+      "height": 390,
+      "phase": "iPhone paisagem viewport"
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "height": 844,
+      "phase": "iPhone paisagem viewport: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 844,
+      "height": 320,
+      "phase": "iPhone paisagem viewport: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 915,
+      "height": 412,
+      "phase": "Android paisagem viewport"
+    },
+    {
+      "engine": "chromium",
+      "width": 412,
+      "height": 915,
+      "phase": "Android paisagem viewport: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 915,
+      "height": 320,
+      "phase": "Android paisagem viewport: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 768,
+      "height": 1024,
+      "phase": "Tablet 768"
+    },
+    {
+      "engine": "chromium",
+      "width": 1024,
+      "height": 768,
+      "phase": "Tablet 768: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 768,
+      "height": 320,
+      "phase": "Tablet 768: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 1366,
+      "height": 800,
+      "phase": "tablet-to-desktop-breakpoint"
+    },
+    {
+      "engine": "chromium",
+      "width": 834,
+      "height": 1194,
+      "phase": "Tablet 834"
+    },
+    {
+      "engine": "chromium",
+      "width": 1194,
+      "height": 834,
+      "phase": "Tablet 834: rotation"
+    },
+    {
+      "engine": "chromium",
+      "width": 834,
+      "height": 320,
+      "phase": "Tablet 834: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 1024,
+      "height": 320,
+      "phase": "Tablet paisagem: reduced keyboard space"
+    },
+    {
+      "engine": "chromium",
+      "width": 640,
+      "height": 360,
+      "phase": "Search 640×360 at 125% text remains usable"
+    }
+  ],
+  "limitations": [
+    "Touch and CSS viewport emulation is not testing on physical Android, iPhone or iPad hardware.",
+    "Chromium using an iPhone-sized viewport is not Safari/iOS. WebKit is tested only if explicitly requested and installed.",
+    "A reduced viewport simulates lost keyboard space, not an operating system keyboard or real browser chrome.",
+    "Safe-area CSS is preserved; hardware notch and home-indicator rendering need device verification.",
+    "Google account/provider availability is covered separately with fixtures, not a live Google account.",
+    "Remote catalogue photos use local placeholders; external CDN/TLS availability is outside the mobile layout result."
+  ],
+  "finishedAt": "2026-10-20T13:39:27.545Z",
+  "passed": 18,
+  "failed": 0,
+  "total": 18
+}

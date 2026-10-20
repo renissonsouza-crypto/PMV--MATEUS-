@@ -44,6 +44,9 @@ async function seedProfile(page, profile) {
   environment.seedRegistration(profile);
   await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: PROFILE_KEY, value: profile });
   await page.reload({ waitUntil: "domcontentloaded" });
+  // Reload preserves the current page. Set this fixture's starting page explicitly.
+  await page.locator("header").waitFor();
+  await navigate(page, "Início");
   await page.getByRole("heading", { name: /Encontre oportunidades/i }).waitFor();
 }
 const storedProfile = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)), PROFILE_KEY);

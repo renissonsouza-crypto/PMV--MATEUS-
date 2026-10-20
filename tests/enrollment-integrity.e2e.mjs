@@ -63,6 +63,9 @@ async function seed(page, person) {
   environment.seedRegistration(person);
   await page.evaluate(({ key, person }) => localStorage.setItem(key, JSON.stringify(person)), { key: PROFILE_KEY, person });
   await page.reload({ waitUntil: 'domcontentloaded' });
+  // Reload now restores navigation; fixtures choose their starting page explicitly.
+  await page.locator('header').waitFor();
+  await navigate(page, 'Início');
   await page.getByRole('heading', { name: /Encontre oportunidades/i }).waitFor();
 }
 async function enroll(page, id) {

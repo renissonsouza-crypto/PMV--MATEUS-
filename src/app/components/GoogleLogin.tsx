@@ -87,9 +87,9 @@ export function GoogleLoginButton({ courseId }: { courseId?: number }) {
     <p className="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-300">Use sua conta Google para acessar o perfil ou começar seu cadastro.</p>
     {config?.enabled && config.clientId ? <Dialog open={open} onOpenChange={value => { if (value) rememberGoogleCourse(courseId); setOpen(value); }}>
       <DialogTrigger asChild><button type="button" className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border-2 border-slate-300 px-4 py-3 font-bold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"><span aria-hidden="true">G</span> Continuar com Google</button></DialogTrigger>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-md sm:max-w-md bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 max-h-[calc(100dvh-2rem)] overflow-y-auto">
-        <DialogHeader><DialogTitle className="pr-8">Entrar na sua conta</DialogTitle><DialogDescription>Escolha sua conta Google para entrar ou completar seu cadastro no Qualifica Vix.</DialogDescription></DialogHeader>
-        {open && <GoogleAccountChooser clientId={config.clientId} />}
+      <DialogContent className="flex w-[calc(100%-2rem)] max-w-md sm:max-w-md flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 max-h-[calc(100dvh-2rem)]">
+        <DialogHeader className="shrink-0"><DialogTitle className="pr-8">Entrar na sua conta</DialogTitle><DialogDescription>Escolha sua conta Google para entrar ou completar seu cadastro no Qualifica Vix.</DialogDescription></DialogHeader>
+        {open && <div className="google-account-options min-h-0 min-w-0 overflow-y-auto overscroll-contain"><GoogleAccountChooser clientId={config.clientId} /></div>}
       </DialogContent>
     </Dialog> : <>
       <button type="button" disabled className="min-h-12 w-full rounded-xl border-2 border-slate-200 px-4 py-3 font-bold text-slate-500 disabled:opacity-70">{error ? 'Não foi possível verificar o Google' : config === null ? 'Verificando entrada com Google…' : 'Entrada com Google ainda indisponível'}</button>

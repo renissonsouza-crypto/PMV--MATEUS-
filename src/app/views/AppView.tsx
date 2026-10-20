@@ -579,7 +579,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
 
   return (
     <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
-      <header className="site-header sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
+      <header className={`site-header sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm${searchOpen ? " header-search-open" : ""}`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-6 h-14 sm:h-16">
             <Logo navigate={navigate} />
@@ -633,7 +633,7 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
                       placeholder="Buscar cursos..." aria-label="Buscar cursos no site" type="search" enterKeyHint="search"
-                      className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-full sm:w-52 font-medium" />
+                      className="h-9 pl-9 pr-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 w-full font-medium" />
                   </div>
                   <button type="button" aria-label="Fechar busca" onClick={closeSearch} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-slate-600">
                     <X className="w-5 h-5" />
@@ -2259,7 +2259,12 @@ export default function App() {
   const {
     page, selectedCourse, darkMode, navigate: navigatePage, viewCourse: handleViewCourse,
     toggleDarkMode, increaseFont, decreaseFont,
-  } = useAppController<Course>();
+  } = useAppController<Course>(COURSES, destination => {
+    const authenticated = Boolean(getUserProfile());
+    if (destination === "register" && authenticated) return "profile";
+    if ((destination === "profile" || destination === "enrollment-confirmation") && !authenticated) return "register";
+    return destination;
+  });
   const [favoriteCourseIds, setFavoriteCourseIds] = useState<number[]>(getFavoriteCourseIds);
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [returnToEnrollmentConfirmation, setReturnToEnrollmentConfirmation] = useState(false);

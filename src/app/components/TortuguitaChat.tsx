@@ -254,20 +254,22 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
             </Dialog.Close>
           </div>
 
-          {profile && <details className="shrink-0 max-h-52 overflow-y-auto border-b border-slate-200 bg-blue-50 px-4 py-2 text-xs text-slate-700">
-            <summary className="cursor-pointer font-semibold">Sua memória com a Tortuguita</summary>
-            <div className="mt-2 space-y-2">
-              <div>Conversas e interesses deste perfil ficam neste navegador. Cursos concluídos são informações suas, sem comprovação de certificado.</div>
-              <div className="font-semibold">Cursos mais consultados por você</div>
-              {mostSoughtCourses(memory).slice(0, 3).map(item => <div key={item.courseId}>{courses.find(course => course.id === item.courseId)?.title} · {item.questions} perguntas · {item.views} visitas</div>)}
-              {memory.interests.length === 0 && <div>Ainda não há consultas salvas.</div>}
-              <div className="font-semibold">Conclusões informadas por você</div>
-              <div>{courses.filter(course => memory.completedCourseIds.includes(course.id)).map(course => course.title).join(", ") || "Nenhuma. Para registrar, diga “já concluí Excel”, por exemplo."}</div>
-              <button type="button" onClick={forgetMemory} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-2 font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700"><Trash2 className="h-3 w-3" aria-hidden="true" />Apagar minha memória</button>
-            </div>
-          </details>}
-          {memoryNotice && <div role="status" className="shrink-0 px-4 py-2 text-xs text-slate-700">{memoryNotice}</div>}
-          {profile && !persistent && <div role="status" className="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-900">O navegador não permitiu salvar sua memória. Ela fica disponível somente enquanto esta página estiver aberta.</div>}
+          <div className="chat-context min-h-0 shrink-0 overflow-y-auto overscroll-contain">
+            {profile && <details className="chat-memory border-b border-slate-200 bg-blue-50 px-4 py-2 text-xs text-slate-700">
+              <summary className="cursor-pointer font-semibold">Sua memória com a Tortuguita</summary>
+              <div className="mt-2 space-y-2">
+                <div>Conversas e interesses deste perfil ficam neste navegador. Cursos concluídos são informações suas, sem comprovação de certificado.</div>
+                <div className="font-semibold">Cursos mais consultados por você</div>
+                {mostSoughtCourses(memory).slice(0, 3).map(item => <div key={item.courseId}>{courses.find(course => course.id === item.courseId)?.title} · {item.questions} perguntas · {item.views} visitas</div>)}
+                {memory.interests.length === 0 && <div>Ainda não há consultas salvas.</div>}
+                <div className="font-semibold">Conclusões informadas por você</div>
+                <div>{courses.filter(course => memory.completedCourseIds.includes(course.id)).map(course => course.title).join(", ") || "Nenhuma. Para registrar, diga “já concluí Excel”, por exemplo."}</div>
+                <button type="button" onClick={forgetMemory} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-2 font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700"><Trash2 className="h-3 w-3" aria-hidden="true" />Apagar minha memória</button>
+              </div>
+            </details>}
+            {memoryNotice && <div role="status" className="shrink-0 px-4 py-2 text-xs text-slate-700">{memoryNotice}</div>}
+            {profile && !persistent && <div role="status" className="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-900">O navegador não permitiu salvar sua memória. Ela fica disponível somente enquanto esta página estiver aberta.</div>}
+          </div>
 
           <div ref={logRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-slate-50 px-4 py-4">
             <div role="log" aria-label="Conversa com a Tortuguita" aria-live="polite" aria-relevant="additions text" className="space-y-3">

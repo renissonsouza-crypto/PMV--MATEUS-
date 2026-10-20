@@ -108,7 +108,9 @@ No PowerShell, substitua `npm` por `npm.cmd`. `npm test` inclui testes de regras
 
 Os testes usam bancos SQLite temporários e um serviço ViaCEP local controlado; preservam o banco de desenvolvimento. O teste serverless exercita controllers, models e SQL com transporte Neon isolado, sem credenciais de produção.
 
-O teste `npm run test:mobile` verifica seis configurações de telefone/tablet no Chromium, com emulação de toque, orientação horizontal e viewport reduzido. Ele exercita menu, busca, filtros, seções do curso, cadastro, fonte ampliada, tema escuro e chat. A emulação não substitui a validação em Safari nem em aparelhos Android/iOS reais.
+O teste `npm run test:mobile` verifica 12 configurações iniciais de telefone/tablet no Chromium, além de rotação, altura reduzida e seis regressões específicas. Ele exercita menu, busca, filtros, favoritos, seções do curso, cadastro, inscrição com conferência no SQLite, histórico Voltar/Avançar, fonte ampliada, tema escuro, políticas, caixa Google e chat. Consulte a [validação móvel de 20/10/2026](docs/validacao-mobile-2026-10-20.md) para os resultados e limites. A emulação não substitui a validação em Safari nem em aparelhos Android/iOS reais.
+
+Para também executar WebKit, instale o navegador compatível com a versão local do Playwright (`node node_modules/playwright-core/cli.js install webkit`) e defina `MOBILE_ENGINES=chromium,webkit` no ambiente antes do teste. Um motor solicitado e ausente faz o comando falhar; ele nunca é contado como aprovado. `PLAYWRIGHT_WEBKIT_EXECUTABLE_PATH` permite indicar uma instalação compatível e `MOBILE_TEST_ARTIFACTS` define a pasta dos relatórios e capturas.
 
 O teste de navegador inicia sua própria API/Vite e usa Chrome, Chromium ou Edge instalado. Ele verifica navegação, filtros, favoritos, cadastro e depoimentos persistidos, perfil, inscrições, cancelamentos, assistente, acessibilidade do formulário e responsividade. Para outro executável, configure `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` ou `CHROME_PATH`. `TEST_URL` permite apontar para um frontend já iniciado, mantendo um backend temporário para as gravações do teste.
 
