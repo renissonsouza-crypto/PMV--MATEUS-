@@ -81,9 +81,9 @@ O limite é de três inscrições realizadas no mês, incluindo inscrições can
 
 O chat abre em uma janela de até 480 × 680 pixels, ajustada ao espaço da tela. Use **Ampliar chat** para aumentar a área e o mesmo controle para restaurar o tamanho anterior. Em telas maiores, arraste o canto superior esquerdo ou foque esse controle e use as setas (Shift ajusta em passos maiores). O tamanho escolhido fica salvo neste navegador; **Opções do chat → Restaurar tamanho padrão** desfaz a preferência. Em celulares, a janela acompanha a rotação e o espaço do teclado; abrir o chat não aciona o teclado antes de tocar no campo.
 
-Memória e aprendizado ficam em **Opções do chat**. **Avaliar resposta** abre os botões de avaliação; **Ver sugestões de perguntas** revela outras sugestões, que também aparecem durante a digitação. As sugestões são recolhidas depois de enviar uma pergunta para dar espaço à resposta. Veja [a validação do tamanho e organização do chat](docs/chat-janela-responsiva.md).
+Memória e aprendizado ficam em **Opções do chat**. **Avaliar resposta** abre os botões de avaliação; **Ver sugestões de perguntas** revela outras sugestões, que também aparecem durante a digitação. As sugestões são recolhidas depois de enviar uma pergunta para dar espaço à resposta; cumprimentos e orientações guiadas mantêm duas escolhas rápidas visíveis. Veja [a validação do tamanho e organização do chat](docs/chat-janela-responsiva.md).
 
-A Tortuguita usa uma base local de 51 temas e 440 exemplos de perguntas, junto com o catálogo compartilhado pelas telas. Ela orienta cadastro, perfil, favoritos, consentimentos, inscrições, cancelamentos, suporte e escolha de cursos. A conversa permite continuar um assunto, comparar cursos e refinar preferências sem repetir toda a pergunta.
+A Tortuguita usa uma base local de 51 temas e 440 exemplos de perguntas, junto com o catálogo compartilhado pelas telas. Ela orienta cadastro, perfil, favoritos, consentimentos, inscrições, cancelamentos, suporte e escolha de cursos. A conversa permite continuar um assunto, comparar cursos e refinar preferências sem repetir toda a pergunta. Cumprimentos compostos (“olá, boa noite”), agradecimentos e respostas curtas preservam o assunto. Frases de cortesia são separadas de pedidos, evitando que “boa noite” vire um filtro de curso; uma busca explícita por cursos à noite continua funcionando. Veja [a validação das interações](docs/chatbot-interatividade.md).
 
 Esse funcionamento combina regras de interpretação de texto, exemplos e contexto da conversa; não envolve treinamento de pesos de um modelo de linguagem nem chamadas a uma API de IA. As respostas não inventam datas, docentes, critérios de certificação ou garantias de emprego ausentes do catálogo. Quando faltam informações, indicam como confirmá-las.
 
@@ -109,6 +109,7 @@ npm run test:mobile
 npm run test:chatbot
 npm run test:chatbot-learning
 npm run test:chat-window
+npm run test:chat-interaction
 ```
 
 No PowerShell, substitua `npm` por `npm.cmd`. `npm test` inclui testes de regras, armazenamento, cliente HTTP, validações, segurança, inicialização em portas alternativas, SQLite e rotas serverless.

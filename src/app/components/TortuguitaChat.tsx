@@ -60,6 +60,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(restored.memory.messages.length ? restored.memory.messages : [WELCOME]);
   const [followUps, setFollowUps] = useState<string[]>([]);
+  const [lastReplyIntent, setLastReplyIntent] = useState('');
   const [sending, setSending] = useState(false);
   const [helpful, setHelpful] = useState(false);
   const [learningEnabled, setLearningEnabled] = useState(() => readLearningConsent(profile?.id ?? null));
@@ -128,6 +129,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
     commitMemory({ ...memoryRef.current, context: { preferences: memoryRef.current.context.preferences }, messages: [] });
     setMessages([WELCOME]);
     setFollowUps([]);
+    setLastReplyIntent('');
     setDraft("");
     lastSubmissionRef.current = { text: "", time: 0 };
     inputRef.current?.focus();
@@ -143,6 +145,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
     setMemory(empty);
     setMessages([WELCOME]);
     setFollowUps([]);
+    setLastReplyIntent('');
     setDraft("");
     nextIdRef.current = 1;
     lastSubmissionRef.current = { text: "", time: 0 };
@@ -196,6 +199,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       commitMemory({ ...rememberReply(memoryRef.current, reply), messages: nextMessages });
       setMessages(nextMessages);
       setFollowUps(reply.suggestions);
+      setLastReplyIntent(reply.intent);
       if (reply.navigation) {
         const { courseId, page: destination } = reply.navigation;
         const alreadyThere = courseId !== undefined
@@ -214,6 +218,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
       commitMemory({ ...memoryRef.current, messages: nextMessages });
       setMessages(nextMessages);
       setFollowUps(["Como entro em contato?", "Quero ajuda para escolher um curso"]);
+      setLastReplyIntent('fallback');
     } finally {
       if (requestId === operation.current) {
         sendingRef.current = false;
@@ -390,7 +395,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                         ))}
                       </div>
                     )}
-                    {message.role === "assistant" && message.id !== 0 && message === messages[messages.length - 1] && (
+                    {message.role === "assistant" && message.id !== 0 && message === messages[messages.length - 1] && !['greeting', 'thanks', 'acknowledgement', 'goodbye'].includes(lastReplyIntent) && (
                       <div className="chat-feedback mt-3 flex flex-wrap items-start gap-x-2 border-t border-slate-100 pt-2">
                         <details key={message.id} className="chat-rating text-xs">
                           <summary className="min-h-11 cursor-pointer py-3 font-semibold text-slate-600">Avaliar resposta</summary>
@@ -424,7 +429,7 @@ export function TortuguitaChat({ courses, contacts, profile, page, activeCourseI
                 <Sparkles className="h-3 w-3" aria-hidden="true" />{suggestionsOpen ? "Recolher sugestões" : "Ver sugestões de perguntas"}
               </button>
               <div id="chat-suggestions" className="grid gap-2 sm:grid-cols-2" aria-label="Perguntas sugeridas">
-                {(suggestionsOpen ? suggestions : messages.length === 1 ? suggestions.slice(0, 2) : []).map(suggestion => (
+                {(suggestionsOpen ? suggestions : messages.length === 1 || ['greeting', 'thanks', 'acknowledgement', 'guided-choice', 'conversation-repair', 'assistant-capabilities'].includes(lastReplyIntent) ? suggestions.slice(0, 2) : []).map(suggestion => (
                   <button key={suggestion} type="button" onClick={() => sendMessage(suggestion)} disabled={sending}
                     className="max-w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs leading-snug text-slate-700 hover:border-blue-400 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50">
                     {suggestion}

@@ -16,7 +16,7 @@ O tamanho inicial passou de 390 × 580 para até **480 × 680 pixels**. A janela
 
 Memória, aprendizado, exclusão de avaliações e restauração do tamanho ficam em **Opções do chat**. Esse painel tem rolagem limitada para preservar o campo de mensagem. Avisos de falha continuam aparecendo mesmo com as opções fechadas.
 
-O início mostra duas perguntas rápidas. **Ver sugestões de perguntas** mostra outras; elas também aparecem durante a digitação e são recolhidas após o envio. **Avaliar resposta** revela as opções de avaliação. **Explicar melhor** permanece disponível ao lado. Consentimento, exclusão de dados, navegação e respostas do assistente foram preservados.
+O início mostra duas perguntas rápidas. **Ver sugestões de perguntas** mostra outras; elas também aparecem durante a digitação e são recolhidas após o envio. Cumprimentos e orientações guiadas mantêm duas escolhas rápidas à vista para continuar a interação. **Avaliar resposta** revela as opções de avaliação. **Explicar melhor** permanece disponível ao lado. Consentimento, exclusão de dados, navegação e respostas do assistente foram preservados.
 
 ## Verificações executadas
 

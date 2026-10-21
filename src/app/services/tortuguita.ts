@@ -6,6 +6,7 @@ import type { KnowledgeIntent } from "../data/tortuguitaKnowledge.ts";
 import { countEnrollmentsInCurrentMonth, canUnsubscribeFromCourse, getUnsubscribeDeadline } from "./enrollmentPolicy.js";
 import { normalizeTortuguitaText, meaningfulWords, wordSimilarity, hasPhrase, hasAny } from "./tortuguitaText.ts";
 import { mostSoughtCourses, type AssistantMemory } from "./tortuguitaMemory.ts";
+import { conversationEnvelope, type SocialIntent } from './tortuguitaConversation.ts';
 
 export type AssistantPreferences = {
   category?: string; modality?: string; period?: string; level?: string;
@@ -73,6 +74,28 @@ function courseActions(courses: Course[]): AssistantAction[] { return courses.sl
 function status(course: Course): string { return course.status === "coming-soon" ? "Início em breve — inscrições indisponíveis" : course.status === "last-spots" ? "Últimas vagas" : "Inscrições abertas"; }
 function courseLine(course: Course): string { return `${course.title}: ${course.modality}, ${course.hours} horas, ${course.duration}, período ${course.period.toLowerCase()}, nível ${course.level.toLowerCase()}. ${status(course)}.`; }
 function courseQuestions(course: Course): string[] { return [`O que vou aprender em ${course.title}?`, `Como me inscrevo em ${course.title}?`, `Qual o certificado de ${course.title}?`]; }
+function conversationNextStep(options: AssistantOptions, context: AssistantContext): { text: string; suggestions: string[] } {
+  if (context.dialogue === 'area') return { text: 'Podemos continuar a escolha do curso. Você prefere Tecnologia, Administração ou outra área? Se ainda não sabe, posso dar exemplos.', suggestions: ['Tecnologia', 'Administração', 'Gastronomia', 'Ainda não sei'] };
+  if (context.dialogue === 'modality') return { text: `Podemos continuar${context.preferences?.category ? ` com ${context.preferences.category}` : ' a escolha do curso'}. Você prefere online, presencial ou qualquer modalidade?`, suggestions: ['Online', 'Presencial', 'Qualquer modalidade', 'Cancelar ajuda'] };
+  const topic = PLATFORM_KNOWLEDGE.find(item => item.id === context.lastIntent);
+  if (topic) return { text: `Quer continuar falando sobre ${topic.title.toLowerCase()} ou tirar outra dúvida?`, suggestions: ['Explique melhor', ...topic.followUps].slice(0, 4) };
+  const selected = options.courses.find(course => context.courseIds?.length === 1 && context.courseIds[0] === course.id)
+    ?? (options.page === 'course-detail' ? options.courses.find(course => course.id === options.activeCourseId) : undefined);
+  if (selected) return { text: `Podemos continuar com ${selected.title}. Você quer ver o conteúdo, a duração ou como se inscrever?`, suggestions: [`O que vou aprender em ${selected.title}?`, `Qual a duração de ${selected.title}?`, `Como me inscrevo em ${selected.title}?`] };
+  if (context.candidateCourseIds?.length) return { text: 'Podemos continuar com as opções que encontramos. Quer saber mais sobre a primeira ou comparar as duas primeiras?', suggestions: ['Quero saber mais sobre o primeiro', 'Comparar o primeiro e o segundo', 'Quero ajuda para escolher um curso'] };
+  if (options.page === 'register') return { text: 'Você está no cadastro. Em qual parte precisa de ajuda: dados pessoais, endereço ou conclusão?', suggestions: ['Quais dados são obrigatórios?', 'Meu CEP não foi aceito', 'Quais são as etapas do cadastro?'] };
+  if (options.page === 'profile') return { text: 'Posso ajudar você a consultar os cursos inscritos ou entender como editar seu perfil. O que deseja fazer?', suggestions: ['Onde vejo meus cursos inscritos?', 'Como edito meu perfil?', 'Quero ajuda para escolher um curso'] };
+  return { text: 'Você quer encontrar um curso, fazer seu cadastro ou acessar sua conta?', suggestions: ['Quero ajuda para escolher um curso', 'Como faço meu cadastro?', 'Como entro na minha conta?'] };
+}
+function socialConversation(intent: SocialIntent, options: AssistantOptions, salutation?: string): AssistantReply {
+  const context = cleanContext(options.context, options.courses);
+  const next = conversationNextStep(options, context);
+  const introduction = intent === 'greeting' ? `${salutation ?? 'Olá'}! Sou a Tortuguita Vix 🐢 Estou aqui para ajudar.`
+    : intent === 'thanks' ? 'Por nada! Que bom poder ajudar 🐢'
+    : intent === 'goodbye' ? 'Até mais! 🐢 Quando precisar, é só abrir o chat para continuar.'
+    : 'Certo! Vamos no seu ritmo.';
+  return { ...reply(`${introduction}${intent === 'goodbye' ? '' : `\n\n${next.text}`}`, intent, context, [], next.suggestions), context };
+}
 function bestSimilarity(word: string, candidates: string[]): number { return Math.max(0, ...candidates.map(candidate => wordSimilarity(word, candidate))); }
 
 // The phrases and examples are scored as words. A single generic “curso” cannot
@@ -326,25 +349,32 @@ function platformUsageReply(text: string, options: AssistantOptions, context: As
     return { ...result, suggestions: ["Quero ajuda para escolher um curso", "Como usar os filtros?", "Quais categorias existem?"] };
   }
   if (question && /\b(?:entrar|entro|acessar|acesso|recuperar|recupero|login)\b/.test(text) && /\b(?:conta|perfil|google|login)\b/.test(text)) return explain("profile_local");
-  if (/^(?:(?:oi|ola) )?(?:o que voce (?:pode fazer|faz)(?: por mim| aqui| na plataforma| no site)?|como voce (?:pode|consegue) me ajudar|em que voce pode me ajudar|com o que voce pode me ajudar|(?:voce )?(?:pode|consegue|poderia) me ajudar|preciso de ajuda|me ajude|(?:quais|quais sao) (?:as )?suas (?:funcoes|funcionalidades|habilidades))(?: por favor)?$/.test(text)) {
+  if (/^(?:(?:oi|ola|sim) )?(?:o que voce (?:pode fazer|faz)(?: por mim| aqui| na plataforma| no site)?|como voce (?:pode|consegue) me ajudar|em que voce pode me ajudar|com o que voce pode me ajudar|(?:voce )?(?:pode|consegue|poderia) me ajudar|preciso de ajuda|quero ajuda|me ajude|me ajuda|estou perdid[oa]|nao sei (?:o que fazer|(?:usar|mexer|navegar)(?: (?:aqui|o site|a plataforma|no site|na plataforma|nesse site|neste site))?)|preciso de orientacao|(?:quais|quais sao) (?:as )?suas (?:funcoes|funcionalidades|habilidades))(?: por favor)?$/.test(text)) {
     return reply("Posso ajudar você a encontrar e comparar cursos do catálogo, explicar como usar a busca e os filtros e orientar sobre cadastro, acesso com Google, perfil, favoritos e inscrições. Você pode me dizer o que deseja aprender ou escolher uma opção abaixo. Não faço inscrições nem altero seus dados pelo chat.", "assistant-capabilities", context, [], ["Quero ajuda para escolher um curso", "Como uso a busca?", "Como faço meu cadastro?", "Como entro na minha conta?"]);
   }
   return undefined;
 }
 
+function wantsGuidedChoice(text: string): boolean {
+  return /^(?:quero|gostaria de|desejo|pretendo) (?:fazer|escolher|encontrar) (?:um|algum) curso(?: para mim)?$/.test(text) || hasAny(text, ["quero ajuda para escolher um curso", "me ajude a escolher", "nao sei qual curso", "me ajude a descobrir", "nao sei por onde comecar", "me ajude a encontrar um curso", "me ajuda a encontrar um curso", "me ajude a achar um curso", "quero fazer um curso mas nao sei qual"]);
+}
 function guidedConversation(text: string, options: AssistantOptions, context: AssistantContext): AssistantReply | undefined {
-  const start = hasAny(text, ["quero ajuda para escolher um curso", "me ajude a escolher", "nao sei qual curso", "me ajude a descobrir", "nao sei por onde comecar"]);
+  const start = wantsGuidedChoice(text);
   if (hasAny(text, ["como faco agora", "qual o proximo passo", "e agora"])) {
     const selected = options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
     if (selected) return reply(selected.status === "coming-soon" ? `${selected.title} ainda não aceita inscrição. Você pode consultar sua ficha ou procurar outro curso disponível.` : `Para seguir com ${selected.title}:\n1. Abra a ficha e confira conteúdo e requisitos.\n2. Toque em Inscrever-se. Se necessário, complete seu cadastro.\n3. Confirme diretamente na plataforma e aguarde o aviso de sucesso. Depois, confira Meu perfil → Cursos cadastrados. Não precisa de confirmação por e-mail.`, "next-step", context, courseActions([selected]), ["Quais são os requisitos para inscrição?", "Onde vejo meus cursos inscritos?", "Quero ajuda para escolher um curso"]);
   }
   if (hasAny(text, ["cancelar ajuda", "sair da escolha", "parar orientacao"]) || (/\b(?:nao quero|pare|parar|cancele|cancelar|encerrar|sair)\b/.test(text) && /\b(?:escolha|orientacao|ajuda guiada)\b/.test(text))) return reply("Tudo bem, encerramos a escolha guiada. Pode perguntar sobre um curso, cadastro ou outra função da plataforma.", "guidance-cancelled", { ...context, dialogue: undefined });
-  if (hasAny(text, ["nao entendi", "explique melhor", "explicar melhor", "mais simples", "nao ajudou", "nao era isso", "preciso de mais ajuda"])) {
+  if (hasAny(text, ["nao entendi", "explique melhor", "explicar melhor", "mais simples", "nao ajudou", "nao era isso", "preciso de mais ajuda", "voce nao entendeu", "resposta errada", "isso esta errado", "nada a ver", "nao foi isso que perguntei", "voce entendeu errado", "resposta esta errada", "resposta esta incorreta", "voce errou", "respondeu errado", "nao e isso", "nao fez sentido"])) {
     const topic = PLATFORM_KNOWLEDGE.find(item => item.id === context.lastIntent);
     const selected = !topic && options.courses.find(course => context.courseIds?.length === 1 && course.id === context.courseIds[0]);
-    if (selected) return reply(`Vamos por partes. ${courseLine(selected)}\n\nVocê pode consultar o conteúdo, conferir as condições ou abrir a ficha. A inscrição só é concluída na plataforma após sua confirmação. Qual dessas partes você quer entender melhor?`, "conversation-repair", context, courseActions([selected]), [`O que vou aprender em ${selected.title}?`, `Como me inscrevo em ${selected.title}?`, "Quero ajuda para escolher um curso"]);
-    const explanation = topic ? topic.answer.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ") + "\n\n" : "";
-    return reply(`${explanation}Vamos por partes: você precisa escolher um curso, preencher o cadastro ou consultar uma inscrição? Escolha uma opção ou diga onde ficou a dúvida.`, "conversation-repair", context, [], ["Quero ajuda para escolher um curso", "Quais são as etapas do cadastro?", "Onde vejo meus cursos inscritos?", "Como entro em contato?"]);
+    if (selected) return { ...reply(`Vamos por partes. ${courseLine(selected)}\n\nVocê pode consultar o conteúdo, conferir as condições ou abrir a ficha. A inscrição só é concluída na plataforma após sua confirmação. Qual dessas partes você quer entender melhor?`, "conversation-repair", context, courseActions([selected]), [`O que vou aprender em ${selected.title}?`, `Como me inscrevo em ${selected.title}?`, "Quero ajuda para escolher um curso"]), context };
+    if (topic) return { ...reply(`Vamos por partes. ${topic.answer.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ')}\n\nQual parte ficou em dúvida? Você pode dizer o que tentou fazer ou escolher uma pergunta abaixo.`, 'conversation-repair', context, [], topic.followUps), context };
+    if (context.dialogue) {
+      const next = conversationNextStep(options, context);
+      return { ...reply(`Vamos tentar de outro jeito. ${next.text}`, 'conversation-repair', context, [], next.suggestions), context };
+    }
+    return reply('Vamos por partes: você precisa escolher um curso, preencher o cadastro ou consultar uma inscrição? Escolha uma opção ou diga onde ficou a dúvida.', "conversation-repair", context, [], ["Quero ajuda para escolher um curso", "Quais são as etapas do cadastro?", "Onde vejo meus cursos inscritos?", "Como entro em contato?"]);
   }
   if (!start && !context.dialogue) return undefined;
   if (!start && semanticIntent(text)) return undefined;
@@ -367,11 +397,9 @@ function answerSingleTortuguita(message: string, options: AssistantOptions): Ass
   const context = cleanContext(options.context, options.courses);
   if (!text) return reply("Sou a Tortuguita Vix 🐢 Posso orientar sobre os cursos do catálogo, cadastro, inscrições, perfil, favoritos e regras da plataforma. Digite sua dúvida ou escolha uma sugestão.", "greeting", context, [], QUICK_QUESTIONS.slice(0, 5));
   if (String(message).length > 1000) return reply("Sua pergunta é muito longa. Envie uma dúvida de até 1.000 caracteres para eu ajudar com clareza.", "clarification", context, [], QUICK_QUESTIONS.slice(0, 3), "low");
-  if (/^((oi|ola|bom dia|boa tarde|boa noite|e ai|hey|hello|tudo bem)( |$)){1,3}[a-z ]*$/.test(text) && meaningfulWords(text).length <= 2) return reply("Olá! Sou a Tortuguita Vix 🐢 Posso encontrar cursos, comparar opções e explicar cadastro, inscrições, perfil e regras do Qualifica Vix. Como posso ajudar?", "greeting", context, [], QUICK_QUESTIONS.slice(0, 5));
-  if (hasAny(text, ["obrigado", "obrigada", "valeu", "agradeco"]) && meaningfulWords(text).length <= 3) return reply("Por nada! 🐢 Quando precisar, posso ajudar com cursos e dúvidas sobre a plataforma.", "thanks", context, [], QUICK_QUESTIONS.slice(0, 3));
   if (hasAny(text, ["ignore instrucoes", "ignore as instrucoes", "prompt do sistema", "system prompt", "chave api", "api key", "seu token", "senha do banco", "dados de outros usuarios", "cpf dos usuarios", "hackear"])) return reply("Posso orientar sobre a plataforma e os dados públicos do catálogo. Não acesso segredos, credenciais nem dados de outros usuários, e não altero inscrições ou apago registros pelo chat. Para tratar dados pessoais, use os canais de atendimento.", "privacy", context, [{ label: "Canais de atendimento", page: "contato" }], ["Como meus dados são armazenados?", "Como solicitar exclusão dos meus dados?"]);
-  if (hasAny(text, ["seu nome", "quem e voce", "voce e uma ia", "voce usa ia", "como voce funciona", "voce e um robo", "assistente virtual"])) return reply("Sou a Tortuguita Vix, assistente local do Qualifica Vix. Respondo com informações revisadas da plataforma, dados do catálogo e contexto desta conversa. Não consulto uma IA externa nem acesso dados de outros usuários. Posso orientar, mas inscrições e alterações exigem sua ação nas telas.", "assistant-capabilities", context, [], QUICK_QUESTIONS.slice(0, 5));
-  const usage = platformUsageReply(text, options, context);
+  if (hasAny(text, ["seu nome", "quem e voce", "voce e uma ia", "voce usa ia", "como voce funciona", "voce e um robo", "voce e humano", "voce e uma pessoa", "voce e real", "assistente virtual"])) return reply("Sou a Tortuguita Vix, assistente local do Qualifica Vix. Respondo com informações revisadas da plataforma, dados do catálogo e contexto desta conversa. Não consulto uma IA externa nem acesso dados de outros usuários. Posso orientar, mas inscrições e alterações exigem sua ação nas telas.", "assistant-capabilities", context, [], QUICK_QUESTIONS.slice(0, 5));
+  const usage = !wantsGuidedChoice(text) && platformUsageReply(text, options, context);
   if (usage) return usage;
   const guided = guidedConversation(text, options, context);
   if (guided) return guided;
@@ -492,7 +520,7 @@ function memoryReply(message: string, options: AssistantOptions): AssistantReply
   return undefined;
 }
 
-export function answerTortuguita(message: string, options: AssistantOptions): AssistantReply {
+function answerRequest(message: string, options: AssistantOptions): AssistantReply {
   const result = answerConversation(message, options);
   const text = normalizeTortuguitaText(message);
   if (String(message).length <= 1000 && !["privacy", "profile_local", "chat_learning"].includes(result.intent) && !result.intent.includes("+")) {
@@ -544,6 +572,15 @@ export function answerTortuguita(message: string, options: AssistantOptions): As
     }
   }
   return result;
+}
+
+export function answerTortuguita(message: string, options: AssistantOptions): AssistantReply {
+  // Length checks run on the original input, before removing courtesy phrases.
+  if (String(message).length > 1000) return answerRequest(message, options);
+  const envelope = conversationEnvelope(message);
+  if (envelope.social) return socialConversation(envelope.social, options, envelope.salutation);
+  const result = answerRequest(envelope.message, options);
+  return envelope.salutation ? { ...result, text: `${envelope.salutation}!\n\n${result.text}` } : result;
 }
 
 export function getTortuguitaSuggestions(input: string, courses: Course[]): string[] {
