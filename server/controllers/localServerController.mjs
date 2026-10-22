@@ -1,5 +1,5 @@
 import { authCookie, registrationGoogleIntent, clearGoogleSignupCookie } from "../services/googleAuth.mjs";
-import { newToken, digest } from "../services/enrollmentConfirmation.mjs";
+import { newToken, digest, fail } from "../services/enrollmentConfirmation.mjs";
 import { authController } from "./authController.mjs";
 import { sqliteAuthRepository } from "../models/AuthRepository.mjs";
 import { enrollmentController } from "./enrollmentController.mjs";
@@ -9,11 +9,12 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
-import { validateRegistration, validateTestimonial, validateVitoriaCep } from "../models/validation.mjs";
+import { isSafePublicName, validateRegistration, validateTestimonial, validateVitoriaCep } from "../models/validation.mjs";
 import { MAX_JSON_BODY_BYTES, validateJsonMutation } from "./requestSecurity.mjs";
 import { getApiPort } from "../../scripts/dev-config.mjs";
 import { chatLearningController } from './chatLearningController.mjs';
 import { sqliteChatLearningRepository } from '../models/ChatLearningRepository.mjs';
+import { COURSES } from "../../shared/courses.mjs";
 
 const port = getApiPort(process.env, { allowEphemeral: true });
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -54,6 +55,13 @@ db.exec(`
     FOREIGN KEY(registration_id) REFERENCES registrations(id) ON DELETE CASCADE
   );
 `);
+const testimonialColumns = new Set(db.prepare("PRAGMA table_info(testimonials)").all().map(column => column.name));
+if (!testimonialColumns.has("registration_id"))
+  db.exec("ALTER TABLE testimonials ADD COLUMN registration_id INTEGER REFERENCES registrations(id) ON DELETE CASCADE");
+if (!testimonialColumns.has("course_id"))
+  db.exec("ALTER TABLE testimonials ADD COLUMN course_id INTEGER");
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS testimonials_author_course
+  ON testimonials(registration_id, course_id) WHERE registration_id IS NOT NULL AND course_id IS NOT NULL`);
 
 const enrollmentRepository = sqliteEnrollmentRepository(db);
 const handleEnrollment = enrollmentController(enrollmentRepository);
@@ -138,8 +146,16 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { status: "ok", database: result.connected === 1 ? "connected" : "error" });
     }
     if (req.method === "GET" && url.pathname === "/api/testimonials") {
-      const rows = db.prepare("SELECT id, name, role, course, quote, rating FROM testimonials ORDER BY id DESC LIMIT 100").all();
-      return json(res, 200, rows);
+      const rows = db.prepare(`SELECT id, name, role, course_id, quote, rating FROM testimonials
+        WHERE registration_id IS NOT NULL AND course_id IS NOT NULL ORDER BY id DESC LIMIT 100`).all();
+      const testimonials = rows.flatMap(row => {
+        const course = COURSES.find(item => item.id === Number(row.course_id));
+        return course && isSafePublicName(row.name) ? [{
+          id: Number(row.id), name: String(row.name), role: String(row.role), courseId: course.id,
+          course: course.title, quote: String(row.quote), rating: Number(row.rating),
+        }] : [];
+      });
+      return json(res, 200, testimonials);
     }
     if (req.method === "POST" && url.pathname === "/api/testimonials") {
       const requestError = validateJsonMutation(req);
@@ -149,10 +165,37 @@ const server = createServer(async (req, res) => {
       if (bodyError) return json(res, bodyError.status, { error: bodyError.error });
       const validation = validateTestimonial(req.body);
       if (validation.error) return json(res, 400, { error: validation.error });
-      const { name, role, course, quote, rating } = validation.data;
-      const result = db.prepare("INSERT INTO testimonials(name, role, course, quote, rating) VALUES (?, ?, ?, ?, ?)")
-        .run(name, role, course, quote, rating);
-      return json(res, 201, { id: Number(result.lastInsertRowid), name, role, course, quote, rating });
+      const profileToken = req.headers["x-profile-token"];
+      if (typeof profileToken !== "string" || !/^[a-f0-9]{64}$/.test(profileToken))
+        return json(res, 401, { error: "Entre na plataforma para publicar seu depoimento." });
+      const { role, courseId, course, quote, rating } = validation.data;
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const now = new Date().toISOString();
+        const person = db.prepare(`SELECT registration.id, registration.name FROM registrations registration
+          JOIN profile_sessions session ON session.registration_id = registration.id
+          WHERE session.token_hash = ? AND session.expires_at > ?`).get(digest(profileToken), now);
+        if (!person) throw fail("Entre novamente na plataforma para publicar seu depoimento.", 401);
+        if (!isSafePublicName(person.name))
+          throw fail("O nome original do cadastro não pode ser exibido publicamente. Entre em contato com o atendimento antes de publicar.", 400);
+        const enrollment = db.prepare(`SELECT 1 FROM course_enrollment_requests
+          WHERE registration_id = ? AND course_id = ? AND confirmed_at IS NOT NULL AND cancelled_at IS NULL`)
+          .get(person.id, courseId);
+        if (!enrollment) throw fail("Você só pode avaliar um curso em que possui inscrição ativa.", 403);
+        let result;
+        try {
+          result = db.prepare(`INSERT INTO testimonials(registration_id, course_id, name, role, course, quote, rating)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`).run(person.id, courseId, person.name, role, course, quote, rating);
+        } catch (error) {
+          if (String(error.message).includes("UNIQUE")) throw fail("Você já publicou um depoimento para este curso.", 409);
+          throw error;
+        }
+        db.exec("COMMIT");
+        return json(res, 201, { id: Number(result.lastInsertRowid), name: person.name, role, courseId, course, quote, rating });
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
     }
     if (req.method === "POST" && url.pathname === "/api/registrations") {
       const requestError = validateJsonMutation(req);

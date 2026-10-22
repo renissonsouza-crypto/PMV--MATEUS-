@@ -507,23 +507,48 @@ test("inscrição: desistência encerrada permanece inscrita", async page => {
 });
 
 test("depoimentos: formulário obrigatório e publicação pela API real", async (page, environment) => {
+  await page.getByRole("button", { name: "Entrar para compartilhar", exact: true }).click();
+  await page.getByRole("heading", { name: "Dados Pessoais", exact: true }).waitFor();
+
+  await seedProfile(page, profileFixture());
+  await page.getByRole("button", { name: "Inscreva-se para compartilhar", exact: true }).click();
+  await page.getByRole("heading", { name: /Encontre o curso ideal/i }).waitFor();
+  await openCourse(page, courseTitles[0]);
+  await page.getByRole("button", { name: "Inscrever-se", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar minha inscrição", exact: true }).click();
+  await waitForDirectEnrollment(page);
+  await navigate(page, "Início");
+
   await page.getByRole("button", { name: "Compartilhar minha história", exact: true }).click();
   await page.getByRole("heading", { name: "Como o curso mudou sua vida?", exact: true }).waitFor();
-  const form = page.locator("form").filter({ has: page.getByPlaceholder("Ex.: João Silva") });
+  const form = page.locator("form").filter({ has: page.getByPlaceholder("Ex.: Auxiliar administrativo") });
   assert.equal(await form.evaluate(el => el.checkValidity()), false);
-  await page.getByPlaceholder("Ex.: João Silva").fill("Pessoa Depoimento Teste");
   await page.getByPlaceholder("Ex.: Auxiliar administrativo").fill("Aluno");
-  await page.getByPlaceholder("Ex.: Introdução à Programação").fill(courseTitles[0]);
-  await form.locator("textarea").fill("Aprendi lógica e pratiquei a criação de pequenos programas.");
+  const courseSelect = form.locator("select");
+  await courseSelect.waitFor();
+  assert.deepEqual(await courseSelect.locator("option").allTextContents(), ["Selecione um curso", courseTitles[0]]);
+  await courseSelect.selectOption({ label: courseTitles[0] });
+  await form.locator("textarea").fill("O curso me ajudou a aprender lógica e praticar a criação de pequenos programas no trabalho.");
+  await form.getByRole("checkbox", { name: /Confirmo que o relato é verdadeiro/i }).check();
   const [published] = await Promise.all([
     page.waitForResponse(response => response.url().endsWith("/api/testimonials") && response.request().method() === "POST"),
     form.getByRole("button", { name: "Publicar depoimento", exact: true }).click(),
   ]);
   assert.equal(published.status(), 201);
+  const created = await published.json();
+  assert.equal(created.name, profileFixture().nome, "O servidor deve derivar o autor do perfil autenticado");
+  assert.equal(created.courseId, 1);
+  assert.equal(created.course, courseTitles[0]);
   await page.getByText(/Depoimento enviado com sucesso/i).waitFor();
   await page.reload({ waitUntil: "domcontentloaded" });
   const response = await page.request.get(`${process.env.TEST_URL ? environment.apiURL : environment.baseURL}/api/testimonials`);
-  assert((await response.json()).some(item => item.name === "Pessoa Depoimento Teste"));
+  assert((await response.json()).some(item => item.name === profileFixture().nome && item.courseId === 1));
+
+  await seedProfile(page, { ...profileFixture(), id: 1001, nome: "Outro Perfil", email: "testimonial-other@example.test" });
+  const participantCard = page.locator("main article").filter({ hasText: profileFixture().nome }).first();
+  await participantCard.getByRole("button", { name: "Inscrever-se neste curso", exact: true }).click();
+  await page.getByRole("heading", { name: "Confirmar inscrição", exact: true }).waitFor();
+  await page.getByText(courseTitles[0], { exact: true }).waitFor();
 });
 
 test("assistente: pedidos abrem cadastro e ficha de Excel sem cliques adicionais", async page => {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { ageFromBirthDate, validateRegistration, validateTestimonial } from "../server/models/validation.mjs";
+import { COURSES } from "../shared/courses.mjs";
 
 const adult = {
   nome: "Maria Silva", cpf: "123.456.789-01", email: "MARIA@example.com", telefone: "27999999999",
@@ -62,12 +63,25 @@ assert.match(validateRegistration({
   grauParentesco: "Pai", telefoneResponsavel: "x",
 }).error, /Telefone do responsável inválido/);
 
-assert.equal(validateTestimonial({ name: "Ana", role: "Aluna", course: "Excel", quote: "Ótimo", rating: 5 }).error, undefined);
-assert.match(validateTestimonial({ name: "Ana", role: "Aluna", course: "Excel", quote: "Ótimo", rating: 6 }).error, /inválidos/);
-for (const rating of [true, false, [5], "5extra", null])
-  assert.ok(validateTestimonial({ name: "Ana", role: "Aluna", course: "Excel", quote: "Ótimo", rating }).error);
-assert.ok(validateTestimonial({ name: { text: "Ana" }, role: "Aluna", course: "Excel", quote: "Ótimo", rating: 5 }).error);
-assert.ok(validateTestimonial({ name: "Ana", role: "Aluna", course: "Excel", quote: "x".repeat(501), rating: 5 }).error);
+const testimonialInput = {
+  role: "Aluna", courseId: 2,
+  quote: "O curso me ajudou a organizar planilhas e aplicar fórmulas no trabalho.",
+  rating: 5, acceptedGuidelines: true, website: "",
+};
+const validTestimonial = validateTestimonial(testimonialInput);
+assert.equal(validTestimonial.error, undefined);
+assert.equal(validTestimonial.data.courseId, 2);
+assert.equal(validTestimonial.data.course, COURSES.find(course => course.id === 2).title);
+assert.equal(validTestimonial.data.name, undefined, "O nome deve vir da sessão autenticada");
+for (const rating of [true, false, [5], "5", "5extra", null, 0, 6, 1.5])
+  assert.ok(validateTestimonial({ ...testimonialInput, rating }).error);
+for (const courseId of [undefined, null, "2", 0, 999, 1.5])
+  assert.ok(validateTestimonial({ ...testimonialInput, courseId }).error);
+assert.ok(validateTestimonial({ ...testimonialInput, name: "Ana" }).error, "Nome enviado pelo cliente deve ser rejeitado");
+assert.ok(validateTestimonial({ ...testimonialInput, course: "Excel" }).error, "Título livre deve ser rejeitado");
+assert.ok(validateTestimonial({ ...testimonialInput, quote: "x".repeat(501) }).error);
+assert.ok(validateTestimonial({ ...testimonialInput, acceptedGuidelines: false }).error);
+assert.ok(validateTestimonial({ ...testimonialInput, website: "robô" }).error);
 console.log("✓ validações de cadastro, menor de idade e depoimentos");
 
 for (const numero of ['', undefined, 'Sem número']) {

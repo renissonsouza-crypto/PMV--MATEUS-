@@ -7,6 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { createHash } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { getApiPort, requireSupportedNode, resolveViteCli } from "../scripts/dev-config.mjs";
@@ -112,19 +114,68 @@ test("dev starts API and Vite on alternate ports and proxies real database mutat
     assert.equal(google.headers.get('cache-control'), 'no-store');
     assert.deepEqual(await google.json(), { enabled: true, clientId: 'startup.apps.googleusercontent.com' }, 'Configured API must expose availability and public ID only');
 
-    const created = await fetch(`${origin}/api/testimonials`, {
+    const profileToken = "a".repeat(64);
+    const database = new DatabaseSync(join(directory, "test.sqlite"));
+    const now = new Date().toISOString();
+    const profilePayload = { nome: "Teste de inicialização", email: "startup@example.com", telefone: "27999999999", autorizaDados: true, aceitaTermos: true };
+    const registration = database.prepare(`INSERT INTO registrations
+      (name, cpf, email, phone, birth_date, city, state, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      profilePayload.nome, "12345678901", profilePayload.email, profilePayload.telefone, "1990-01-01", "Vitória", "ES", JSON.stringify(profilePayload),
+    );
+    database.prepare("INSERT INTO profile_sessions(token_hash, registration_id, expires_at) VALUES (?, ?, ?)")
+      .run(createHash("sha256").update(profileToken).digest("hex"), Number(registration.lastInsertRowid), new Date(Date.now() + 86_400_000).toISOString());
+    database.prepare(`INSERT INTO course_enrollment_requests
+      (id, registration_id, course_id, token_hash, status_hash, delivery, created_at, expires_at, confirmed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      "startup-enrollment", Number(registration.lastInsertRowid), 1, "b".repeat(64), "c".repeat(64), "direct", now, now, now,
+    );
+    database.close();
+
+    const testimonialData = {
+      role: "Aluna",
+      courseId: 1,
+      quote: "O curso de programação me ajudou a praticar lógica e criar pequenos projetos.",
+      rating: 5,
+      acceptedGuidelines: true,
+      website: "",
+    };
+    const anonymous = await fetch(`${origin}/api/testimonials`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: origin },
-      body: JSON.stringify({ name: "Teste de inicialização", role: "Aluno", course: "Programação", quote: "API e frontend conectados", rating: 5 }),
+      body: JSON.stringify(testimonialData),
+    });
+    assert.equal(anonymous.status, 401);
+
+    const created = await fetch(`${origin}/api/testimonials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin, "x-profile-token": profileToken },
+      body: JSON.stringify(testimonialData),
     });
     assert.equal(created.status, 201, await created.clone().text());
     const testimonial = await created.json();
+    assert.equal(testimonial.name, profilePayload.nome);
+    assert.equal(testimonial.course, "Introdução à Programação");
+    assert.equal(testimonial.courseId, 1);
     const list = await (await fetch(`${origin}/api/testimonials`)).json();
     assert.ok(list.some(item => item.id === testimonial.id));
 
+    const duplicate = await fetch(`${origin}/api/testimonials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin, "x-profile-token": profileToken },
+      body: JSON.stringify(testimonialData),
+    });
+    assert.equal(duplicate.status, 409);
+
+    const notEnrolled = await fetch(`${origin}/api/testimonials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin, "x-profile-token": profileToken },
+      body: JSON.stringify({ ...testimonialData, courseId: 2, quote: "O curso de Excel poderia ajudar meu trabalho com planilhas e relatórios." }),
+    });
+    assert.equal(notEnrolled.status, 403);
+
     const rejected = await fetch(`${origin}/api/testimonials`, {
       method: "POST", headers: { "Content-Type": "application/json", Origin: "https://outside.example" },
-      body: JSON.stringify({ name: "Teste", role: "Aluno", course: "Excel", quote: "Outra origem", rating: 5 }),
+      body: JSON.stringify(testimonialData),
     });
     assert.equal(rejected.status, 403);
   } finally {

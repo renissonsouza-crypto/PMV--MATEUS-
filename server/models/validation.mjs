@@ -1,6 +1,14 @@
 import { policyReceipt, POLICY_VERSION } from "../../shared/policies.mjs";
+import { COURSES } from "../../shared/courses.mjs";
 // Regras de domínio compartilhadas pelos bancos local e de produção.
 export const clean = (value, max = 500) => String(value ?? "").trim().slice(0, max);
+export const isSafePublicName = value => {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  return text.length >= 1 && text.length <= 120 && /\p{L}/u.test(text) &&
+    !/[<>\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u.test(text) &&
+    !/(?:https?:\/\/|www\.|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b)/iu.test(text);
+};
 
 export async function validateVitoriaCep(value, fetcher = fetch) {
   const cep = clean(value, 12).replace(/\D/g, "");
@@ -89,15 +97,58 @@ export function validateRegistration(input) {
 
 export function validateTestimonial(input) {
   const data = typeof input === "object" && input && !Array.isArray(input) ? input : {};
-  const limits = { name: 120, role: 120, course: 160, quote: 500 };
-  if (Object.entries(limits).some(([key, max]) => typeof data[key] !== "string" || data[key].trim().length > max) ||
-      !["number", "string"].includes(typeof data.rating))
-    return { error: "Dados do depoimento inválidos" };
-  const parsed = {
-    name: clean(data.name, 120), role: clean(data.role, 120), course: clean(data.course, 160),
-    quote: clean(data.quote, 500), rating: Number(data.rating),
-  };
-  if (!parsed.name || !parsed.role || !parsed.course || !parsed.quote || !Number.isInteger(parsed.rating) || parsed.rating < 1 || parsed.rating > 5)
-    return { error: "Dados do depoimento inválidos" };
-  return { data: parsed };
+  const allowedFields = new Set(["role", "courseId", "quote", "rating", "acceptedGuidelines", "website"]);
+  if (Object.keys(data).some(key => !allowedFields.has(key)))
+    return { error: "O depoimento contém campos que não são permitidos." };
+  if (typeof data.website !== "string" || data.website.trim())
+    return { error: "Não foi possível validar o envio do depoimento." };
+  if (data.acceptedGuidelines !== true)
+    return { error: "Confirme as regras de publicação antes de enviar o depoimento." };
+  if (typeof data.role !== "string" || typeof data.quote !== "string" ||
+      typeof data.rating !== "number" || !Number.isSafeInteger(data.courseId))
+    return { error: "Dados do depoimento inválidos." };
+
+  const course = COURSES.find(item => item.id === data.courseId);
+  if (!course) return { error: "Selecione um curso disponível no catálogo." };
+
+  const role = data.role.trim().replace(/\s+/gu, " ");
+  const quote = data.quote.trim().replace(/\s+/gu, " ");
+  if (role.length < 2 || role.length > 80 || quote.length < 30 || quote.length > 500 ||
+      !Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5)
+    return { error: "Informe sua ocupação, uma experiência com pelo menos 30 caracteres e uma nota de 1 a 5." };
+
+  const hiddenCharacters = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u;
+  const markupOrCode = /<\s*\/?\s*[a-z][^>]*>|\bon[a-z]+\s*=|javascript\s*:|\]\s*\(\s*(?:javascript|data)\s*:|\b(?:drop\s+table|delete\s+from|insert\s+into|alter\s+table|truncate\s+table)\b|--/iu;
+  const publicContact = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(?:https?:\/\/|www\.)\S+|\b[A-Z0-9-]{2,}\.(?:com(?:\.br)?|org\.br|br)(?:\/\S*)?\b|@\w{2,}|\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b|(?:\(?\d{2}\)?[\s.-]*)?(?:9[\s.-]*)?\d{4}[\s.-]*\d{4}\b/iu;
+  const abusiveContent = /\b(?:caralho|porra|merda|foda-se|idiota|imbecil|vou\s+(?:matar|agredir)|discurso\s+de\s+odio)\b/iu;
+  const gibberish = /\b(?:asdf|qwer|zxcv|hjkl)\b/iu;
+  const repeatedCharacter = /(.)\1{7,}/u;
+  const repeatedWord = /\b([\p{L}\p{N}]{2,})\b(?:[\s,;.!?-]+\1\b){3,}/iu;
+  if ([role, quote].some(value => hiddenCharacters.test(value) || markupOrCode.test(value) || publicContact.test(value) || abusiveContent.test(value)))
+    return { error: "Remova links, contatos pessoais, códigos ou conteúdo ofensivo antes de publicar." };
+  if (gibberish.test(quote) || repeatedCharacter.test(quote) || repeatedWord.test(quote))
+    return { error: "Escreva um relato claro, sem texto repetitivo ou aleatório." };
+  if (!/^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'’/&()+-]*$/u.test(role))
+    return { error: "Informe a profissão ou situação atual usando texto simples." };
+
+  const words = quote.toLocaleLowerCase("pt-BR").match(/[\p{L}\p{N}]+/gu) ?? [];
+  const meaningfulWords = words.filter(word => word.length > 2);
+  const uniqueWords = new Set(meaningfulWords);
+  const courseTerms = `${course.title} ${course.category} ${course.whatYouLearn.join(" ")}`
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .match(/[a-z0-9]+/g) ?? [];
+  const normalizedQuote = quote.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const experienceTerms = [
+    "curso", "aula", "aprendi", "aprendizado", "conteudo", "atividade", "exercicio", "pratica",
+    "professor", "formacao", "conhecimento", "habilidade", "trabalho", "emprego", "carreira",
+    "oportunidade", "ajudou", "melhorei", "recomendo", "gostei", "dificuldade", "util", "estudo",
+  ];
+  const relevant = [...experienceTerms, ...courseTerms.filter(term => term.length > 3)]
+    .some(term => new RegExp(`\\b${term}\\b`, "u").test(normalizedQuote));
+  if (meaningfulWords.length < 6 || uniqueWords.size < 5 || !relevant)
+    return { error: "Conte de forma clara como o curso contribuiu para sua experiência." };
+
+  return { data: { role, courseId: course.id, course: course.title, quote, rating: data.rating } };
 }

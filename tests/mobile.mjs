@@ -204,6 +204,46 @@ try {
         await page.getByRole('searchbox').fill('Excel'); await page.getByRole('searchbox').press('Enter'); await page.getByRole('heading', { name: /Encontre o curso ideal/ }).waitFor();
         assert.equal(await page.locator('main article').count(), 1); return { fontScale: '125%', searchSubmitted: true };
       });
+      await runCase(browser, engine, 'Authenticated testimonial stays usable at 360px', { width: 360, height: 740 }, async (page, sequence) => {
+        const profile = {
+          id: 24000 + sequence, nome: 'Pessoa Depoimento Mobile', email: `mobile-testimonial${sequence}@example.test`,
+          telefone: '27999999999', cep: '29050-945', bairro: 'Bento Ferreira', rua: 'Rua de teste', numero: '',
+          escolaridade: 'Ensino médio completo', enrolledCourseIds: [], enrollments: [],
+        };
+        environment.seedRegistration(profile);
+        const enrollmentResponse = await fetch(`${environment.apiURL}/api/enrollments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Origin: environment.apiURL, 'x-profile-token': profile.profileToken },
+          body: JSON.stringify({ action: 'enroll', registrationId: profile.id, courseId: 1 }),
+        });
+        assert(enrollmentResponse.ok, `Testimonial fixture enrollment failed with ${enrollmentResponse.status}`);
+        const enrollment = await enrollmentResponse.json();
+        profile.enrolledCourseIds = [1];
+        profile.enrollments = [{ courseId: 1, enrolledAt: enrollment.enrolledAt, requestId: enrollment.requestId }];
+        await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: PROFILE_KEY, value: profile });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+
+        const share = page.getByRole('button', { name: 'Compartilhar minha história', exact: true });
+        await share.scrollIntoViewIfNeeded(); await withinScreen(page, share, { touch: true }); await share.click();
+        const form = page.locator('form').filter({ has: page.getByPlaceholder('Ex.: Auxiliar administrativo') });
+        await form.waitFor(); await noOverflow(page);
+        const course = form.locator('select');
+        assert.deepEqual(await course.locator('option').allTextContents(), ['Selecione um curso', COURSES[0].title]);
+        await form.getByPlaceholder('Ex.: Auxiliar administrativo').fill('Aluno');
+        await course.selectOption(String(COURSES[0].id));
+        await form.locator('textarea').fill('O curso me ajudou a aprender lógica e aplicar novos conhecimentos no trabalho.');
+        const guidelines = form.getByRole('checkbox', { name: /Confirmo que o relato é verdadeiro/i });
+        assert.equal(await guidelines.isChecked(), false); await guidelines.check();
+        const publish = form.getByRole('button', { name: 'Publicar depoimento', exact: true });
+        await publish.scrollIntoViewIfNeeded(); await withinScreen(page, publish, { touch: true }); await noOverflow(page);
+        const responsePromise = page.waitForResponse(response => response.url().endsWith('/api/testimonials') && response.request().method() === 'POST');
+        await publish.click(); const response = await responsePromise;
+        assert.equal(response.status(), 201);
+        const created = await response.json();
+        assert.equal(created.name, profile.nome); assert.equal(created.courseId, COURSES[0].id); assert.equal(created.course, COURSES[0].title);
+        await page.getByText(/Depoimento enviado com sucesso/i).waitFor(); await noOverflow(page);
+        return { viewport: '360x740', enrolledCourseOptions: 1, guidelinesAccepted: true, publishedStatus: 201, linkedCourseId: created.courseId };
+      });
       await runCase(browser, engine, 'Browser Back and Forward traverse platform pages', { width: 390, height: 844 }, async page => {
         await enterCatalog(page); await navigate(page, 'Favoritos'); await page.getByRole('heading', { name: 'Cursos favoritados', exact: true }).waitFor();
         await page.goBack(); await page.getByRole('heading', { name: /Encontre o curso ideal/ }).waitFor();

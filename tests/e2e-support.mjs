@@ -190,9 +190,10 @@ export async function startTestEnvironment({ google = false } = {}) {
           await context.route("**/api/**", async route => {
             const request = route.request();
             const url = new URL(request.url());
+            const profileToken = await request.headerValue("x-profile-token");
             const response = await fetch(`${apiURL}${url.pathname}${url.search}`, {
               method: request.method(), body: request.postDataBuffer() ?? undefined,
-              headers: { "Content-Type": "application/json", Origin: apiURL },
+              headers: { "Content-Type": "application/json", Origin: apiURL, ...(profileToken ? { "x-profile-token": profileToken } : {}) },
             });
             await route.fulfill({ status: response.status, contentType: "application/json", body: await response.text() });
           });

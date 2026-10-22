@@ -26,11 +26,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
-export type StoredTestimonial = { id: number; name: string; role: string; course: string; quote: string; rating: number };
+export type StoredTestimonial = { id: number; name: string; role: string; courseId: number; course: string; quote: string; rating: number };
+export type TestimonialSubmission = {
+  role: string;
+  courseId: number;
+  quote: string;
+  rating: number;
+  acceptedGuidelines: true;
+  website: string;
+};
 function isTestimonial(value: unknown): value is StoredTestimonial {
   if (!value || typeof value !== "object") return false;
   const entry = value as StoredTestimonial;
-  return isCourseId(entry.id) && [entry.name, entry.role, entry.course, entry.quote].every(text => typeof text === "string")
+  return isCourseId(entry.id) && isCourseId(entry.courseId) && [entry.name, entry.role, entry.course, entry.quote].every(text => typeof text === "string")
     && Number.isInteger(entry.rating) && entry.rating >= 1 && entry.rating <= 5;
 }
 export async function getGoogleLoginConfig(signal?: AbortSignal): Promise<{ enabled: boolean; clientId?: string }> {
@@ -45,8 +53,13 @@ export const getTestimonials = async () => {
   if (!Array.isArray(data) || !data.every(isTestimonial)) throw new Error("Resposta de depoimentos inválida");
   return data;
 };
-export const createTestimonial = async (data: Omit<StoredTestimonial, "id">) => {
-  const result = await request<unknown>("/testimonials", { method: "POST", body: JSON.stringify(data) });
+export const createTestimonial = async (data: TestimonialSubmission, profileToken: string) => {
+  if (!/^[a-f0-9]{64}$/.test(profileToken)) throw new Error("Entre novamente na plataforma para publicar seu depoimento.");
+  const result = await request<unknown>("/testimonials", {
+    method: "POST",
+    headers: { "x-profile-token": profileToken },
+    body: JSON.stringify(data),
+  });
   if (!isTestimonial(result)) throw new Error("Resposta de depoimento inválida");
   return result;
 };

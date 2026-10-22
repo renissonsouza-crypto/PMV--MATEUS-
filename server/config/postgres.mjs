@@ -28,6 +28,8 @@ export function ensurePostgresSchema() {
       )`;
       await sql`CREATE TABLE IF NOT EXISTS testimonials (
         id BIGSERIAL PRIMARY KEY,
+        registration_id BIGINT REFERENCES registrations(id) ON DELETE CASCADE,
+        course_id INTEGER,
         name VARCHAR(120) NOT NULL,
         role VARCHAR(120) NOT NULL,
         course VARCHAR(160) NOT NULL,
@@ -35,6 +37,10 @@ export function ensurePostgresSchema() {
         rating SMALLINT NOT NULL CHECK(rating BETWEEN 1 AND 5),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`;
+      await sql`ALTER TABLE testimonials ADD COLUMN IF NOT EXISTS registration_id BIGINT REFERENCES registrations(id) ON DELETE CASCADE`;
+      await sql`ALTER TABLE testimonials ADD COLUMN IF NOT EXISTS course_id INTEGER`;
+      await sql`CREATE UNIQUE INDEX IF NOT EXISTS testimonials_author_course
+        ON testimonials(registration_id, course_id) WHERE registration_id IS NOT NULL AND course_id IS NOT NULL`;
       await sql`CREATE TABLE IF NOT EXISTS enrollments (
         id BIGSERIAL PRIMARY KEY,
         registration_id BIGINT NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,

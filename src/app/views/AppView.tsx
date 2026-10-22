@@ -88,6 +88,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 1,
     name: "Sandra Lima",
     role: "Auxiliar de cozinha",
+    courseId: 9,
     course: "Gastronomia Brasileira",
     quote: "Eu fazia diárias e minha renda variava muito. No curso aprendi boas práticas e técnicas de preparo; depois consegui uma vaga fixa em uma cozinha.",
     rating: 5,
@@ -97,6 +98,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 2,
     name: "Marcos Pereira",
     role: "Eletricista auxiliar",
+    courseId: 10,
     course: "Eletricista Predial",
     quote: "Eu já ajudava em pequenos reparos, mas não tinha formação. Estudar segurança e instalações me ajudou a buscar oportunidades melhores e organizar meus serviços.",
     rating: 5,
@@ -106,6 +108,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 3,
     name: "Joana Souza",
     role: "Assistente administrativa",
+    courseId: 2,
     course: "Excel do Básico ao Avançado",
     quote: "Eu tinha dificuldade com planilhas e relatórios. Com a prática, ganhei confiança para concorrer a vagas administrativas e consegui uma oportunidade mais estável.",
     rating: 5,
@@ -115,6 +118,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 4,
     name: "Renata Alves",
     role: "Pequena empreendedora",
+    courseId: 4,
     course: "Marketing Digital na Prática",
     quote: "Eu vendia doces para conhecidos e quase não divulgava meu trabalho. Aprendi a planejar conteúdo e hoje alcanço clientes além do meu bairro.",
     rating: 5,
@@ -124,6 +128,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 5,
     name: "Paulo Henrique",
     role: "Assistente de suporte",
+    courseId: 7,
     course: "Informática para o Mercado",
     quote: "Depois de um tempo fora do mercado, eu precisava recuperar a confiança com computador e e-mail. O curso me ajudou a voltar a procurar trabalho com mais preparo.",
     rating: 5,
@@ -133,6 +138,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 6,
     name: "Aline Rocha",
     role: "Designer iniciante",
+    courseId: 3,
     course: "Design Gráfico para Iniciantes",
     quote: "Eu fazia artes simples no celular, sem saber explicar minhas escolhas. Aprendi composição e identidade visual e comecei a montar um portfólio para buscar clientes.",
     rating: 5,
@@ -142,6 +148,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 7,
     name: "Diego Martins",
     role: "Desenvolvedor júnior",
+    courseId: 1,
     course: "Introdução à Programação",
     quote: "Eu achava que tecnologia era uma área distante da minha realidade. Começar pela lógica e criar pequenos projetos me mostrou um caminho possível para mudar de carreira.",
     rating: 5,
@@ -151,6 +158,7 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     id: 8,
     name: "Vera Costa",
     role: "Atendente de loja",
+    courseId: 8,
     course: "Atendimento ao Cliente",
     quote: "Eu já atendia clientes, mas não sabia como lidar com reclamações difíceis. As técnicas de comunicação me ajudaram a crescer para uma função de referência na equipe.",
     rating: 5,
@@ -707,19 +715,11 @@ function Header({ page, navigate, darkMode, toggleDarkMode, increaseFont, decrea
 }
 
 // ─── Depoimentos ───────────────────────────────────────────────────────────────
-function findTestimonialCourse(courseName: string): Course | undefined {
-  const query = normalizeChatText(courseName);
-  if (!query) return undefined;
-  const exactMatch = COURSES.find(course => normalizeChatText(course.title) === query);
-  if (exactMatch) return exactMatch;
-  const partialMatches = COURSES.filter(course => {
-    const title = normalizeChatText(course.title);
-    return title.includes(query) || query.includes(title);
-  });
-  return partialMatches.length === 1 ? partialMatches[0] : undefined;
-}
-
-function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Course) => void }) {
+function TestimonialsSection({ onEnrollCourse, profile, navigate }: {
+  onEnrollCourse: (course: Course) => void;
+  profile: UserProfile | null;
+  navigate: (page: Page) => void;
+}) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
   const [carouselApi, setCarouselApi] = useState<CarouselApi | undefined>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -729,15 +729,17 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
   const [carouselHovered, setCarouselHovered] = useState(false);
   const [carouselFocused, setCarouselFocused] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [course, setCourse] = useState("");
+  const [courseId, setCourseId] = useState("");
   const [quote, setQuote] = useState("");
   const [rating, setRating] = useState(5);
+  const [acceptedGuidelines, setAcceptedGuidelines] = useState(false);
+  const [website, setWebsite] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [testimonialError, setTestimonialError] = useState("");
   const [testimonialSubmitting, setTestimonialSubmitting] = useState(false);
   const testimonialSubmissionRef = useRef(false);
+  const enrolledCourses = COURSES.filter(course => profile?.enrolledCourseIds.includes(course.id));
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -766,15 +768,23 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
   async function submitTestimonial(e: FormEvent) {
     e.preventDefault();
 
-    const cleanName = name.trim();
     const cleanRole = role.trim();
-    const cleanCourse = course.trim();
     const cleanQuote = quote.trim();
+    const selectedCourseId = Number(courseId);
 
     if (testimonialSubmissionRef.current) return;
     setTestimonialError("");
-    if (!cleanName || !cleanRole || !cleanCourse || !cleanQuote) {
+    if (!profile?.profileToken) {
+      setTestimonialError("Entre novamente na plataforma para publicar seu depoimento.");
+      return;
+    }
+    if (!cleanRole || !cleanQuote || !Number.isSafeInteger(selectedCourseId) ||
+        !enrolledCourses.some(course => course.id === selectedCourseId)) {
       setTestimonialError("Preencha todos os campos do depoimento.");
+      return;
+    }
+    if (!acceptedGuidelines) {
+      setTestimonialError("Confirme as regras de publicação antes de enviar o depoimento.");
       return;
     }
 
@@ -782,7 +792,14 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
     testimonialSubmissionRef.current = true;
     setTestimonialSubmitting(true);
     try {
-      testimonial = await createTestimonial({ name: cleanName, role: cleanRole, course: cleanCourse, quote: cleanQuote, rating });
+      testimonial = await createTestimonial({
+        role: cleanRole,
+        courseId: selectedCourseId,
+        quote: cleanQuote,
+        rating,
+        acceptedGuidelines: true,
+        website,
+      }, profile.profileToken);
     } catch (error) {
       setTestimonialError(error instanceof Error ? error.message : "Não foi possível enviar seu depoimento. Tente novamente.");
       return;
@@ -792,11 +809,12 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
     }
     setTestimonials(current => [testimonial, ...current]);
 
-    setName("");
     setRole("");
-    setCourse("");
+    setCourseId("");
     setQuote("");
     setRating(5);
+    setAcceptedGuidelines(false);
+    setWebsite("");
     setSubmitted(true);
     setShowForm(false);
 
@@ -823,7 +841,7 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
           <div className="max-w-2xl mx-auto mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-center shadow-sm">
             <p className="font-black text-green-800">Depoimento enviado com sucesso! 🎉</p>
             <p className="text-sm text-green-700 mt-1">
-              Sua história já está aparecendo nesta página neste navegador.
+              Sua história já está aparecendo nesta página.
             </p>
           </div>
         )}
@@ -844,7 +862,7 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
             {testimonials.map(testimonial => (
               <CarouselItem key={`${testimonial.illustrative ? "illustrative" : "participant"}-${testimonial.id}`} className="basis-full sm:basis-1/2 lg:basis-1/3">
                 {(() => {
-                  const matchingCourse = findTestimonialCourse(testimonial.course);
+                  const matchingCourse = COURSES.find(course => course.id === testimonial.courseId);
                   return (
                 <article className="h-full min-h-80 bg-white rounded-2xl p-5 sm:p-6 shadow-md border border-blue-100 flex flex-col">
                   <div className="flex items-center justify-between gap-3 mb-4">
@@ -870,7 +888,7 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
 
                   <div className="rounded-lg px-3 py-2 mb-4 text-xs font-black inline-flex self-start"
                     style={{ backgroundColor: C.orangeLight, color: C.orangeDark }}>
-                    {testimonial.course}
+                    {matchingCourse?.title ?? testimonial.course}
                   </div>
 
                   <blockquote className="text-sm sm:text-base text-slate-600 leading-relaxed italic flex-1">
@@ -920,13 +938,23 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
 
         <div className="text-center mt-10">
           <button
-            onClick={() => setShowForm(value => !value)}
+            onClick={() => {
+              setTestimonialError("");
+              if (!profile) { navigate("register"); return; }
+              if (!profile.profileToken) {
+                setTestimonialError("Sua sessão precisa ser renovada. Saia da conta e entre novamente antes de publicar.");
+                return;
+              }
+              if (!enrolledCourses.length) { navigate("cursos"); return; }
+              setShowForm(value => !value);
+            }}
             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl text-slate-950 font-black shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
             style={{ background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeBrightEnd} 100%)` }}
           >
             <Star className="w-5 h-5" fill="currentColor" />
-            {showForm ? "Fechar formulário" : "Compartilhar minha história"}
+            {showForm ? "Fechar formulário" : !profile ? "Entrar para compartilhar" : !enrolledCourses.length ? "Inscreva-se para compartilhar" : "Compartilhar minha história"}
           </button>
+          {!showForm && testimonialError && <p role="alert" className="mt-3 text-sm font-semibold text-red-600">{testimonialError}</p>}
         </div>
 
         {showForm && (
@@ -942,41 +970,45 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
             </div>
 
             <form onSubmit={submitTestimonial} className="space-y-5">
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-slate-700">
+                O relato será publicado com o nome original informado na criação do seu cadastro. Ele não pode ser alterado neste formulário.
+              </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="block text-sm font-black text-slate-700 mb-2">Seu nome</span>
-                  <input
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    maxLength={60}
-                    required
-                    placeholder="Ex.: João Silva"
-                    className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                  />
-                </label>
-
                 <label className="block">
                   <span className="block text-sm font-black text-slate-700 mb-2">Profissão / situação atual</span>
                   <input
                     value={role}
                     onChange={e => setRole(e.target.value)}
+                    minLength={2}
                     maxLength={80}
                     required
                     placeholder="Ex.: Auxiliar administrativo"
                     className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                   />
                 </label>
+
+                <label className="block">
+                  <span className="block text-sm font-black text-slate-700 mb-2">Curso em que estou inscrito</span>
+                  <select
+                    value={courseId}
+                    onChange={e => setCourseId(e.target.value)}
+                    required
+                    className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                  >
+                    <option value="">Selecione um curso</option>
+                    {enrolledCourses.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}
+                  </select>
+                </label>
               </div>
 
-              <label className="block">
-                <span className="block text-sm font-black text-slate-700 mb-2">Curso realizado</span>
+              <label aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+                Não preencha este campo
                 <input
-                  value={course}
-                  onChange={e => setCourse(e.target.value)}
-                  maxLength={100}
-                  required
-                  placeholder="Ex.: Introdução à Programação"
-                  className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                  name="additionalConfirmation"
+                  value={website}
+                  onChange={e => setWebsite(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
                 />
               </label>
 
@@ -989,6 +1021,7 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
                       key={i}
                       onClick={() => setRating(i + 1)}
                       aria-label={`Dar ${i + 1} estrela${i === 0 ? "" : "s"}`}
+                      aria-pressed={rating === i + 1}
                       className="p-1 hover:scale-110 transition-transform"
                     >
                       <Star
@@ -1009,6 +1042,7 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
                 <textarea
                   value={quote}
                   onChange={e => setQuote(e.target.value)}
+                  minLength={30}
                   maxLength={500}
                   required
                   rows={5}
@@ -1020,10 +1054,26 @@ function TestimonialsSection({ onEnrollCourse }: { onEnrollCourse: (course: Cour
                 </div>
               </label>
 
+              <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                <p className="text-sm font-black text-slate-800">Regras para publicação</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Escreva somente sobre sua experiência com o curso. Não inclua links, anúncios, códigos, ofensas, telefone, e-mail, CPF ou outros dados pessoais.
+                </p>
+                <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={acceptedGuidelines}
+                    onChange={event => setAcceptedGuidelines(event.target.checked)}
+                    required
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-blue-600"
+                  />
+                  Confirmo que o relato é verdadeiro, trata do curso selecionado e pode aparecer publicamente com meu nome.
+                </label>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-2">
                 <p className="text-xs text-slate-400 max-w-md">
-                  Ao enviar, seu depoimento será salvo na plataforma e exibido para outros visitantes.
-                  Compartilhe apenas as informações que deseja tornar públicas.
+                  Para reduzir abuso, é necessário estar autenticado e possuir uma inscrição ativa. Cada conta pode publicar um relato por curso.
                 </p>
 
                 <button
@@ -1215,7 +1265,7 @@ function HomePage({ navigate, onViewCourse, onEnrollCourse, favoriteCourseIds, o
       </section>
 
       {/* ── Depoimentos e histórias de transformação ── */}
-      <TestimonialsSection onEnrollCourse={onEnrollCourse} />
+      <TestimonialsSection onEnrollCourse={onEnrollCourse} profile={profile} navigate={navigate} />
 
       {/* ── CTA Banner ── */}
       <section className="py-16" style={{ background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 100%)` }}>

@@ -3,7 +3,7 @@ import { registerHooks } from "node:module";
 
 // Exercise the actual Vercel routes/controllers/models without a production DB
 // or network calls. Only the Neon transport is replaced by an isolated SQL fake.
-const rows = { registrations: [], testimonials: [] };
+const rows = { registrations: [], testimonials: [], sessions: [], enrollments: [] };
 let schemaCalls = 0;
 let failNextSchema = true;
 let failDatabase = false;
@@ -11,7 +11,8 @@ let healthValue = 1;
 const sql = async (parts, ...params) => {
   const query = parts.join("?");
   if (failDatabase) throw new Error("postgresql://private-user:private-password@private-host/database");
-  if (/CREATE INDEX/.test(query)) return [];
+  if (/ALTER TABLE/.test(query)) return [];
+  if (/CREATE (?:UNIQUE )?INDEX/.test(query)) return [];
   if (/CREATE TABLE/.test(query)) {
     schemaCalls++;
     if (failNextSchema) { failNextSchema = false; throw new Error("transient schema connection failure"); }
@@ -23,7 +24,12 @@ const sql = async (parts, ...params) => {
     assert.match(query, /lower\(trim\(email\)\)/);
     return rows.registrations.filter(row => row.cpf.replace(/\D/g, "") === params[0] || row.email.trim().toLowerCase() === params[1]).slice(0, 1);
   }
-  if (/INSERT INTO profile_sessions/.test(query)) return [];
+  if (/INSERT INTO profile_sessions/.test(query)) {
+    const [tokenHash, expiresAt, email] = params;
+    const person = rows.registrations.find(row => row.email === email);
+    if (person) rows.sessions.push({ token_hash: tokenHash, registration_id: person.id, expires_at: expiresAt });
+    return [];
+  }
   if (/INSERT INTO registrations/.test(query)) {
     const [name, cpf, email, phone, birth_date, neighborhood, payload] = params;
     const row = { id: String(rows.registrations.length + 1), name, cpf, email, phone, birth_date, neighborhood, payload: JSON.parse(payload) };
@@ -31,12 +37,31 @@ const sql = async (parts, ...params) => {
     return [row];
   }
   if (/INSERT INTO testimonials/.test(query)) {
-    const [name, role, course, quote, rating] = params;
-    const row = { id: String(rows.testimonials.length + 1), name, role, course, quote, rating: String(rating) };
+    const [courseId, role, course, quote, rating, sessionHash, now, enrollmentCourseId] = params;
+    const session = rows.sessions.find(item => item.token_hash === sessionHash && item.expires_at > now);
+    const person = session && rows.registrations.find(item => item.id === session.registration_id);
+    const enrollment = person && rows.enrollments.find(item => item.registration_id === person.id && item.course_id === enrollmentCourseId && item.confirmed_at && !item.cancelled_at);
+    const duplicate = person && rows.testimonials.some(item => item.registration_id === person.id && Number(item.course_id) === courseId);
+    if (!person || !enrollment || duplicate) return [];
+    const row = {
+      id: String(rows.testimonials.length + 1), registration_id: person.id, course_id: String(courseId),
+      name: person.name, role, course, quote, rating: String(rating),
+    };
     rows.testimonials.push(row);
     return [row];
   }
-  if (/SELECT id, name, role, course, quote, rating FROM testimonials/.test(query)) return [...rows.testimonials].reverse();
+  if (/SELECT registration\.id, registration\.name FROM registrations registration[\s\S]*JOIN profile_sessions/.test(query)) {
+    const [sessionHash, now] = params;
+    const session = rows.sessions.find(item => item.token_hash === sessionHash && item.expires_at > now);
+    const person = session && rows.registrations.find(item => item.id === session.registration_id);
+    return person ? [{ id: person.id, name: person.name }] : [];
+  }
+  if (/SELECT 1 FROM course_enrollment_requests/.test(query)) {
+    const [registrationId, courseId] = params;
+    return rows.enrollments.some(item => item.registration_id === String(registrationId) && item.course_id === courseId && item.confirmed_at && !item.cancelled_at) ? [{ "?column?": 1 }] : [];
+  }
+  if (/SELECT id, name, role, course_id, quote, rating FROM testimonials/.test(query))
+    return [...rows.testimonials].reverse();
   throw new Error(`SQL não esperado no teste: ${query}`);
 };
 sql.query = query => sql([query]);
@@ -142,11 +167,25 @@ try {
   assert.equal((await call(registration, "POST", { ...minor,
     nomeResponsavel: "João Silva", cpfResponsavel: "111.222.333-44", grauParentesco: "Pai", telefoneResponsavel: "27988888888",
   })).code, 201);
-  const testimonialData = { name: "Ana", role: "Aluna", course: "Excel", quote: "Ótimo", rating: 5 };
+  const testimonialData = {
+    role: "Aluna", courseId: 2,
+    quote: "O curso de Excel me ajudou a organizar planilhas e relatórios no trabalho.",
+    rating: 5, acceptedGuidelines: true, website: "",
+  };
   assert.equal((await call(testimonials, "POST", { ...testimonialData, rating: true })).code, 400);
-  const testimonial = await call(testimonials, "POST", testimonialData);
+  assert.equal((await call(testimonials, "POST", testimonialData)).code, 401, "publicação anônima deve ser bloqueada");
+  assert.equal((await call(testimonials, "POST", testimonialData, { "x-profile-token": created.payload.profileToken })).code, 403,
+    "sessão válida não substitui a inscrição ativa no curso");
+  rows.enrollments.push({ registration_id: "1", course_id: 2, confirmed_at: new Date().toISOString(), cancelled_at: null });
+  assert.equal((await call(testimonials, "POST", { ...testimonialData, name: "Nome forjado" }, { "x-profile-token": created.payload.profileToken })).code, 400);
+  const testimonial = await call(testimonials, "POST", testimonialData, { "x-profile-token": created.payload.profileToken });
   assert.equal(testimonial.code, 201);
-  assert.deepEqual(testimonial.payload, { ...testimonialData, id: 1 });
+  assert.deepEqual(testimonial.payload, {
+    id: 1, name: "Maria Silva", role: testimonialData.role, courseId: 2,
+    course: "Excel do Básico ao Avançado", quote: testimonialData.quote, rating: 5,
+  });
+  assert.equal((await call(testimonials, "POST", testimonialData, { "x-profile-token": created.payload.profileToken })).code, 409,
+    "índice lógico deve impedir dois relatos da mesma conta para o curso");
   const list = await call(testimonials, "GET");
   assert.equal(list.code, 200);
   assert.deepEqual(list.payload, [testimonial.payload]);

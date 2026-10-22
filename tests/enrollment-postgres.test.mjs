@@ -24,6 +24,7 @@ const previous = process.env.DATABASE_URL;
 process.env.DATABASE_URL = 'postgresql://test:test@isolated.invalid/test';
 const { ensurePostgresSchema } = await import('../server/config/postgres.mjs');
 const { postgresEnrollmentRepository } = await import('../server/models/PostgresEnrollmentRepository.mjs');
+const { createPostgresTestimonial, listPostgresTestimonials } = await import('../server/models/PostgresTestimonialModel.mjs');
 await ensurePostgresSchema();
 test.after(async () => {
   hooks.deregister();
@@ -113,6 +114,33 @@ test('PostgreSQL direct enrollment is authenticated, idempotent under concurrenc
   await service.cancel({ requestId: repeated[0].requestId }, token);
   await assert.rejects(service.enroll({ ...input, courseId: 4 }, token), error => error.statusCode === 409);
   assert.equal(mails.length, 0);
+});
+
+test('PostgreSQL testimonials require the authenticated enrollee and enforce one canonical report per course', async () => {
+  const { service, repository, input } = await fixture();
+  const token = 'a'.repeat(64);
+  await repository.session(1, digest(token));
+  await service.enroll({ ...input, courseId: 2 }, token);
+  const data = {
+    role: 'Auxiliar administrativa', courseId: 2, course: 'Excel do Básico ao Avançado',
+    quote: 'O curso me ajudou a organizar planilhas e aplicar fórmulas no trabalho.', rating: 5,
+  };
+
+  const attempts = await Promise.allSettled(Array.from({ length: 5 }, () => createPostgresTestimonial(data, digest(token))));
+  assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 1);
+  assert(attempts.filter(result => result.status === 'rejected').every(result => result.reason.statusCode === 409));
+  const created = attempts.find(result => result.status === 'fulfilled').value;
+  assert.equal(created.name, 'Pessoa PostgreSQL');
+  assert.equal(created.courseId, 2);
+  assert.equal(created.course, 'Excel do Básico ao Avançado');
+
+  await assert.rejects(
+    createPostgresTestimonial({ ...data, courseId: 3, course: 'Design Gráfico para Iniciantes' }, digest(token)),
+    error => error.statusCode === 403,
+  );
+  await assert.rejects(createPostgresTestimonial(data, digest('b'.repeat(64))), error => error.statusCode === 401);
+  await database.query("INSERT INTO testimonials(name, role, course, quote, rating) VALUES ('Legado', 'Aluno', 'Texto livre', 'Relato anônimo antigo', 5)");
+  assert.deepEqual(await listPostgresTestimonials(), [created]);
 });
 
 test('PostgreSQL Google signup of an existing email restores the original account and enrollment history without duplicate registration', async () => {
